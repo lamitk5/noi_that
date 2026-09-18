@@ -54,13 +54,29 @@ class ProductController extends Controller
         ));
     }
 
-    public function show(Product $product)
+    public function show(Product $product, \App\Services\ReviewService $reviewService)
     {
         if (! $product->is_active) {
             abort(404);
         }
 
         $product->load(['category', 'images', 'primaryImage', 'variants']);
+
+        $reviewsCount = $product->reviews()->count();
+        $reviewsAvg = $reviewsCount > 0 ? round((float) $product->reviews()->avg('rating'), 1) : 0;
+        $reviews = $product->reviews()->with('user')->latest()->paginate(5, ['*'], 'reviews_page')->withQueryString();
+
+        $canReview = false;
+        $userReview = null;
+        $hasCompletedPurchase = false;
+
+        if (auth()->check()) {
+            /** @var \App\Models\User $user */
+            $user = auth()->user();
+            $canReview = $reviewService->canReview($user, $product);
+            $userReview = $reviewService->getUserReview($user, $product);
+            $hasCompletedPurchase = $reviewService->findEligibleOrderItem($user, $product) !== null;
+        }
 
         $relatedProducts = Product::query()
             ->with(['category', 'primaryImage'])
@@ -71,6 +87,15 @@ class ProductController extends Controller
             ->limit(4)
             ->get();
 
-        return view('products.show', compact('product', 'relatedProducts'));
+        return view('products.show', compact(
+            'product',
+            'relatedProducts',
+            'reviews',
+            'reviewsCount',
+            'reviewsAvg',
+            'canReview',
+            'userReview',
+            'hasCompletedPurchase'
+        ));
     }
 }

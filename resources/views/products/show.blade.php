@@ -131,6 +131,30 @@
                     {{ $product->name }}
                 </h1>
 
+                <!-- Rating Summary Inline -->
+                <div class="mt-2.5 flex items-center gap-2 text-xs">
+                    @if ($reviewsCount > 0)
+                        <div class="flex items-center text-amber-500">
+                            @for ($i = 1; $i <= 5; $i++)
+                                <svg class="size-4 {{ $i <= round($reviewsAvg) ? 'fill-current' : 'text-stone-300 dark:text-stone-700' }}" viewBox="0 0 20 20">
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                </svg>
+                            @endfor
+                        </div>
+                        <span class="font-bold text-heading">{{ number_format($reviewsAvg, 1) }}/5</span>
+                        <span class="text-muted">·</span>
+                        <a href="#reviews" class="text-primary hover:underline font-medium">
+                            {{ $reviewsCount }} đánh giá
+                        </a>
+                    @else
+                        <span class="text-muted">Chưa có đánh giá</span>
+                        <span class="text-muted">·</span>
+                        <a href="#reviews" class="text-primary hover:underline font-medium">
+                            Đánh giá từ khách mua hàng
+                        </a>
+                    @endif
+                </div>
+
                 <!-- Price Block -->
                 <div class="mt-4 flex items-baseline gap-3 pb-6 border-b border-ui-border">
                     <span class="text-2xl sm:text-3xl font-bold tracking-tight text-heading" x-text="formatCurrency(activePrice)">
@@ -280,6 +304,255 @@
                 </div>
             </div>
         @endif
+
+        <!-- Customer Reviews Section -->
+        <div id="reviews" class="mt-16 sm:mt-24 rounded-3xl border border-ui-border bg-surface p-6 sm:p-10 shadow-xs scroll-mt-20">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-8 border-b border-ui-border">
+                <div>
+                    <p class="eyebrow">Nhận xét từ khách hàng</p>
+                    <h2 class="mt-1 font-display text-2xl sm:text-3xl font-semibold text-heading">Đánh giá sản phẩm</h2>
+                </div>
+
+                <!-- Rating Summary Box -->
+                <div class="flex items-center gap-4 bg-surface-alt/70 px-5 py-3 rounded-2xl border border-ui-border shrink-0">
+                    <div class="text-center">
+                        @if ($reviewsCount > 0)
+                            <span class="font-display text-2xl sm:text-3xl font-bold text-heading">{{ number_format($reviewsAvg, 1) }}</span>
+                            <span class="text-xs text-muted">/ 5</span>
+                        @else
+                            <span class="font-display text-sm font-semibold text-muted">Chưa có đánh giá</span>
+                        @endif
+                    </div>
+                    <div class="border-l border-ui-border pl-4">
+                        <div class="flex items-center text-amber-500">
+                            @for ($i = 1; $i <= 5; $i++)
+                                <svg class="size-4 {{ $reviewsCount > 0 && $i <= round($reviewsAvg) ? 'fill-current' : 'text-stone-300 dark:text-stone-700' }}" viewBox="0 0 20 20">
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                </svg>
+                            @endfor
+                        </div>
+                        <p class="text-xs text-muted mt-0.5">Dựa trên {{ $reviewsCount }} lượt đánh giá</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Review Action / Form Area -->
+            <div class="my-8">
+                @guest
+                    <div class="rounded-2xl border border-ui-border bg-surface-alt/40 p-5 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
+                        <div class="flex items-center gap-3">
+                            <div class="size-9 rounded-xl bg-surface border border-ui-border flex items-center justify-center text-muted shrink-0">
+                                <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                            </div>
+                            <span class="text-muted">Đăng nhập bằng tài khoản đã mua hàng để gửi nhận xét và đánh giá sản phẩm.</span>
+                        </div>
+                        <a href="{{ route('login') }}" class="shrink-0 font-bold uppercase tracking-wider text-[11px] text-primary hover:underline">
+                            Đăng nhập ngay →
+                        </a>
+                    </div>
+                @else
+                    @if ($userReview)
+                        <!-- User's Existing Review Card -->
+                        <div x-data="{ editing: false }" class="rounded-2xl border border-primary/30 bg-surface-alt/40 p-5 sm:p-6 shadow-xs">
+                            <div class="flex items-center justify-between gap-4 pb-4 border-b border-ui-border">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs font-bold text-heading">Đánh giá của bạn</span>
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-900/40">
+                                        <svg class="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                        Đã mua hàng
+                                    </span>
+                                </div>
+                                <div class="flex items-center gap-3 text-xs">
+                                    <button
+                                        type="button"
+                                        @click="editing = !editing"
+                                        class="font-semibold text-primary hover:underline cursor-pointer"
+                                    >
+                                        <span x-text="editing ? 'Đóng' : 'Chỉnh sửa'"></span>
+                                    </button>
+                                    <span class="text-muted">·</span>
+                                    <form
+                                        method="POST"
+                                        action="{{ route('reviews.destroy', $userReview->id) }}"
+                                        onsubmit="return confirm('Bạn có chắc chắn muốn xóa đánh giá này?');"
+                                        class="inline"
+                                    >
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="font-semibold text-rose-600 hover:underline cursor-pointer">
+                                            Xóa
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <!-- View Mode -->
+                            <div x-show="!editing" class="pt-4">
+                                <div class="flex items-center gap-2 text-xs text-amber-500 mb-2">
+                                    @for ($i = 1; $i <= 5; $i++)
+                                        <svg class="size-4 {{ $i <= $userReview->rating ? 'fill-current' : 'text-stone-300 dark:text-stone-700' }}" viewBox="0 0 20 20">
+                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                        </svg>
+                                    @endfor
+                                    <span class="text-muted ml-1 text-[11px]">{{ $userReview->updated_at->format('d/m/Y') }}</span>
+                                </div>
+                                @if ($userReview->comment)
+                                    <p class="text-xs sm:text-sm text-body leading-relaxed whitespace-pre-line">{{ $userReview->comment }}</p>
+                                @endif
+                            </div>
+
+                            <!-- Edit Form -->
+                            <div x-show="editing" x-cloak class="pt-4">
+                                <form method="POST" action="{{ route('reviews.update', $userReview->id) }}" class="space-y-4">
+                                    @csrf
+                                    @method('PATCH')
+                                    <div>
+                                        <label class="block text-xs font-semibold text-heading mb-1.5">Số sao đánh giá</label>
+                                        <div class="flex items-center gap-4 text-xs">
+                                            @for ($star = 5; $star >= 1; $star--)
+                                                <label class="flex items-center gap-1 cursor-pointer">
+                                                    <input
+                                                        type="radio"
+                                                        name="rating"
+                                                        value="{{ $star }}"
+                                                        {{ (int) old('rating', $userReview->rating) === $star ? 'checked' : '' }}
+                                                        class="text-primary focus:ring-primary size-4"
+                                                    >
+                                                    <span class="text-heading font-medium">{{ $star }} ★</span>
+                                                </label>
+                                            @endfor
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label for="comment_edit" class="block text-xs font-semibold text-heading mb-1.5">Nội dung nhận xét</label>
+                                        <textarea
+                                            id="comment_edit"
+                                            name="comment"
+                                            rows="3"
+                                            maxlength="2000"
+                                            class="w-full rounded-xl border border-ui-border bg-surface px-3.5 py-2.5 text-xs sm:text-sm text-heading placeholder:text-muted focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                                        >{{ old('comment', $userReview->comment) }}</textarea>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <button
+                                            type="submit"
+                                            class="inline-flex items-center justify-center rounded-xl bg-primary px-5 py-2 text-xs font-bold uppercase tracking-wider text-primary-foreground shadow-sm hover:opacity-95 cursor-pointer"
+                                        >
+                                            Cập nhật
+                                        </button>
+                                        <button
+                                            type="button"
+                                            @click="editing = false"
+                                            class="text-xs text-muted hover:text-heading cursor-pointer"
+                                        >
+                                            Hủy
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    @elseif ($canReview)
+                        <!-- New Review Form -->
+                        <div class="rounded-2xl border border-ui-border bg-surface-alt/40 p-5 sm:p-6 shadow-xs">
+                            <h3 class="font-display text-sm font-bold text-heading mb-1">Chia sẻ cảm nhận của bạn</h3>
+                            <p class="text-xs text-muted mb-4">Đơn hàng của bạn đã hoàn tất. Hãy giúp cộng đồng Mộc An hiểu rõ hơn về chất lượng sản phẩm.</p>
+
+                            <form method="POST" action="{{ route('reviews.store', $product->slug) }}" class="space-y-4">
+                                @csrf
+                                <div>
+                                    <label class="block text-xs font-semibold text-heading mb-1.5">Số sao đánh giá <span class="text-rose-500">*</span></label>
+                                    <div class="flex items-center gap-4 text-xs">
+                                        @for ($star = 5; $star >= 1; $star--)
+                                            <label class="flex items-center gap-1 cursor-pointer">
+                                                <input
+                                                    type="radio"
+                                                    name="rating"
+                                                    value="{{ $star }}"
+                                                    {{ (int) old('rating', 5) === $star ? 'checked' : '' }}
+                                                    class="text-primary focus:ring-primary size-4"
+                                                    required
+                                                >
+                                                <span class="text-heading font-medium">{{ $star }} ★</span>
+                                            </label>
+                                        @endfor
+                                    </div>
+                                    @error('rating')
+                                        <p class="text-[11px] text-rose-500 mt-1">{{ $message }}</p>
+                                    @enderror
+                                </div>
+
+                                <div>
+                                    <label for="comment_new" class="block text-xs font-semibold text-heading mb-1.5">Nội dung nhận xét</label>
+                                    <textarea
+                                        id="comment_new"
+                                        name="comment"
+                                        rows="3"
+                                        maxlength="2000"
+                                        placeholder="Màu sắc thực tế, chất lượng vật liệu gỗ, trải nghiệm sử dụng..."
+                                        class="w-full rounded-xl border border-ui-border bg-surface px-3.5 py-2.5 text-xs sm:text-sm text-heading placeholder:text-muted focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                                    >{{ old('comment') }}</textarea>
+                                    @error('comment')
+                                        <p class="text-[11px] text-rose-500 mt-1">{{ $message }}</p>
+                                    @enderror
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    class="inline-flex items-center justify-center rounded-xl bg-primary px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-primary-foreground shadow-md shadow-primary/20 hover:opacity-95 transition cursor-pointer"
+                                >
+                                    Gửi đánh giá
+                                </button>
+                            </form>
+                        </div>
+                    @elseif (! $hasCompletedPurchase)
+                        <!-- Not Eligible Notice -->
+                        <div class="rounded-2xl border border-ui-border bg-surface-alt/40 p-4 text-xs text-muted flex items-center gap-2.5">
+                            <svg viewBox="0 0 24 24" class="size-4 shrink-0 text-muted" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            <span>Bạn có thể đánh giá sau khi đơn hàng được giao thành công.</span>
+                        </div>
+                    @endif
+                @endguest
+            </div>
+
+            <!-- Review Items List -->
+            <div class="divide-y divide-ui-border">
+                @forelse ($reviews as $review)
+                    <div class="py-5 first:pt-0 last:pb-0">
+                        <div class="flex items-center justify-between gap-4 mb-2">
+                            <div class="flex items-center gap-2.5">
+                                <span class="font-semibold text-xs text-heading">{{ $review->user->name }}</span>
+                                <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-900/40">
+                                    <svg class="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                    Đã mua hàng
+                                </span>
+                            </div>
+                            <span class="text-[11px] text-muted">{{ $review->created_at->format('d/m/Y') }}</span>
+                        </div>
+                        <div class="flex items-center text-amber-500 mb-2">
+                            @for ($i = 1; $i <= 5; $i++)
+                                <svg class="size-3.5 {{ $i <= $review->rating ? 'fill-current' : 'text-stone-300 dark:text-stone-700' }}" viewBox="0 0 20 20">
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                </svg>
+                            @endfor
+                        </div>
+                        @if ($review->comment)
+                            <p class="text-xs sm:text-sm text-body leading-relaxed whitespace-pre-line">{{ $review->comment }}</p>
+                        @endif
+                    </div>
+                @empty
+                    <div class="py-8 text-center text-xs text-muted">
+                        Chưa có đánh giá cho sản phẩm này. Hãy là người đầu tiên trải nghiệm và chia sẻ nhận xét!
+                    </div>
+                @endforelse
+            </div>
+
+            <!-- Review Pagination -->
+            @if ($reviews->hasPages())
+                <div class="mt-6 pt-4 border-t border-ui-border">
+                    {{ $reviews->fragment('reviews')->links() }}
+                </div>
+            @endif
+        </div>
 
         <!-- Related Products Section -->
         @if ($relatedProducts->isNotEmpty())

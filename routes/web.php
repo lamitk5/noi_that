@@ -52,6 +52,11 @@ Route::middleware('auth')->group(function () {
     Route::patch('/tai-khoan', [AccountController::class, 'update'])->name('account.update');
     Route::get('/tai-khoan/don-hang', [OrderHistoryController::class, 'index'])->name('orders.index');
     Route::get('/tai-khoan/don-hang/{order:order_code}', [OrderHistoryController::class, 'show'])->name('orders.show');
+
+    // Product Reviews
+    Route::post('/san-pham/{product:slug}/danh-gia', [\App\Http\Controllers\ReviewController::class, 'store'])->name('reviews.store');
+    Route::patch('/danh-gia/{review}', [\App\Http\Controllers\ReviewController::class, 'update'])->name('reviews.update');
+    Route::delete('/danh-gia/{review}', [\App\Http\Controllers\ReviewController::class, 'destroy'])->name('reviews.destroy');
 });
 
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
