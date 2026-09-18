@@ -20,14 +20,23 @@ class Product extends Model
         'short_description',
         'description',
         'base_price',
+        'material',
+        'dimensions',
+        'color',
+        'weight',
+        'is_featured',
         'is_active',
+        'views_count',
     ];
 
     protected function casts(): array
     {
         return [
             'base_price' => 'decimal:2',
+            'is_featured' => 'boolean',
             'is_active' => 'boolean',
+            'weight' => 'decimal:2',
+            'views_count' => 'integer',
         ];
     }
 
@@ -96,6 +105,46 @@ class Product extends Model
         }
 
         return 'Còn hàng';
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
+    public function scopeFeatured($query)
+    {
+        return $query->where('is_featured', true);
+    }
+
+    public function getPriceAttribute(): float
+    {
+        return (float) $this->base_price;
+    }
+
+    public function setPriceAttribute($value): void
+    {
+        $this->attributes['base_price'] = $value;
+    }
+
+    public function getFinalPriceAttribute(): float
+    {
+        return (float) $this->base_price;
+    }
+
+    public function getStockQuantityAttribute(): int
+    {
+        return $this->totalStock();
+    }
+
+    public function getIsInStockAttribute(): bool
+    {
+        return !$this->isOutOfStock();
+    }
+
+    public function getPrimaryImageUrlAttribute(): string
+    {
+        return $this->primaryImage?->image_path ?? 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=800&q=80';
     }
 
     public function scopeBestSelling($query, int $limit = 4)

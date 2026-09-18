@@ -54,6 +54,24 @@ Route::middleware('auth')->group(function () {
     Route::get('/tai-khoan/don-hang/{order:order_code}', [OrderHistoryController::class, 'show'])->name('orders.show');
 });
 
+// Guest & Customer Order Tracking
+Route::get('/tra-cuu-don-hang', [\App\Http\Controllers\OrderTrackingController::class, 'index'])->name('orders.track');
+Route::get('/orders/track', [\App\Http\Controllers\OrderTrackingController::class, 'index']);
+
+// Admin Backoffice
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [\App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('dashboard');
+
+    // Category Management
+    Route::resource('categories', \App\Http\Controllers\Admin\CategoryController::class)->except(['show']);
+
+    // Product Management & Image Gallery
+    Route::resource('products', \App\Http\Controllers\Admin\ProductController::class);
+    Route::post('/products/images/{image}/primary', [\App\Http\Controllers\Admin\ProductController::class, 'setPrimaryImage'])->name('products.images.primary');
+    Route::delete('/products/images/{image}', [\App\Http\Controllers\Admin\ProductController::class, 'deleteImage'])->name('products.images.destroy');
+
+    // Order Management
+    Route::get('/orders', [\App\Http\Controllers\Admin\OrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/{order}', [\App\Http\Controllers\Admin\OrderController::class, 'show'])->name('orders.show');
+    Route::put('/orders/{order}/status', [\App\Http\Controllers\Admin\OrderController::class, 'updateStatus'])->name('orders.updateStatus');
 });

@@ -44,9 +44,9 @@
             <nav class="hidden items-center gap-8 lg:flex" aria-label="Điều hướng chính">
                 <a href="{{ route('home') }}" class="nav-link {{ request()->routeIs('home') ? 'is-active' : '' }}">Trang chủ</a>
                 <a href="{{ route('products.index') }}" class="nav-link {{ request()->routeIs('products.*') ? 'is-active' : '' }}">Sản phẩm</a>
+                <a href="{{ route('orders.track') }}" class="nav-link {{ request()->routeIs('orders.track') ? 'is-active' : '' }}">Tra cứu đơn hàng</a>
                 <a href="{{ route('home') }}#bo-suu-tap" class="nav-link">Bộ sưu tập</a>
                 <a href="{{ route('home') }}#ve-chung-toi" class="nav-link">Về Mộc An</a>
-                <a href="#lien-he" class="nav-link">Liên hệ</a>
             </nav>
 
             <div class="flex items-center gap-1 sm:gap-2">

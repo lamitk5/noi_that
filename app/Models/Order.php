@@ -34,6 +34,16 @@ class Order extends Model
         ];
     }
 
+    public const STATUS_PENDING = 'pending';
+    public const STATUS_CONFIRMED = 'confirmed';
+    public const STATUS_SHIPPING = 'shipping';
+    public const STATUS_COMPLETED = 'completed';
+    public const STATUS_CANCELLED = 'canceled';
+
+    public const PAYMENT_PENDING = 'pending';
+    public const PAYMENT_PAID = 'paid';
+    public const PAYMENT_FAILED = 'failed';
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -47,5 +57,67 @@ class Order extends Model
     public function paymentTransactions(): HasMany
     {
         return $this->hasMany(PaymentTransaction::class);
+    }
+
+    public function getOrderNumberAttribute(): ?string
+    {
+        return $this->order_code;
+    }
+
+    public function setOrderNumberAttribute($value): void
+    {
+        $this->attributes['order_code'] = $value;
+    }
+
+    public function getTotalAmountAttribute(): float
+    {
+        return (float) $this->total_price;
+    }
+
+    public function setTotalAmountAttribute($value): void
+    {
+        $this->attributes['total_price'] = $value;
+    }
+
+    public function getNotesAttribute(): ?string
+    {
+        return $this->note;
+    }
+
+    public function setNotesAttribute($value): void
+    {
+        $this->attributes['note'] = $value;
+    }
+
+    public function getSubtotalAttribute(): float
+    {
+        return (float) ($this->total_price - $this->shipping_fee);
+    }
+
+    public function getOrderStatusLabelAttribute(): string
+    {
+        return match ($this->order_status) {
+            'pending' => 'Chờ xử lý',
+            'confirmed' => 'Đã xác nhận',
+            'shipping' => 'Đang giao hàng',
+            'completed' => 'Hoàn thành',
+            'canceled', 'cancelled' => 'Đã hủy',
+            default => ucfirst($this->order_status),
+        };
+    }
+
+    public function getPaymentStatusLabelAttribute(): string
+    {
+        return match ($this->payment_status) {
+            'pending' => 'Chờ thanh toán',
+            'paid' => 'Đã thanh toán',
+            'failed' => 'Thất bại',
+            default => ucfirst($this->payment_status),
+        };
+    }
+
+    public static function generateOrderNumber(): string
+    {
+        return 'ORD-' . date('Ymd') . '-' . strtoupper(\Illuminate\Support\Str::random(6));
     }
 }

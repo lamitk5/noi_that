@@ -14,6 +14,7 @@ class Category extends Model
         'name',
         'slug',
         'description',
+        'image',
         'is_active',
     ];
 
@@ -27,5 +28,10 @@ class Category extends Model
     public function products(): HasMany
     {
         return $this->hasMany(Product::class);
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
     }
 }

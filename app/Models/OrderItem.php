@@ -36,4 +36,26 @@ class OrderItem extends Model
     {
         return $this->belongsTo(ProductVariant::class, 'product_variant_id');
     }
+
+    public function product(): \Illuminate\Database\Eloquent\Relations\HasOneThrough
+    {
+        return $this->hasOneThrough(
+            Product::class,
+            ProductVariant::class,
+            'id',
+            'id',
+            'product_variant_id',
+            'product_id'
+        );
+    }
+
+    public function getTotalAttribute(): float
+    {
+        return (float) ($this->price * $this->quantity);
+    }
+
+    public function getProductIdAttribute(): ?int
+    {
+        return $this->variant?->product_id;
+    }
 }

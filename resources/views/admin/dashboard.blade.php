@@ -18,11 +18,52 @@
         </div>
     </div>
 
-    <!-- Modular Sections / Future Capability Placeholders -->
+    <!-- Quick Metrics Overview -->
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="rounded-2xl border border-ui-border bg-surface p-5 shadow-xs">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-muted">Doanh thu thực nhận</span>
+            <div class="mt-2 flex items-baseline gap-2">
+                <span class="text-2xl font-bold font-display text-heading">{{ number_format($totalRevenue ?? 0, 0, ',', '.') }}₫</span>
+            </div>
+            <p class="mt-1 text-xs text-muted">Từ các đơn hoàn thành & đã thanh toán</p>
+        </div>
+
+        <div class="rounded-2xl border border-ui-border bg-surface p-5 shadow-xs">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-muted">Tổng đơn hàng</span>
+            <div class="mt-2 flex items-baseline gap-2">
+                <span class="text-2xl font-bold font-display text-heading">{{ $totalOrders ?? 0 }}</span>
+                @if(($pendingOrders ?? 0) > 0)
+                    <span class="text-xs font-semibold text-amber-600 bg-amber-500/10 px-2 py-0.5 rounded-full">{{ $pendingOrders }} chờ xử lý</span>
+                @endif
+            </div>
+            <p class="mt-1 text-xs text-muted">Cập nhật theo thời gian thực</p>
+        </div>
+
+        <div class="rounded-2xl border border-ui-border bg-surface p-5 shadow-xs">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-muted">Sản phẩm trong kho</span>
+            <div class="mt-2 flex items-baseline gap-2">
+                <span class="text-2xl font-bold font-display text-heading">{{ $totalProducts ?? 0 }}</span>
+                @if(($lowStockCount ?? 0) > 0)
+                    <span class="text-xs font-semibold text-red-600 bg-red-500/10 px-2 py-0.5 rounded-full">{{ $lowStockCount }} sắp hết hàng</span>
+                @endif
+            </div>
+            <p class="mt-1 text-xs text-muted">Đang phân phối trên website</p>
+        </div>
+
+        <div class="rounded-2xl border border-ui-border bg-surface p-5 shadow-xs">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-muted">Khách hàng đăng ký</span>
+            <div class="mt-2 flex items-baseline gap-2">
+                <span class="text-2xl font-bold font-display text-heading">{{ $totalCustomers ?? 0 }}</span>
+            </div>
+            <p class="mt-1 text-xs text-muted">Tài khoản khách hàng Mộc An</p>
+        </div>
+    </div>
+
+    <!-- Modular Sections / Functional Capabilities -->
     <div>
         <div class="mb-4">
             <h2 class="text-base font-bold text-heading">Phân hệ Quản trị</h2>
-            <p class="text-xs text-muted">Các module chức năng đang được phát triển theo lộ trình phân hệ.</p>
+            <p class="text-xs text-muted">Các phân hệ quản lý sản phẩm, danh mục và đơn hàng đang hoạt động trực tiếp.</p>
         </div>
 
         <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -33,11 +74,11 @@
                         <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z"/></svg>
                     </div>
                     <h3 class="text-sm font-bold text-heading">Quản lý Sản phẩm</h3>
-                    <p class="mt-1 text-xs text-muted leading-relaxed">Thêm mới, cập nhật giá, hình ảnh và thuộc tính sản phẩm nội thất.</p>
+                    <p class="mt-1 text-xs text-muted leading-relaxed">Thêm mới, cập nhật giá, hình ảnh, biến thể và thuộc tính sản phẩm nội thất.</p>
                 </div>
                 <div class="mt-4 pt-3 border-t border-ui-border flex items-center justify-between">
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-muted">Giai đoạn tiếp theo</span>
-                    <span class="text-xs font-semibold text-muted/60">Chưa kích hoạt</span>
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-mono">Đang hoạt động</span>
+                    <a href="{{ route('admin.products.index') }}" class="text-xs font-bold text-primary hover:underline">Quản lý &rarr;</a>
                 </div>
             </div>
 
@@ -51,8 +92,8 @@
                     <p class="mt-1 text-xs text-muted leading-relaxed">Tổ chức phân loại không gian phòng khách, phòng ngủ, phòng ăn.</p>
                 </div>
                 <div class="mt-4 pt-3 border-t border-ui-border flex items-center justify-between">
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-muted">Giai đoạn tiếp theo</span>
-                    <span class="text-xs font-semibold text-muted/60">Chưa kích hoạt</span>
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-mono">Đang hoạt động</span>
+                    <a href="{{ route('admin.categories.index') }}" class="text-xs font-bold text-primary hover:underline">Quản lý &rarr;</a>
                 </div>
             </div>
 
@@ -66,8 +107,8 @@
                     <p class="mt-1 text-xs text-muted leading-relaxed">Theo dõi biến động số lượng tồn kho theo từng biến thể sản phẩm.</p>
                 </div>
                 <div class="mt-4 pt-3 border-t border-ui-border flex items-center justify-between">
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-muted">Giai đoạn tiếp theo</span>
-                    <span class="text-xs font-semibold text-muted/60">Chưa kích hoạt</span>
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-mono">Đang hoạt động</span>
+                    <a href="{{ route('admin.products.index') }}" class="text-xs font-bold text-primary hover:underline">Quản lý kho &rarr;</a>
                 </div>
             </div>
 
@@ -78,11 +119,11 @@
                         <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007ZM8.625 10.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm7.5 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"/></svg>
                     </div>
                     <h3 class="text-sm font-bold text-heading">Quản lý Đơn hàng</h3>
-                    <p class="mt-1 text-xs text-muted leading-relaxed">Xác nhận, cập nhật trạng thái giao hàng và xử lý thanh toán.</p>
+                    <p class="mt-1 text-xs text-muted leading-relaxed">Xác nhận, cập nhật trạng thái giao hàng, thanh toán và hoàn trả tồn kho.</p>
                 </div>
                 <div class="mt-4 pt-3 border-t border-ui-border flex items-center justify-between">
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-muted">Giai đoạn tiếp theo</span>
-                    <span class="text-xs font-semibold text-muted/60">Chưa kích hoạt</span>
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-mono">Đang hoạt động</span>
+                    <a href="{{ route('admin.orders.index') }}" class="text-xs font-bold text-primary hover:underline">Quản lý &rarr;</a>
                 </div>
             </div>
 
@@ -160,6 +201,87 @@
                     <span class="text-xs font-semibold text-muted/60">Chưa kích hoạt</span>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Recent Orders & Inventory Alerts -->
+    <div class="grid gap-6 lg:grid-cols-3">
+        <!-- Recent Orders Table -->
+        <div class="lg:col-span-2 rounded-2xl border border-ui-border bg-surface p-6 shadow-xs">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h3 class="text-sm font-bold text-heading">Đơn hàng mới nhất</h3>
+                    <p class="text-xs text-muted">Các đơn hàng vừa được đặt trên hệ thống.</p>
+                </div>
+                <a href="{{ route('admin.orders.index') }}" class="text-xs font-semibold text-primary hover:underline">Xem tất cả &rarr;</a>
+            </div>
+
+            @if(isset($recentOrders) && $recentOrders->count() > 0)
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead>
+                            <tr class="border-b border-ui-border text-muted uppercase font-bold">
+                                <th class="pb-2">Mã đơn</th>
+                                <th class="pb-2">Khách hàng</th>
+                                <th class="pb-2">Tổng tiền</th>
+                                <th class="pb-2">Trạng thái</th>
+                                <th class="pb-2 text-right">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-ui-border">
+                            @foreach($recentOrders as $order)
+                                <tr class="hover:bg-surface-alt/50">
+                                    <td class="py-2.5 font-mono font-bold text-heading">{{ $order->order_code }}</td>
+                                    <td class="py-2.5">
+                                        <div class="font-semibold text-heading">{{ $order->customer_name }}</div>
+                                        <div class="text-[10px] text-muted">{{ $order->customer_phone }}</div>
+                                    </td>
+                                    <td class="py-2.5 font-bold text-heading">{{ number_format($order->total_price, 0, ',', '.') }}₫</td>
+                                    <td class="py-2.5">
+                                        <span class="px-2 py-0.5 rounded text-[10px] font-bold {{ $order->order_status === 'completed' ? 'bg-emerald-500/10 text-emerald-600' : ($order->order_status === 'canceled' ? 'bg-red-500/10 text-red-600' : 'bg-amber-500/10 text-amber-600') }}">
+                                            {{ $order->order_status_label }}
+                                        </span>
+                                    </td>
+                                    <td class="py-2.5 text-right">
+                                        <a href="{{ route('admin.orders.show', $order) }}" class="text-primary hover:underline font-semibold">Chi tiết</a>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @else
+                <p class="text-xs text-muted py-6 text-center">Chưa có đơn hàng nào phát sinh.</p>
+            @endif
+        </div>
+
+        <!-- Low Stock Products -->
+        <div class="rounded-2xl border border-ui-border bg-surface p-6 shadow-xs">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h3 class="text-sm font-bold text-heading">Cảnh báo tồn kho</h3>
+                    <p class="text-xs text-muted">Sản phẩm sắp hết hàng (<= 5 sp).</p>
+                </div>
+                <a href="{{ route('admin.products.index') }}" class="text-xs font-semibold text-primary hover:underline">Quản lý kho</a>
+            </div>
+
+            @if(isset($lowStockProducts) && $lowStockProducts->count() > 0)
+                <div class="space-y-3">
+                    @foreach($lowStockProducts as $p)
+                        <div class="flex items-center justify-between p-2.5 rounded-xl border border-ui-border/60 bg-surface-alt/40">
+                            <div>
+                                <div class="text-xs font-bold text-heading truncate max-w-[150px]">{{ $p->name }}</div>
+                                <div class="text-[10px] text-muted">{{ $p->category?->name ?? 'Nội thất' }}</div>
+                            </div>
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/10 text-red-600">
+                                Còn {{ $p->totalStock() }} sp
+                            </span>
+                        </div>
+                    @endforeach
+                </div>
+            @else
+                <p class="text-xs text-muted py-6 text-center">Tồn kho các mặt hàng đang ở mức an toàn.</p>
+            @endif
         </div>
     </div>
 </div>
