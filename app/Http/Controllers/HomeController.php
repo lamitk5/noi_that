@@ -22,6 +22,10 @@ class HomeController extends Controller
             ->limit(8)
             ->get();
 
-        return view('home', compact('categories', 'featuredProducts'));
+        $bestSellers = Product::bestSelling(4)
+            ->with(['category', 'primaryImage'])
+            ->get();
+
+        return view('home', compact('categories', 'featuredProducts', 'bestSellers'));
     }
 }

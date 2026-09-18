@@ -53,4 +53,24 @@ class ProductController extends Controller
             'sort',
         ));
     }
+
+    public function show(Product $product)
+    {
+        if (! $product->is_active) {
+            abort(404);
+        }
+
+        $product->load(['category', 'images', 'primaryImage', 'variants']);
+
+        $relatedProducts = Product::query()
+            ->with(['category', 'primaryImage'])
+            ->where('category_id', $product->category_id)
+            ->where('is_active', true)
+            ->where('id', '!=', $product->id)
+            ->latest()
+            ->limit(4)
+            ->get();
+
+        return view('products.show', compact('product', 'relatedProducts'));
+    }
 }

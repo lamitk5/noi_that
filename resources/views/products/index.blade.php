@@ -119,24 +119,25 @@
                 @foreach ($products as $product)
                     <article class="product-card group">
                         <div class="product-media">
-                            <img
-                                src="{{ $product->primaryImage?->image_path ?? 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=900&q=80' }}"
-                                alt="{{ $product->name }}"
-                                class="size-full object-cover transition duration-700 group-hover:scale-105"
-                                loading="lazy"
-                            >
+                            <a href="{{ route('products.show', $product->slug) }}" class="block size-full">
+                                <img
+                                    src="{{ $product->primaryImage?->image_path ?? 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=900&q=80' }}"
+                                    alt="{{ $product->name }}"
+                                    class="size-full object-cover transition duration-700 group-hover:scale-105"
+                                    loading="lazy"
+                                >
+                            </a>
                             <button class="wishlist-button" type="button" aria-label="Thêm {{ $product->name }} vào yêu thích">
                                 <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20.8 5.7a5.5 5.5 0 0 0-7.8 0L12 6.8l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 22l8.8-8.5a5.5 5.5 0 0 0 0-7.8Z"/></svg>
                             </button>
-                            <button class="quick-add" type="button">
-                                <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 4h2l2 11h10l2-8H6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9" cy="19" r="1"/><circle cx="17" cy="19" r="1"/></svg>
-                                Thêm vào giỏ
-                            </button>
+                            <a href="{{ route('products.show', $product->slug) }}" class="quick-add">
+                                Xem chi tiết
+                            </a>
                         </div>
                         <div class="px-2 pt-5">
                             <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">{{ $product->category?->name }}</p>
                             <h3 class="mt-2 font-display text-[1.25rem] font-semibold leading-snug text-heading">
-                                <a class="transition-colors hover:text-accent" href="#">{{ $product->name }}</a>
+                                <a class="transition-colors hover:text-accent" href="{{ route('products.show', $product->slug) }}">{{ $product->name }}</a>
                             </h3>
                             <div class="mt-3 flex items-center gap-2">
                                 <span class="text-[15px] font-bold tracking-tight text-body">{{ number_format((float) $product->base_price, 0, ',', '.') }}₫</span>

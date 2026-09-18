@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/san-pham', [ProductController::class, 'index'])->name('products.index');
+Route::get('/san-pham/{product:slug}', [ProductController::class, 'show'])->name('products.show');
 
 Route::middleware('guest')->group(function () {
     Route::get('/dang-nhap', [AuthenticatedSessionController::class, 'create'])->name('login');

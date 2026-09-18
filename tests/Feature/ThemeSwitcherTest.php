@@ -67,4 +67,36 @@ class ThemeSwitcherTest extends TestCase
         $response->assertSee('text-heading');
         $response->assertSee('border-ui-border');
     }
+
+    public function test_product_detail_page_contains_theme_switcher_and_tokens(): void
+    {
+        $category = \App\Models\Category::create([
+            'name' => 'Phòng khách',
+            'slug' => 'phong-khach',
+            'is_active' => true,
+        ]);
+
+        $product = \App\Models\Product::create([
+            'category_id' => $category->id,
+            'name' => 'Ghế Đôn Thư Giãn',
+            'slug' => 'ghe-don-thu-gian',
+            'sku' => 'GDTG-01',
+            'base_price' => 1500000,
+            'is_active' => true,
+        ]);
+
+        $response = $this->get(route('products.show', $product->slug));
+
+        $response->assertStatus(200);
+        $response->assertSee('moc-an-theme');
+        $response->assertSee("setTheme('moss')", false);
+        $response->assertSee("setTheme('wood')", false);
+        $response->assertSee("setTheme('cream')", false);
+        $response->assertSee("setTheme('blue')", false);
+        $response->assertSee("setTheme('black')", false);
+        $response->assertSee('bg-page');
+        $response->assertSee('bg-surface');
+        $response->assertSee('text-heading');
+        $response->assertSee('border-ui-border');
+    }
 }

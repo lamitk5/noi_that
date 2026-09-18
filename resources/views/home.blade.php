@@ -118,25 +118,29 @@
                 @forelse ($featuredProducts as $product)
                     <article class="product-card reveal-on-scroll group" data-delay="{{ ($loop->index % 4) * 80 }}">
                         <div class="product-media">
-                            <img
-                                src="{{ $product->primaryImage?->image_path ?? 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=900&q=80' }}"
-                                alt="{{ $product->name }}"
-                                class="size-full object-cover transition duration-700 group-hover:scale-105"
-                            >
+                            <a href="{{ route('products.show', $product->slug) }}" class="block size-full">
+                                <img
+                                    src="{{ $product->primaryImage?->image_path ?? 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=900&q=80' }}"
+                                    alt="{{ $product->name }}"
+                                    class="size-full object-cover transition duration-700 group-hover:scale-105"
+                                    loading="lazy"
+                                >
+                            </a>
                             @if ($loop->iteration <= 2)
                                 <span class="absolute left-3 top-3 bg-primary px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-primary-foreground">Mới</span>
                             @endif
                             <button class="wishlist-button" type="button" aria-label="Thêm {{ $product->name }} vào yêu thích">
                                 <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20.8 5.7a5.5 5.5 0 0 0-7.8 0L12 6.8l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 22l8.8-8.5a5.5 5.5 0 0 0 0-7.8Z"/></svg>
                             </button>
-                            <button class="quick-add" type="button">
-                                <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 4h2l2 11h10l2-8H6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9" cy="19" r="1"/><circle cx="17" cy="19" r="1"/></svg>
-                                Thêm vào giỏ
-                            </button>
+                            <a href="{{ route('products.show', $product->slug) }}" class="quick-add">
+                                Xem chi tiết
+                            </a>
                         </div>
                         <div class="px-2 pt-5">
                             <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">{{ $product->category->name }}</p>
-                            <h3 class="mt-2 font-display text-[1.35rem] font-semibold leading-snug text-heading"><a class="transition-colors hover:text-accent" href="#">{{ $product->name }}</a></h3>
+                            <h3 class="mt-2 font-display text-[1.35rem] font-semibold leading-snug text-heading">
+                                <a class="transition-colors hover:text-accent" href="{{ route('products.show', $product->slug) }}">{{ $product->name }}</a>
+                            </h3>
                             <div class="mt-3 flex items-center gap-2">
                                 <span class="text-[15px] font-bold tracking-tight text-body">{{ number_format((float) $product->base_price, 0, ',', '.') }}₫</span>
                             </div>
@@ -148,6 +152,54 @@
             </div>
         </div>
     </section>
+
+    @if (isset($bestSellers) && $bestSellers->isNotEmpty())
+        <section id="ban-chay" class="section-space bg-surface-alt">
+            <div class="page-shell">
+                <div class="section-heading reveal-on-scroll">
+                    <div>
+                        <p class="eyebrow">Xu hướng lựa chọn</p>
+                        <h2 class="section-title">Sản phẩm bán chạy</h2>
+                    </div>
+                    <a href="{{ route('products.index') }}" class="text-link">Xem tất cả <span aria-hidden="true">→</span></a>
+                </div>
+
+                <div class="mt-10 grid gap-x-5 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
+                    @foreach ($bestSellers as $product)
+                        <article class="product-card reveal-on-scroll group" data-delay="{{ ($loop->index % 4) * 80 }}">
+                            <div class="product-media">
+                                <a href="{{ route('products.show', $product->slug) }}" class="block size-full">
+                                    <img
+                                        src="{{ $product->primaryImage?->image_path ?? 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=900&q=80' }}"
+                                        alt="{{ $product->name }}"
+                                        class="size-full object-cover transition duration-700 group-hover:scale-105"
+                                        loading="lazy"
+                                    >
+                                </a>
+                                <span class="absolute left-3 top-3 bg-accent px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-accent-foreground shadow-xs">Bán chạy</span>
+                                <button class="wishlist-button" type="button" aria-label="Thêm {{ $product->name }} vào yêu thích">
+                                    <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20.8 5.7a5.5 5.5 0 0 0-7.8 0L12 6.8l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 22l8.8-8.5a5.5 5.5 0 0 0 0-7.8Z"/></svg>
+                                </button>
+                                <a href="{{ route('products.show', $product->slug) }}" class="quick-add">
+                                    Xem chi tiết
+                                </a>
+                            </div>
+                            <div class="px-2 pt-5">
+                                <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">{{ $product->category?->name }}</p>
+                                <h3 class="mt-2 font-display text-[1.35rem] font-semibold leading-snug text-heading">
+                                    <a class="transition-colors hover:text-accent" href="{{ route('products.show', $product->slug) }}">{{ $product->name }}</a>
+                                </h3>
+                                <div class="mt-3 flex items-center justify-between">
+                                    <span class="text-[15px] font-bold tracking-tight text-body">{{ number_format((float) $product->base_price, 0, ',', '.') }}₫</span>
+                                    <span class="text-xs font-medium text-muted">Đã bán {{ $product->total_sold ?? 0 }}</span>
+                                </div>
+                            </div>
+                        </article>
+                    @endforeach
+                </div>
+            </div>
+        </section>
+    @endif
 
     <section id="ve-chung-toi" class="section-space bg-surface-alt">
         <div class="page-shell grid items-center gap-14 lg:grid-cols-2 lg:gap-24">
