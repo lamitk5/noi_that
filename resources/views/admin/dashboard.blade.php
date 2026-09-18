@@ -13,63 +13,114 @@
                 Xin chào, {{ $user->name }}!
             </h1>
             <p class="mt-2 text-sm text-muted leading-relaxed">
-                Chào mừng bạn đến với trung tâm quản trị thương mại điện tử Mộc An. Tại đây bạn có thể theo dõi và quản trị toàn bộ hoạt động kinh doanh, sản phẩm, đơn hàng và khách hàng.
+                Chào mừng bạn đến với trung tâm quản trị thương mại điện tử Mộc An. Theo dõi hiệu suất kinh doanh, quản lý kho hàng và xử lý đơn hàng theo thời gian thực.
             </p>
         </div>
     </div>
 
-    <!-- Modular Sections / Future Capability Placeholders -->
-    <div>
-        <div class="mb-4">
-            <h2 class="text-base font-bold text-heading">Phân hệ Quản trị</h2>
-            <p class="text-xs text-muted">Các module chức năng đang được phát triển theo lộ trình phân hệ.</p>
+    <!-- Live KPI Metrics Cards -->
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5">
+        <div class="p-4 rounded-2xl bg-surface border border-ui-border">
+            <div class="text-[10px] font-bold uppercase tracking-wider text-muted">Doanh thu thực nhận</div>
+            <div class="text-base sm:text-lg font-bold font-display text-primary mt-1 truncate">
+                {{ number_format($stats['revenue'] ?? 0, 0, ',', '.') }}đ
+            </div>
+            <div class="text-[10px] text-muted mt-1">Đơn hoàn thành</div>
         </div>
 
-        <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div class="p-4 rounded-2xl bg-surface border border-ui-border">
+            <div class="text-[10px] font-bold uppercase tracking-wider text-muted">Đơn hoàn tất</div>
+            <div class="text-base sm:text-lg font-bold font-display text-heading mt-1">
+                {{ number_format($stats['completed_orders'] ?? 0) }}
+            </div>
+            <div class="text-[10px] text-emerald-600 mt-1">Thành công</div>
+        </div>
+
+        <div class="p-4 rounded-2xl bg-surface border border-ui-border">
+            <div class="text-[10px] font-bold uppercase tracking-wider text-muted">Đơn chờ xử lý</div>
+            <div class="text-base sm:text-lg font-bold font-display text-heading mt-1">
+                {{ number_format($stats['pending_orders'] ?? 0) }}
+            </div>
+            <a href="{{ route('admin.orders.index', ['status' => 'pending']) }}" class="text-[10px] text-primary hover:underline mt-1 block">Xử lý ngay →</a>
+        </div>
+
+        <div class="p-4 rounded-2xl bg-surface border border-ui-border">
+            <div class="text-[10px] font-bold uppercase tracking-wider text-muted">Sản phẩm đang bán</div>
+            <div class="text-base sm:text-lg font-bold font-display text-heading mt-1">
+                {{ number_format($stats['active_products'] ?? 0) }}
+            </div>
+            <div class="text-[10px] text-muted mt-1">Hiển thị storefront</div>
+        </div>
+
+        <div class="p-4 rounded-2xl bg-surface border {{ ($stats['low_stock_variants'] ?? 0) > 0 ? 'border-amber-500/30 bg-amber-500/5' : 'border-ui-border' }}">
+            <div class="text-[10px] font-bold uppercase tracking-wider {{ ($stats['low_stock_variants'] ?? 0) > 0 ? 'text-amber-500' : 'text-muted' }}">Sắp hết hàng</div>
+            <div class="text-base sm:text-lg font-bold font-display {{ ($stats['low_stock_variants'] ?? 0) > 0 ? 'text-amber-500' : 'text-heading' }} mt-1">
+                {{ number_format($stats['low_stock_variants'] ?? 0) }}
+            </div>
+            <a href="{{ route('admin.inventory.index', ['filter' => 'low_stock']) }}" class="text-[10px] text-amber-600 hover:underline mt-1 block">Xem tồn kho →</a>
+        </div>
+
+        <div class="p-4 rounded-2xl bg-surface border border-ui-border">
+            <div class="text-[10px] font-bold uppercase tracking-wider text-muted">Khách hàng</div>
+            <div class="text-base sm:text-lg font-bold font-display text-heading mt-1">
+                {{ number_format($stats['total_customers'] ?? 0) }}
+            </div>
+            <div class="text-[10px] text-muted mt-1">Đã đăng ký</div>
+        </div>
+    </div>
+
+    <!-- Active Admin Modules -->
+    <div>
+        <div class="mb-4">
+            <h2 class="text-base font-bold text-heading">Phân hệ Quản trị Chức năng</h2>
+            <p class="text-xs text-muted">Truy cập nhanh vào các tính năng quản lý cửa hàng và kinh doanh.</p>
+        </div>
+
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <!-- Products Module -->
-            <div class="rounded-2xl border border-ui-border bg-surface p-5 shadow-xs flex flex-col justify-between transition hover:border-primary/50">
+            <a href="{{ route('admin.products.index') }}" class="rounded-2xl border border-ui-border bg-surface p-5 shadow-xs flex flex-col justify-between transition hover:border-primary/50 group">
                 <div>
                     <div class="size-10 rounded-xl bg-primary/10 text-primary grid place-items-center mb-3">
                         <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z"/></svg>
                     </div>
-                    <h3 class="text-sm font-bold text-heading">Quản lý Sản phẩm</h3>
-                    <p class="mt-1 text-xs text-muted leading-relaxed">Thêm mới, cập nhật giá, hình ảnh và thuộc tính sản phẩm nội thất.</p>
+                    <h3 class="text-sm font-bold text-heading group-hover:text-primary transition">Quản lý Sản phẩm</h3>
+                    <p class="mt-1 text-xs text-muted leading-relaxed">Danh sách sản phẩm, quản lý biến thể, màu sắc, kích thước và hình ảnh.</p>
                 </div>
                 <div class="mt-4 pt-3 border-t border-ui-border flex items-center justify-between">
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-muted">Giai đoạn tiếp theo</span>
-                    <span class="text-xs font-semibold text-muted/60">Chưa kích hoạt</span>
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-600">Đang hoạt động</span>
+                    <span class="text-xs font-semibold text-primary group-hover:translate-x-0.5 transition">Mở quản lý →</span>
                 </div>
-            </div>
+            </a>
 
             <!-- Categories Module -->
-            <div class="rounded-2xl border border-ui-border bg-surface p-5 shadow-xs flex flex-col justify-between transition hover:border-primary/50">
+            <a href="{{ route('admin.categories.index') }}" class="rounded-2xl border border-ui-border bg-surface p-5 shadow-xs flex flex-col justify-between transition hover:border-primary/50 group">
                 <div>
                     <div class="size-10 rounded-xl bg-accent/15 text-accent grid place-items-center mb-3">
                         <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z"/></svg>
                     </div>
-                    <h3 class="text-sm font-bold text-heading">Quản lý Danh mục</h3>
-                    <p class="mt-1 text-xs text-muted leading-relaxed">Tổ chức phân loại không gian phòng khách, phòng ngủ, phòng ăn.</p>
+                    <h3 class="text-sm font-bold text-heading group-hover:text-primary transition">Quản lý Danh mục</h3>
+                    <p class="mt-1 text-xs text-muted leading-relaxed">Tổ chức phân loại danh mục, cập nhật mô tả và kiểm soát trạng thái hiển thị.</p>
                 </div>
                 <div class="mt-4 pt-3 border-t border-ui-border flex items-center justify-between">
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-muted">Giai đoạn tiếp theo</span>
-                    <span class="text-xs font-semibold text-muted/60">Chưa kích hoạt</span>
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-600">Đang hoạt động</span>
+                    <span class="text-xs font-semibold text-primary group-hover:translate-x-0.5 transition">Mở quản lý →</span>
                 </div>
-            </div>
+            </a>
 
             <!-- Inventory Module -->
-            <div class="rounded-2xl border border-ui-border bg-surface p-5 shadow-xs flex flex-col justify-between transition hover:border-primary/50">
+            <a href="{{ route('admin.inventory.index') }}" class="rounded-2xl border border-ui-border bg-surface p-5 shadow-xs flex flex-col justify-between transition hover:border-primary/50 group">
                 <div>
                     <div class="size-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 grid place-items-center mb-3">
                         <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="m21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"/></svg>
                     </div>
-                    <h3 class="text-sm font-bold text-heading">Quản lý Kho hàng</h3>
-                    <p class="mt-1 text-xs text-muted leading-relaxed">Theo dõi biến động số lượng tồn kho theo từng biến thể sản phẩm.</p>
+                    <h3 class="text-sm font-bold text-heading group-hover:text-primary transition">Quản lý Kho hàng</h3>
+                    <p class="mt-1 text-xs text-muted leading-relaxed">Theo dõi tồn kho theo từng SKU, nhận diện sắp hết hàng và cập nhật nhanh số lượng.</p>
                 </div>
                 <div class="mt-4 pt-3 border-t border-ui-border flex items-center justify-between">
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-muted">Giai đoạn tiếp theo</span>
-                    <span class="text-xs font-semibold text-muted/60">Chưa kích hoạt</span>
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-600">Đang hoạt động</span>
+                    <span class="text-xs font-semibold text-primary group-hover:translate-x-0.5 transition">Kiểm kho →</span>
                 </div>
-            </div>
+            </a>
 
             <!-- Orders Module -->
             <a href="{{ route('admin.orders.index') }}" class="rounded-2xl border border-ui-border bg-surface p-5 shadow-xs flex flex-col justify-between transition hover:border-primary/50 group">
@@ -78,88 +129,81 @@
                         <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007ZM8.625 10.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm7.5 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"/></svg>
                     </div>
                     <h3 class="text-sm font-bold text-heading group-hover:text-primary transition">Quản lý Đơn hàng</h3>
-                    <p class="mt-1 text-xs text-muted leading-relaxed">Xác nhận, cập nhật trạng thái giao hàng và xử lý thanh toán.</p>
+                    <p class="mt-1 text-xs text-muted leading-relaxed">Xác nhận đơn, chuyển trạng thái giao hàng và xử lý thanh toán thực tế.</p>
                 </div>
                 <div class="mt-4 pt-3 border-t border-ui-border flex items-center justify-between">
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Đang hoạt động</span>
-                    <span class="text-xs font-semibold text-primary group-hover:translate-x-0.5 transition">Quản lý →</span>
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-600">Đang hoạt động</span>
+                    <span class="text-xs font-semibold text-primary group-hover:translate-x-0.5 transition">Quản lý đơn →</span>
                 </div>
             </a>
 
-            <!-- Customers Module -->
-            <div class="rounded-2xl border border-ui-border bg-surface p-5 shadow-xs flex flex-col justify-between transition hover:border-primary/50">
+            <!-- Sales Reports Module -->
+            <a href="{{ route('admin.reports.index') }}" class="rounded-2xl border border-ui-border bg-surface p-5 shadow-xs flex flex-col justify-between transition hover:border-primary/50 group">
                 <div>
                     <div class="size-10 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 grid place-items-center mb-3">
-                        <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z"/></svg>
-                    </div>
-                    <h3 class="text-sm font-bold text-heading">Khách hàng</h3>
-                    <p class="mt-1 text-xs text-muted leading-relaxed">Danh sách tài khoản khách hàng, lịch sử mua hàng và thông tin liên hệ.</p>
-                </div>
-                <div class="mt-4 pt-3 border-t border-ui-border flex items-center justify-between">
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-muted">Giai đoạn tiếp theo</span>
-                    <span class="text-xs font-semibold text-muted/60">Chưa kích hoạt</span>
-                </div>
-            </div>
-
-            <!-- Reviews Module -->
-            <div class="rounded-2xl border border-ui-border bg-surface p-5 shadow-xs flex flex-col justify-between transition hover:border-primary/50">
-                <div>
-                    <div class="size-10 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 grid place-items-center mb-3">
-                        <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z"/></svg>
-                    </div>
-                    <h3 class="text-sm font-bold text-heading">Đánh giá & Phản hồi</h3>
-                    <p class="mt-1 text-xs text-muted leading-relaxed">Kiểm duyệt nhận xét và trải nghiệm của khách hàng về sản phẩm.</p>
-                </div>
-                <div class="mt-4 pt-3 border-t border-ui-border flex items-center justify-between">
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-muted">Giai đoạn tiếp theo</span>
-                    <span class="text-xs font-semibold text-muted/60">Chưa kích hoạt</span>
-                </div>
-            </div>
-
-            <!-- Vouchers Module -->
-            <div class="rounded-2xl border border-ui-border bg-surface p-5 shadow-xs flex flex-col justify-between transition hover:border-primary/50">
-                <div>
-                    <div class="size-10 rounded-xl bg-pink-500/10 text-pink-600 dark:text-pink-400 grid place-items-center mb-3">
-                        <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 0 1 0 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 0 1 0-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375Z"/></svg>
-                    </div>
-                    <h3 class="text-sm font-bold text-heading">Khuyến mãi & Voucher</h3>
-                    <p class="mt-1 text-xs text-muted leading-relaxed">Tạo mã giảm giá và các chương trình ưu đãi tri ân khách hàng.</p>
-                </div>
-                <div class="mt-4 pt-3 border-t border-ui-border flex items-center justify-between">
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-muted">Giai đoạn tiếp theo</span>
-                    <span class="text-xs font-semibold text-muted/60">Chưa kích hoạt</span>
-                </div>
-            </div>
-
-            <!-- CMS Module -->
-            <div class="rounded-2xl border border-ui-border bg-surface p-5 shadow-xs flex flex-col justify-between transition hover:border-primary/50">
-                <div>
-                    <div class="size-10 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400 grid place-items-center mb-3">
-                        <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 7.5h1.5m-1.5 3h1.5m-7.5 3h7.5m-7.5 3h7.5m3-9h3.375c.621 0 1.125.504 1.125 1.125V18a2.25 2.25 0 0 1-2.25 2.25M16.5 7.5V18a2.25 2.25 0 0 0 2.25 2.25M16.5 7.5V4.875c0-.621-.504-1.125-1.125-1.125H4.125C3.504 3.75 3 4.254 3 4.875V18a2.25 2.25 0 0 0 2.25 2.25h13.5M6 7.5h3v3H6v-3Z"/></svg>
-                    </div>
-                    <h3 class="text-sm font-bold text-heading">Nội dung & Trang tĩnh</h3>
-                    <p class="mt-1 text-xs text-muted leading-relaxed">Biên tập các bài viết chia sẻ không gian đẹp và chính sách bán hàng.</p>
-                </div>
-                <div class="mt-4 pt-3 border-t border-ui-border flex items-center justify-between">
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-muted">Giai đoạn tiếp theo</span>
-                    <span class="text-xs font-semibold text-muted/60">Chưa kích hoạt</span>
-                </div>
-            </div>
-
-            <!-- Analytics Module -->
-            <div class="rounded-2xl border border-ui-border bg-surface p-5 shadow-xs flex flex-col justify-between transition hover:border-primary/50">
-                <div>
-                    <div class="size-10 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 grid place-items-center mb-3">
                         <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"/></svg>
                     </div>
-                    <h3 class="text-sm font-bold text-heading">Báo cáo & Phân tích</h3>
-                    <p class="mt-1 text-xs text-muted leading-relaxed">Báo cáo doanh thu, sản phẩm bán chạy và hiệu suất kinh doanh tổng thể.</p>
+                    <h3 class="text-sm font-bold text-heading group-hover:text-primary transition">Báo cáo & Phân tích</h3>
+                    <p class="mt-1 text-xs text-muted leading-relaxed">Phân tích doanh thu, tỷ trọng phương thức thanh toán và top sản phẩm bán chạy.</p>
                 </div>
                 <div class="mt-4 pt-3 border-t border-ui-border flex items-center justify-between">
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-muted">Giai đoạn tiếp theo</span>
-                    <span class="text-xs font-semibold text-muted/60">Chưa kích hoạt</span>
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-600">Đang hoạt động</span>
+                    <span class="text-xs font-semibold text-primary group-hover:translate-x-0.5 transition">Xem báo cáo →</span>
                 </div>
-            </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Recent Orders Table -->
+    <div class="p-6 rounded-2xl bg-surface border border-ui-border shadow-xs space-y-4">
+        <div class="flex items-center justify-between">
+            <h2 class="text-sm font-bold text-heading">Đơn hàng mới nhận gần đây</h2>
+            <a href="{{ route('admin.orders.index') }}" class="text-xs font-semibold text-primary hover:underline">
+                Xem tất cả đơn hàng &rarr;
+            </a>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                    <tr class="text-muted font-semibold uppercase tracking-wider text-[11px] border-b border-ui-border">
+                        <th class="py-2.5 px-3">Mã đơn</th>
+                        <th class="py-2.5 px-3">Khách hàng</th>
+                        <th class="py-2.5 px-3">Tổng tiền</th>
+                        <th class="py-2.5 px-3">Thanh toán</th>
+                        <th class="py-2.5 px-3">Trạng thái đơn</th>
+                        <th class="py-2.5 px-3 text-right">Chi tiết</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-ui-border">
+                    @forelse($recentOrders as $order)
+                        <tr class="hover:bg-surface-alt/30 transition">
+                            <td class="py-2.5 px-3 font-mono font-bold text-heading">#{{ $order->order_code }}</td>
+                            <td class="py-2.5 px-3">{{ $order->customer_name }}</td>
+                            <td class="py-2.5 px-3 font-medium text-heading">{{ number_format($order->total_price, 0, ',', '.') }}đ</td>
+                            <td class="py-2.5 px-3">
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold {{ $order->payment_status === 'paid' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-surface-alt text-muted' }}">
+                                    {{ strtoupper($order->payment_method) }} - {{ $order->payment_status_text }}
+                                </span>
+                            </td>
+                            <td class="py-2.5 px-3">
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold {{ $order->order_status === 'completed' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-primary/10 text-primary' }}">
+                                    {{ $order->order_status_text }}
+                                </span>
+                            </td>
+                            <td class="py-2.5 px-3 text-right">
+                                <a href="{{ route('admin.orders.show', $order) }}" class="text-primary hover:underline font-semibold text-[11px]">
+                                    Xem &rarr;
+                                </a>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="6" class="py-6 text-center text-muted">Chưa có đơn hàng nào trong hệ thống.</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
         </div>
     </div>
 </div>

@@ -19,6 +19,10 @@ class Order extends Model
     public const STATUS_COMPLETED = 'completed';
     public const STATUS_CANCELED = 'canceled';
 
+    public const PAYMENT_PENDING = 'pending';
+    public const PAYMENT_PAID = 'paid';
+    public const PAYMENT_FAILED = 'failed';
+
     public function statusLabel(): string
     {
         return OrderStatus::labels()[$this->order_status] ?? $this->order_status;

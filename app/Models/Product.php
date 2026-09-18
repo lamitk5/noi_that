@@ -70,6 +70,11 @@ class Product extends Model
 
     public const LOW_STOCK_THRESHOLD = 5;
 
+    public static function lowStockThreshold(): int
+    {
+        return config('shop.low_stock_threshold', self::LOW_STOCK_THRESHOLD);
+    }
+
     public function totalStock(): int
     {
         if ($this->relationLoaded('variants')) {
@@ -87,7 +92,7 @@ class Product extends Model
     public function isLowStock(): bool
     {
         $stock = $this->totalStock();
-        return $stock > 0 && $stock <= self::LOW_STOCK_THRESHOLD;
+        return $stock > 0 && $stock <= self::lowStockThreshold();
     }
 
     public function stockStatusText(): string

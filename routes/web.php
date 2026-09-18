@@ -65,4 +65,32 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/don-hang/{order:order_code}', [\App\Http\Controllers\Admin\OrderController::class, 'show'])->name('orders.show');
     Route::match(['post', 'patch'], '/don-hang/{order:order_code}/trang-thai', [\App\Http\Controllers\Admin\OrderController::class, 'updateStatus'])->name('orders.update-status');
     Route::match(['post', 'patch'], '/don-hang/{order:order_code}/xac-nhan-thanh-toan', [\App\Http\Controllers\Admin\OrderController::class, 'markPaid'])->name('orders.mark-paid');
+
+    // Categories
+    Route::resource('danh-muc', \App\Http\Controllers\Admin\CategoryController::class)
+        ->parameters(['danh-muc' => 'category'])
+        ->names('categories');
+
+    // Products
+    Route::patch('san-pham/{product}/chuyen-trang-thai', [\App\Http\Controllers\Admin\ProductController::class, 'toggleStatus'])->name('products.toggle-status');
+    Route::resource('san-pham', \App\Http\Controllers\Admin\ProductController::class)
+        ->parameters(['san-pham' => 'product'])
+        ->names('products');
+
+    // Product Variants
+    Route::post('san-pham/{product}/bien-the', [\App\Http\Controllers\Admin\ProductVariantController::class, 'store'])->name('products.variants.store');
+    Route::put('san-pham/{product}/bien-the/{variant}', [\App\Http\Controllers\Admin\ProductVariantController::class, 'update'])->name('products.variants.update');
+    Route::delete('san-pham/{product}/bien-the/{variant}', [\App\Http\Controllers\Admin\ProductVariantController::class, 'destroy'])->name('products.variants.destroy');
+
+    // Product Images
+    Route::post('san-pham/{product}/hinh-anh', [\App\Http\Controllers\Admin\ProductImageController::class, 'store'])->name('products.images.store');
+    Route::patch('san-pham/{product}/hinh-anh/{image}/chinh', [\App\Http\Controllers\Admin\ProductImageController::class, 'setPrimary'])->name('products.images.primary');
+    Route::delete('san-pham/{product}/hinh-anh/{image}', [\App\Http\Controllers\Admin\ProductImageController::class, 'destroy'])->name('products.images.destroy');
+
+    // Inventory
+    Route::get('ton-kho', [\App\Http\Controllers\Admin\InventoryController::class, 'index'])->name('inventory.index');
+    Route::patch('ton-kho/{variant}', [\App\Http\Controllers\Admin\InventoryController::class, 'update'])->name('inventory.update');
+
+    // Reports & Analytics
+    Route::get('bao-cao', [\App\Http\Controllers\Admin\ReportController::class, 'index'])->name('reports.index');
 });
