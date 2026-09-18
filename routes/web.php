@@ -24,5 +24,11 @@ Route::middleware('auth')->group(function () {
     Route::post('/dang-xuat', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 
     Route::get('/tai-khoan', [AccountController::class, 'index'])->name('account.index');
+    Route::get('/tai-khoan/chinh-sua', [AccountController::class, 'edit'])->name('account.edit');
+    Route::patch('/tai-khoan', [AccountController::class, 'update'])->name('account.update');
     Route::get('/tai-khoan/don-hang', [OrderHistoryController::class, 'index'])->name('orders.index');
+});
+
+Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('dashboard');
 });

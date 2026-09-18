@@ -99,4 +99,30 @@ class ThemeSwitcherTest extends TestCase
         $response->assertSee('text-heading');
         $response->assertSee('border-ui-border');
     }
+
+    public function test_profile_edit_page_contains_theme_tokens(): void
+    {
+        $user = \App\Models\User::factory()->create();
+
+        $response = $this->actingAs($user)->get(route('account.edit'));
+
+        $response->assertStatus(200);
+        $response->assertSee('bg-page');
+        $response->assertSee('bg-surface');
+        $response->assertSee('text-heading');
+        $response->assertSee('border-ui-border');
+    }
+
+    public function test_admin_dashboard_page_contains_theme_tokens(): void
+    {
+        $admin = \App\Models\User::factory()->admin()->create();
+
+        $response = $this->actingAs($admin)->get(route('admin.dashboard'));
+
+        $response->assertStatus(200);
+        $response->assertSee('bg-page');
+        $response->assertSee('bg-surface');
+        $response->assertSee('text-heading');
+        $response->assertSee('border-ui-border');
+    }
 }

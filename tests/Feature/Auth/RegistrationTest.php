@@ -138,4 +138,21 @@ class RegistrationTest extends TestCase
 
         $response->assertRedirect();
     }
+
+    public function test_registering_with_role_admin_in_payload_still_creates_customer_user(): void
+    {
+        $response = $this->post(route('register.store'), [
+            'name' => 'Người Dùng Mới',
+            'email' => 'newuser@example.com',
+            'password' => 'matkhau123',
+            'password_confirmation' => 'matkhau123',
+            'role' => 'admin',
+        ]);
+
+        $response->assertRedirect(route('account.index'));
+        $user = User::where('email', 'newuser@example.com')->first();
+        $this->assertNotNull($user);
+        $this->assertEquals('customer', $user->role);
+        $this->assertFalse($user->isAdmin());
+    }
 }

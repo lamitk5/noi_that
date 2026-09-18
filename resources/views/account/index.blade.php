@@ -11,6 +11,13 @@
             <p class="mt-2 text-sm text-muted">Quản lý thông tin cá nhân và đơn mua hàng tại Mộc An.</p>
         </div>
 
+        @if (session('status'))
+            <div class="mb-6 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-4 text-sm font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-3">
+                <svg viewBox="0 0 24 24" class="size-5 shrink-0 text-emerald-500" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
+                <span>{{ session('status') }}</span>
+            </div>
+        @endif
+
         <div class="grid gap-6 md:grid-cols-3">
             <!-- Profile Card -->
             <div class="md:col-span-1 bg-surface rounded-3xl p-6 sm:p-8 shadow-xl shadow-black/5 border border-ui-border flex flex-col items-center text-center">
@@ -25,6 +32,10 @@
                         <span>Tham gia từ {{ $user->created_at->format('d/m/Y') }}</span>
                     </div>
                 @endif
+                <a href="{{ route('account.edit') }}" class="mt-5 w-full inline-flex items-center justify-center gap-2 rounded-xl border border-ui-border bg-surface-alt px-4 py-2.5 text-xs font-bold text-heading hover:border-primary transition">
+                    <svg viewBox="0 0 24 24" class="size-3.5 text-muted" fill="none" stroke="currentColor" stroke-width="2"><path d="M16.862 4.487l1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"/></svg>
+                    <span>Chỉnh sửa hồ sơ</span>
+                </a>
             </div>
 
             <!-- Shortcuts and Details -->

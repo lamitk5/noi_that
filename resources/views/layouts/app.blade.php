@@ -143,6 +143,13 @@
                                         </span>
                                     @endif
 
+                                    @if (auth()->user()->isAdmin() && Route::has('admin.dashboard'))
+                                        <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-accent font-semibold hover:bg-surface-alt transition-colors">
+                                            <svg viewBox="0 0 24 24" class="size-4 text-accent" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" /></svg>
+                                            <span>Trang quản trị</span>
+                                        </a>
+                                    @endif
+
                                     @if (Route::has('logout'))
                                         <form method="POST" action="{{ route('logout') }}" class="pt-1">
                                             @csrf

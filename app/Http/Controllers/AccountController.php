@@ -14,4 +14,28 @@ class AccountController extends Controller
             'user' => $request->user(),
         ]);
     }
+
+    public function edit(Request $request): View
+    {
+        return view('account.edit', [
+            'user' => $request->user(),
+        ]);
+    }
+
+    public function update(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:users,email,' . $user->id],
+        ]);
+
+        $user->update([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+        ]);
+
+        return redirect()->route('account.index')->with('status', 'Thông tin cá nhân đã được cập nhật thành công.');
+    }
 }
