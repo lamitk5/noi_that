@@ -28,6 +28,78 @@
         </div>
 
         <div class="space-y-6">
+            <!-- Order Timeline Card -->
+            @if ($order->order_status === 'canceled')
+                <div class="rounded-3xl border border-rose-200 bg-rose-50/70 dark:bg-rose-950/20 dark:border-rose-900/40 p-6 sm:p-8">
+                    <div class="flex items-center gap-4">
+                        <div class="size-12 rounded-2xl bg-rose-100 dark:bg-rose-900/50 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+                            <svg class="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 class="font-display text-base font-bold text-rose-900 dark:text-rose-200">Đơn hàng đã bị hủy</h2>
+                            <p class="text-xs text-rose-700 dark:text-rose-400 mt-1">Đơn hàng #{{ $order->order_code }} đã kết thúc ở trạng thái hủy. Tồn kho sản phẩm đã được hoàn lại đầy đủ.</p>
+                        </div>
+                    </div>
+                </div>
+            @else
+                <div class="rounded-3xl border border-ui-border bg-surface p-6 sm:p-8 shadow-sm">
+                    <h2 class="font-display text-sm font-bold uppercase tracking-wider text-muted mb-6">Tiến trình đơn hàng</h2>
+                    @php
+                        $timelineSteps = [
+                            'pending' => 'Chờ xử lý',
+                            'confirmed' => 'Đã xác nhận',
+                            'packed' => 'Đã đóng gói',
+                            'shipping' => 'Đang giao hàng',
+                            'completed' => 'Hoàn tất',
+                        ];
+                        $stepKeys = array_keys($timelineSteps);
+                        $currentIndex = array_search($order->order_status, $stepKeys);
+                        if ($currentIndex === false) {
+                            $currentIndex = 0;
+                        }
+                    @endphp
+
+                    <div class="relative">
+                        <!-- Progress line for desktop -->
+                        <div class="hidden sm:block absolute top-5 left-12 right-12 h-1 bg-surface-alt rounded-full -z-0">
+                            <div class="h-full bg-primary rounded-full transition-all duration-500" style="width: {{ count($stepKeys) > 1 ? ($currentIndex / (count($stepKeys) - 1)) * 100 : 0 }}%;"></div>
+                        </div>
+
+                        <!-- Steps -->
+                        <div class="grid grid-cols-1 sm:grid-cols-5 gap-4 relative z-10">
+                            @foreach ($timelineSteps as $stepKey => $stepLabel)
+                                @php
+                                    $idx = array_search($stepKey, $stepKeys);
+                                    $isPassed = $idx <= $currentIndex;
+                                    $isCurrent = $idx === $currentIndex;
+                                @endphp
+                                <div class="flex sm:flex-col items-center gap-3 sm:text-center">
+                                    <div class="size-10 rounded-full flex items-center justify-center font-bold text-xs transition-colors shrink-0 {{ $isCurrent ? 'bg-primary text-primary-foreground ring-4 ring-primary/20 shadow-md' : ($isPassed ? 'bg-primary/90 text-primary-foreground' : 'bg-surface-alt text-muted border border-ui-border') }}">
+                                        @if ($isPassed && !$isCurrent)
+                                            <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                                            </svg>
+                                        @else
+                                            <span>{{ $idx + 1 }}</span>
+                                        @endif
+                                    </div>
+                                    <div class="min-w-0">
+                                        <p class="text-xs font-semibold {{ $isCurrent ? 'text-primary font-bold' : ($isPassed ? 'text-heading' : 'text-muted') }}">
+                                            {{ $stepLabel }}
+                                        </p>
+                                        @if ($isCurrent)
+                                            <span class="inline-block sm:hidden text-[10px] text-primary font-medium">(Hiện tại)</span>
+                                        @endif
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            @endif
+
             <!-- Order Status & Summary Card -->
             <div class="rounded-3xl border border-ui-border bg-surface p-6 sm:p-8 shadow-sm">
                 <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 text-xs">
@@ -41,6 +113,7 @@
                             $statusClasses = [
                                 'pending' => 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-900/40',
                                 'confirmed' => 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-900/40',
+                                'packed' => 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-400 dark:border-purple-900/40',
                                 'shipping' => 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-400 dark:border-indigo-900/40',
                                 'completed' => 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-900/40',
                                 'canceled' => 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-900/40',
@@ -48,6 +121,7 @@
                             $statusLabels = [
                                 'pending' => 'Chờ xử lý',
                                 'confirmed' => 'Đã xác nhận',
+                                'packed' => 'Đã đóng gói',
                                 'shipping' => 'Đang giao',
                                 'completed' => 'Hoàn tất',
                                 'canceled' => 'Đã hủy',

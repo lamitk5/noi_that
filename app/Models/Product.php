@@ -102,13 +102,13 @@ class Product extends Model
     {
         return $query->where('is_active', true)
             ->whereHas('variants.orderItems.order', function ($q) {
-                $q->whereIn('order_status', ['completed', 'confirmed', 'shipping'])
-                    ->where('payment_status', '!=', 'failed');
+                $q->where('order_status', 'completed')
+                    ->where('payment_status', 'paid');
             })
             ->withSum(['orderItems as total_sold' => function ($q) {
                 $q->whereHas('order', function ($orderQ) {
-                    $orderQ->whereIn('order_status', ['completed', 'confirmed', 'shipping'])
-                        ->where('payment_status', '!=', 'failed');
+                    $orderQ->where('order_status', 'completed')
+                        ->where('payment_status', 'paid');
                 });
             }], 'quantity')
             ->orderByDesc('total_sold')

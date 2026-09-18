@@ -72,19 +72,19 @@
             </div>
 
             <!-- Orders Module -->
-            <div class="rounded-2xl border border-ui-border bg-surface p-5 shadow-xs flex flex-col justify-between transition hover:border-primary/50">
+            <a href="{{ route('admin.orders.index') }}" class="rounded-2xl border border-ui-border bg-surface p-5 shadow-xs flex flex-col justify-between transition hover:border-primary/50 group">
                 <div>
                     <div class="size-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 grid place-items-center mb-3">
                         <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007ZM8.625 10.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm7.5 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"/></svg>
                     </div>
-                    <h3 class="text-sm font-bold text-heading">Quản lý Đơn hàng</h3>
+                    <h3 class="text-sm font-bold text-heading group-hover:text-primary transition">Quản lý Đơn hàng</h3>
                     <p class="mt-1 text-xs text-muted leading-relaxed">Xác nhận, cập nhật trạng thái giao hàng và xử lý thanh toán.</p>
                 </div>
                 <div class="mt-4 pt-3 border-t border-ui-border flex items-center justify-between">
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-muted">Giai đoạn tiếp theo</span>
-                    <span class="text-xs font-semibold text-muted/60">Chưa kích hoạt</span>
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Đang hoạt động</span>
+                    <span class="text-xs font-semibold text-primary group-hover:translate-x-0.5 transition">Quản lý →</span>
                 </div>
-            </div>
+            </a>
 
             <!-- Customers Module -->
             <div class="rounded-2xl border border-ui-border bg-surface p-5 shadow-xs flex flex-col justify-between transition hover:border-primary/50">

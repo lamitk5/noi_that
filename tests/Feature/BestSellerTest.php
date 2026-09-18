@@ -173,6 +173,40 @@ class BestSellerTest extends TestCase
         $response->assertSee('Sofa Hoàng Gia Mộc An');
     }
 
+    public function test_uncompleted_order_statuses_are_excluded_from_best_seller(): void
+    {
+        [$prodPending, $varPending] = $this->createProductWithVariant('Sản Phẩm Đơn Pending');
+        [$prodConfirmed, $varConfirmed] = $this->createProductWithVariant('Sản Phẩm Đơn Confirmed');
+        [$prodPacked, $varPacked] = $this->createProductWithVariant('Sản Phẩm Đơn Packed');
+        [$prodShipping, $varShipping] = $this->createProductWithVariant('Sản Phẩm Đơn Shipping');
+        [$prodCompleted, $varCompleted] = $this->createProductWithVariant('Sản Phẩm Đơn Hoàn Tất');
+
+        $this->createOrderWithItem($varPending, 20, 'pending', 'paid');
+        $this->createOrderWithItem($varConfirmed, 15, 'confirmed', 'paid');
+        $this->createOrderWithItem($varPacked, 12, 'packed', 'paid');
+        $this->createOrderWithItem($varShipping, 10, 'shipping', 'paid');
+        $this->createOrderWithItem($varCompleted, 2, 'completed', 'paid');
+
+        $bestSellers = Product::bestSelling(10)->get();
+
+        $this->assertCount(1, $bestSellers);
+        $this->assertEquals($prodCompleted->id, $bestSellers->first()->id);
+    }
+
+    public function test_unpaid_completed_order_is_excluded_from_best_seller(): void
+    {
+        [$prodUnpaid, $varUnpaid] = $this->createProductWithVariant('Sản Phẩm Chưa Thanh Toán');
+        [$prodPaid, $varPaid] = $this->createProductWithVariant('Sản Phẩm Đã Thanh Toán');
+
+        $this->createOrderWithItem($varUnpaid, 20, 'completed', 'pending');
+        $this->createOrderWithItem($varPaid, 2, 'completed', 'paid');
+
+        $bestSellers = Product::bestSelling(10)->get();
+
+        $this->assertCount(1, $bestSellers);
+        $this->assertEquals($prodPaid->id, $bestSellers->first()->id);
+    }
+
     public function test_home_page_hides_best_seller_section_when_no_sales_exist(): void
     {
         $response = $this->get(route('home'));
