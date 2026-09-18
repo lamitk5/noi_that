@@ -38,4 +38,13 @@ class AccountController extends Controller
 
         return redirect()->route('account.index')->with('status', 'Thông tin cá nhân đã được cập nhật thành công.');
     }
+
+    public function loyalty(Request $request): View
+    {
+        $user = $request->user();
+        $user->recalculateTier();
+        $transactions = $user->loyaltyTransactions()->take(30)->get();
+
+        return view('account.loyalty', compact('user', 'transactions'));
+    }
 }

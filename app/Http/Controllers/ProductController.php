@@ -54,13 +54,19 @@ class ProductController extends Controller
         ));
     }
 
-    public function show(Product $product, \App\Services\ReviewService $reviewService)
-    {
+    public function show(
+        Product $product,
+        \App\Services\ReviewService $reviewService,
+        \App\Services\RecommendationService $recommendationService
+    ) {
         if (! $product->is_active) {
             abort(404);
         }
 
         $product->load(['category', 'images', 'primaryImage', 'variants']);
+
+        // Record browsing history
+        $recommendationService->recordView($product);
 
         $reviewsCount = $product->reviews()->count();
         $reviewsAvg = $reviewsCount > 0 ? round((float) $product->reviews()->avg('rating'), 1) : 0;
@@ -78,18 +84,17 @@ class ProductController extends Controller
             $hasCompletedPurchase = $reviewService->findEligibleOrderItem($user, $product) !== null;
         }
 
-        $relatedProducts = Product::query()
-            ->with(['category', 'primaryImage'])
-            ->where('category_id', $product->category_id)
-            ->where('is_active', true)
-            ->where('id', '!=', $product->id)
-            ->latest()
-            ->limit(4)
-            ->get();
+        $similarProducts = $recommendationService->getSimilarProducts($product, 4);
+        $relatedProducts = $similarProducts;
+        $frequentlyBoughtTogether = $recommendationService->getFrequentlyBoughtTogether($product, 4);
+        $recentlyViewed = $recommendationService->getRecentlyViewed($product->id, 4);
 
         return view('products.show', compact(
             'product',
             'relatedProducts',
+            'similarProducts',
+            'frequentlyBoughtTogether',
+            'recentlyViewed',
             'reviews',
             'reviewsCount',
             'reviewsAvg',

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Voucher;
 use App\Http\Requests\CheckoutRequest;
 use App\Models\Order;
 use App\Services\CartService;
@@ -36,16 +37,49 @@ class CheckoutController extends Controller
         $token = Str::random(40);
         session()->put('checkout_token', $token);
 
+        $user = $request->user();
         $subtotal = $this->cartService->subtotal();
         $shippingFee = (float) config('shop.shipping_fee', 0);
-        $totalPrice = $subtotal + $shippingFee;
+
+        // Voucher Calculation
+        $appliedVoucher = null;
+        $voucherDiscount = 0;
+        if ($code = session()->get('applied_voucher_code')) {
+            $voucher = Voucher::where('code', $code)->first();
+            if ($voucher && $voucher->isValidFor($user, $subtotal)) {
+                $appliedVoucher = $voucher;
+                $voucherDiscount = $voucher->calculateDiscount($subtotal);
+            } else {
+                session()->forget('applied_voucher_code');
+            }
+        }
+
+        // Loyalty Points Calculation
+        $appliedPoints = 0;
+        $pointsDiscount = 0;
+        if ($points = session()->get('applied_loyalty_points')) {
+            $availablePoints = $user ? $user->loyalty_points : 0;
+            $appliedPoints = min((int) $points, $availablePoints);
+            if ($appliedPoints > 0) {
+                $maxDiscount = max(0, $subtotal - $voucherDiscount);
+                $pointsDiscount = min($appliedPoints * 1000, $maxDiscount);
+            } else {
+                session()->forget('applied_loyalty_points');
+            }
+        }
+
+        $totalPrice = max(0, $subtotal + $shippingFee - $voucherDiscount - $pointsDiscount);
 
         return view('checkout.index', [
             'items' => $items,
             'subtotal' => $subtotal,
             'shippingFee' => $shippingFee,
+            'voucherDiscount' => $voucherDiscount,
+            'appliedVoucher' => $appliedVoucher,
+            'appliedPoints' => $appliedPoints,
+            'pointsDiscount' => $pointsDiscount,
             'totalPrice' => $totalPrice,
-            'user' => $request->user(),
+            'user' => $user,
             'checkoutToken' => $token,
         ]);
     }
@@ -116,5 +150,84 @@ class CheckoutController extends Controller
         return view('checkout.success', [
             'order' => $order,
         ]);
+    }
+
+    /**
+     * Apply a promotional voucher.
+     */
+    public function applyVoucher(Request $request): RedirectResponse
+    {
+        $code = strtoupper(trim((string) $request->input('code')));
+        if (empty($code)) {
+            return back()->with('error', 'Vui lòng nhập mã giảm giá.');
+        }
+
+        $voucher = Voucher::where('code', $code)->first();
+        if (! $voucher) {
+            return back()->with('error', 'Mã giảm giá không tồn tại.');
+        }
+
+        $subtotal = $this->cartService->subtotal();
+        if (! $voucher->isValidFor($request->user(), $subtotal)) {
+            $reason = 'Mã giảm giá không thể áp dụng cho đơn hàng này.';
+            if (! $voucher->is_active) {
+                $reason = 'Mã giảm giá hiện đang bị tạm khóa.';
+            } elseif ($voucher->starts_at && $voucher->starts_at->isFuture()) {
+                $reason = 'Chương trình khuyến mãi chưa bắt đầu.';
+            } elseif ($voucher->expires_at && $voucher->expires_at->isPast()) {
+                $reason = 'Mã giảm giá đã hết hạn sử dụng.';
+            } elseif ($voucher->usage_limit !== null && $voucher->used_count >= $voucher->usage_limit) {
+                $reason = 'Mã giảm giá đã hết lượt sử dụng.';
+            } elseif ($voucher->min_order_amount && $subtotal < $voucher->min_order_amount) {
+                $reason = 'Đơn hàng chưa đạt giá trị tối thiểu ' . number_format($voucher->min_order_amount, 0, ',', '.') . '₫.';
+            }
+
+            return back()->with('error', $reason);
+        }
+
+        session()->put('applied_voucher_code', $voucher->code);
+
+        return back()->with('success', "Đã áp dụng mã giảm giá {$voucher->code} thành công!");
+    }
+
+    /**
+     * Remove the currently applied voucher.
+     */
+    public function removeVoucher(): RedirectResponse
+    {
+        session()->forget('applied_voucher_code');
+
+        return back()->with('success', 'Đã hủy áp dụng mã giảm giá.');
+    }
+
+    /**
+     * Apply loyalty points redemption.
+     */
+    public function applyPoints(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+        $points = (int) $request->input('points', 0);
+
+        if ($points <= 0) {
+            return back()->with('error', 'Số điểm quy đổi phải lớn hơn 0.');
+        }
+
+        if ($points > ($user ? $user->loyalty_points : 0)) {
+            return back()->with('error', 'Bạn không có đủ số điểm thưởng yêu cầu.');
+        }
+
+        session()->put('applied_loyalty_points', $points);
+
+        return back()->with('success', "Đã áp dụng quy đổi {$points} điểm tích lũy!");
+    }
+
+    /**
+     * Remove loyalty points redemption.
+     */
+    public function removePoints(): RedirectResponse
+    {
+        session()->forget('applied_loyalty_points');
+
+        return back()->with('success', 'Đã hủy dùng điểm tích lũy.');
     }
 }

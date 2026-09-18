@@ -24,6 +24,8 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
+        'loyalty_points',
+        'loyalty_tier',
     ];
 
     /**
@@ -46,6 +48,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'loyalty_points' => 'integer',
         ];
     }
 
@@ -57,6 +60,52 @@ class User extends Authenticatable
     public function reviews(): HasMany
     {
         return $this->hasMany(Review::class);
+    }
+
+    public function wishlists(): HasMany
+    {
+        return $this->hasMany(Wishlist::class);
+    }
+
+    public function wishlistProducts(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Product::class, 'wishlists')->withTimestamps();
+    }
+
+    public function loyaltyTransactions(): HasMany
+    {
+        return $this->hasMany(LoyaltyTransaction::class)->latest();
+    }
+
+    public function recalculateTier(): string
+    {
+        $points = (int) $this->loyalty_points;
+
+        if ($points >= 10000) {
+            $tier = 'diamond';
+        } elseif ($points >= 3000) {
+            $tier = 'gold';
+        } elseif ($points >= 1000) {
+            $tier = 'silver';
+        } else {
+            $tier = 'bronze';
+        }
+
+        if ($this->loyalty_tier !== $tier) {
+            $this->update(['loyalty_tier' => $tier]);
+        }
+
+        return $tier;
+    }
+
+    public function tierLabel(): string
+    {
+        return match ($this->loyalty_tier) {
+            'diamond' => 'Kim Cương',
+            'gold' => 'Vàng',
+            'silver' => 'Bạc',
+            default => 'Đồng',
+        };
     }
 
     public function isAdmin(): bool

@@ -78,8 +78,38 @@ class CheckoutService
                 ];
             }
 
+            $voucherId = null;
+            $discountAmount = 0;
+            if ($voucherCode = session()->get('applied_voucher_code')) {
+                $voucher = \App\Models\Voucher::where('code', $voucherCode)->first();
+                if ($voucher && $voucher->isValidFor($user, $subtotal)) {
+                    $voucherId = $voucher->id;
+                    $discountAmount = $voucher->calculateDiscount($subtotal);
+                    $voucher->increment('used_count');
+                    \App\Models\VoucherUsage::create([
+                        'voucher_id' => $voucher->id,
+                        'user_id' => $user->id,
+                        'discount_amount' => $discountAmount,
+                    ]);
+                }
+            }
+
+            $pointsUsed = 0;
+            $pointsDiscount = 0;
+            if ($points = session()->get('applied_loyalty_points')) {
+                $availablePoints = $user->loyalty_points;
+                $pointsUsed = min((int) $points, $availablePoints);
+                if ($pointsUsed > 0) {
+                    $maxDiscount = max(0, $subtotal - $discountAmount);
+                    $pointsDiscount = min($pointsUsed * 1000, $maxDiscount);
+                    $user->decrement('loyalty_points', $pointsUsed);
+                } else {
+                    $pointsUsed = 0;
+                }
+            }
+
             $shippingFee = (float) config('shop.shipping_fee', 0);
-            $totalPrice = $subtotal + $shippingFee;
+            $totalPrice = max(0, $subtotal + $shippingFee - $discountAmount - $pointsDiscount);
 
             $orderCode = $this->generateOrderCode();
 
@@ -93,10 +123,33 @@ class CheckoutService
                 'note' => $data['note'] ?? null,
                 'total_price' => $totalPrice,
                 'shipping_fee' => $shippingFee,
+                'voucher_id' => $voucherId,
+                'discount_amount' => $discountAmount,
+                'points_used' => $pointsUsed,
+                'points_discount' => $pointsDiscount,
                 'payment_method' => $data['payment_method'],
                 'payment_status' => 'pending',
                 'order_status' => 'pending',
             ]);
+
+            if ($voucherId) {
+                \App\Models\VoucherUsage::where('voucher_id', $voucherId)
+                    ->where('user_id', $user->id)
+                    ->whereNull('order_id')
+                    ->latest('id')
+                    ->first()
+                    ?->update(['order_id' => $order->id]);
+            }
+
+            if ($pointsUsed > 0) {
+                \App\Models\LoyaltyTransaction::create([
+                    'user_id' => $user->id,
+                    'order_id' => $order->id,
+                    'points' => -$pointsUsed,
+                    'type' => 'redeem',
+                    'description' => "Đổi {$pointsUsed} điểm giảm giá cho đơn hàng #{$order->order_code}",
+                ]);
+            }
 
             foreach ($itemsData as $item) {
                 $order->items()->create([
@@ -113,8 +166,20 @@ class CheckoutService
             return $order;
         });
 
-        // ONLY clear cart after transaction has successfully committed
+        // Clear cart and checkout session state
         $this->cartService->clear();
+        session()->forget(['applied_voucher_code', 'applied_loyalty_points']);
+
+        // Send notifications & emails
+        try {
+            $user->notify(new \App\Notifications\OrderPlacedNotification($order));
+            if ($order->customer_email) {
+                \Illuminate\Support\Facades\Mail::to($order->customer_email)
+                    ->send(new \App\Mail\OrderPlacedMail($order));
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Failed to dispatch order notification/email: ' . $e->getMessage());
+        }
 
         return $order;
     }

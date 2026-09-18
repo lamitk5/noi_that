@@ -36,8 +36,12 @@ class Order extends Model
         'customer_email',
         'shipping_address',
         'note',
+        'voucher_id',
         'total_price',
         'shipping_fee',
+        'discount_amount',
+        'points_used',
+        'points_discount',
         'payment_method',
         'payment_status',
         'order_status',
@@ -48,6 +52,9 @@ class Order extends Model
         return [
             'total_price' => 'decimal:2',
             'shipping_fee' => 'decimal:2',
+            'discount_amount' => 'decimal:2',
+            'points_discount' => 'decimal:2',
+            'points_used' => 'integer',
         ];
     }
 
@@ -56,9 +63,19 @@ class Order extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function voucher(): BelongsTo
+    {
+        return $this->belongsTo(Voucher::class);
+    }
+
     public function items(): HasMany
     {
         return $this->hasMany(OrderItem::class);
+    }
+
+    public function loyaltyTransaction(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(LoyaltyTransaction::class);
     }
 
     public function paymentTransactions(): HasMany

@@ -79,6 +79,14 @@
                         <span>Đơn hàng</span>
                     </a>
 
+                    <a
+                        href="{{ route('admin.vouchers.index') }}"
+                        class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition {{ request()->routeIs('admin.vouchers.*') ? 'bg-primary text-primary-foreground shadow-xs' : 'text-body hover:bg-surface-alt hover:text-heading' }}"
+                    >
+                        <svg viewBox="0 0 24 24" class="size-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="m9 14.25 6-6m4.5-3.493V10.5a2.25 2.25 0 0 1-2.25 2.25h-1.5a2.25 2.25 0 0 0-2.25 2.25v1.5a2.25 2.25 0 0 1-2.25 2.25H4.875A2.25 2.25 0 0 1 2.625 16.5v-9A2.25 2.25 0 0 1 4.875 5.25h12.75a2.25 2.25 0 0 1 2.25 2.25v.757Z"/></svg>
+                        <span>Khuyến mãi & Mã giảm</span>
+                    </a>
+
                     <div class="pt-4 pb-1 px-3.5 text-[10px] font-bold uppercase tracking-widest text-muted">Báo cáo & Phân tích</div>
 
                     <a

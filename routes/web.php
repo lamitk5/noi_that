@@ -53,6 +53,25 @@ Route::middleware('auth')->group(function () {
     Route::get('/tai-khoan/don-hang', [OrderHistoryController::class, 'index'])->name('orders.index');
     Route::get('/tai-khoan/don-hang/{order:order_code}', [OrderHistoryController::class, 'show'])->name('orders.show');
 
+    // Wishlist
+    Route::get('/tai-khoan/yeu-thich', [\App\Http\Controllers\WishlistController::class, 'index'])->name('account.wishlist');
+    Route::post('/san-pham/{product:slug}/yeu-thich', [\App\Http\Controllers\WishlistController::class, 'toggle'])->name('wishlist.toggle');
+    Route::delete('/tai-khoan/yeu-thich/{product:slug}', [\App\Http\Controllers\WishlistController::class, 'destroy'])->name('wishlist.destroy');
+
+    // Loyalty Points & Rewards
+    Route::get('/tai-khoan/diem-thuong', [AccountController::class, 'loyalty'])->name('account.loyalty');
+
+    // Notifications
+    Route::get('/tai-khoan/thong-bao', [\App\Http\Controllers\NotificationController::class, 'index'])->name('account.notifications');
+    Route::patch('/tai-khoan/thong-bao-tat-ca', [\App\Http\Controllers\NotificationController::class, 'markAllAsRead'])->name('account.notifications.read-all');
+    Route::patch('/tai-khoan/thong-bao/{id}', [\App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('account.notifications.read');
+
+    // Checkout Voucher & Loyalty Points
+    Route::post('/thanh-toan/ma-giam-gia', [CheckoutController::class, 'applyVoucher'])->name('checkout.apply-voucher');
+    Route::delete('/thanh-toan/ma-giam-gia', [CheckoutController::class, 'removeVoucher'])->name('checkout.remove-voucher');
+    Route::post('/thanh-toan/diem-thuong', [CheckoutController::class, 'applyPoints'])->name('checkout.apply-points');
+    Route::delete('/thanh-toan/diem-thuong', [CheckoutController::class, 'removePoints'])->name('checkout.remove-points');
+
     // Product Reviews
     Route::post('/san-pham/{product:slug}/danh-gia', [\App\Http\Controllers\ReviewController::class, 'store'])->name('reviews.store');
     Route::patch('/danh-gia/{review}', [\App\Http\Controllers\ReviewController::class, 'update'])->name('reviews.update');
@@ -86,6 +105,12 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::post('san-pham/{product}/hinh-anh', [\App\Http\Controllers\Admin\ProductImageController::class, 'store'])->name('products.images.store');
     Route::patch('san-pham/{product}/hinh-anh/{image}/chinh', [\App\Http\Controllers\Admin\ProductImageController::class, 'setPrimary'])->name('products.images.primary');
     Route::delete('san-pham/{product}/hinh-anh/{image}', [\App\Http\Controllers\Admin\ProductImageController::class, 'destroy'])->name('products.images.destroy');
+
+    // Vouchers / Promotions
+    Route::patch('khuyen-mai/{voucher}/chuyen-trang-thai', [\App\Http\Controllers\Admin\VoucherController::class, 'toggleStatus'])->name('vouchers.toggle-status');
+    Route::resource('khuyen-mai', \App\Http\Controllers\Admin\VoucherController::class)
+        ->parameters(['khuyen-mai' => 'voucher'])
+        ->names('vouchers');
 
     // Inventory
     Route::get('ton-kho', [\App\Http\Controllers\Admin\InventoryController::class, 'index'])->name('inventory.index');

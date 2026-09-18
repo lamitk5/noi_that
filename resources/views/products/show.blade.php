@@ -245,32 +245,49 @@
                         <span class="text-xs text-muted" x-text="stockStatusMessage"></span>
                     </div>
 
-                    <!-- Cart Form -->
-                    <form method="POST" action="{{ route('cart.store') }}" class="pt-2">
-                        @csrf
-                        <input type="hidden" name="variant_id" :value="selectedVariantId">
-                        <input type="hidden" name="quantity" :value="quantity">
+                    <!-- Actions (Cart + Wishlist) -->
+                    <div class="pt-2 flex flex-col sm:flex-row items-center gap-3">
+                        <form method="POST" action="{{ route('cart.store') }}" class="w-full sm:flex-1">
+                            @csrf
+                            <input type="hidden" name="variant_id" :value="selectedVariantId">
+                            <input type="hidden" name="quantity" :value="quantity">
 
-                        <div class="flex flex-col sm:flex-row items-center gap-3">
                             <button
                                 type="submit"
-                                class="w-full sm:flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 text-sm font-bold text-primary-foreground shadow-sm transition hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                                class="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 text-sm font-bold text-primary-foreground shadow-sm transition hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                                 :disabled="isOutOfStock || !selectedVariantId"
                                 title="Thêm sản phẩm vào giỏ hàng"
                             >
                                 <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 4h2l2 11h10l2-8H6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9" cy="19" r="1"/><circle cx="17" cy="19" r="1"/></svg>
                                 <span>Thêm vào giỏ</span>
                             </button>
-                            <button
-                                type="button"
-                                class="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-ui-border bg-surface px-5 py-3.5 text-sm font-bold text-heading hover:border-primary transition"
-                                aria-label="Thêm vào danh sách yêu thích"
+                        </form>
+
+                        @auth
+                            <form method="POST" action="{{ route('wishlist.toggle', $product->slug) }}" class="w-full sm:w-auto">
+                                @csrf
+                                @php $isFav = $product->isFavoritedBy(auth()->user()); @endphp
+                                <button
+                                    type="submit"
+                                    class="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-ui-border bg-surface px-5 py-3.5 text-sm font-bold text-heading hover:border-primary transition cursor-pointer"
+                                    aria-label="{{ $isFav ? 'Bỏ yêu thích' : 'Thêm vào yêu thích' }}"
+                                    title="{{ $isFav ? 'Bỏ yêu thích' : 'Thêm vào yêu thích' }}"
+                                >
+                                    <svg viewBox="0 0 24 24" class="size-5 {{ $isFav ? 'text-rose-500 fill-rose-500' : 'text-muted hover:text-rose-500' }} transition-colors" stroke="currentColor" stroke-width="1.7"><path d="M20.8 5.7a5.5 5.5 0 0 0-7.8 0L12 6.8l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 22l8.8-8.5a5.5 5.5 0 0 0 0-7.8Z"/></svg>
+                                    <span class="sm:hidden">{{ $isFav ? 'Đã yêu thích' : 'Yêu thích' }}</span>
+                                </button>
+                            </form>
+                        @else
+                            <a
+                                href="{{ route('login') }}"
+                                class="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-ui-border bg-surface px-5 py-3.5 text-sm font-bold text-heading hover:border-primary transition cursor-pointer"
+                                title="Đăng nhập để lưu vào yêu thích"
                             >
-                                <svg viewBox="0 0 24 24" class="size-5 text-muted hover:text-red-500 transition-colors" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20.8 5.7a5.5 5.5 0 0 0-7.8 0L12 6.8l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 22l8.8-8.5a5.5 5.5 0 0 0 0-7.8Z"/></svg>
+                                <svg viewBox="0 0 24 24" class="size-5 text-muted hover:text-rose-500 transition-colors" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20.8 5.7a5.5 5.5 0 0 0-7.8 0L12 6.8l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 22l8.8-8.5a5.5 5.5 0 0 0 0-7.8Z"/></svg>
                                 <span class="sm:hidden">Yêu thích</span>
-                            </button>
-                        </div>
-                    </form>
+                            </a>
+                        @endauth
+                    </div>
                 </div>
 
                 <!-- Commitment & Value Props -->
@@ -595,6 +612,84 @@
                                 </h3>
                                 <div class="mt-3 flex items-center gap-2">
                                     <span class="text-[15px] font-bold tracking-tight text-body">{{ number_format((float) $related->base_price, 0, ',', '.') }}₫</span>
+                                </div>
+                            </div>
+                        </article>
+                    @endforeach
+                </div>
+            </div>
+        @endif
+
+        <!-- Frequently Bought Together Section -->
+        @if ($frequentlyBoughtTogether->isNotEmpty())
+            <div class="mt-16 sm:mt-24 rounded-3xl border border-ui-border bg-surface p-6 sm:p-10 shadow-xs">
+                <div class="mb-8">
+                    <p class="eyebrow">Gợi ý kết hợp hoàn hảo</p>
+                    <h2 class="mt-1 font-display text-2xl sm:text-3xl font-semibold text-heading">Thường được mua cùng</h2>
+                </div>
+
+                <div class="grid gap-x-5 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
+                    @foreach ($frequentlyBoughtTogether as $fbt)
+                        <div class="flex items-center gap-4 p-4 rounded-2xl border border-ui-border bg-surface-alt/40 hover:bg-surface-alt transition">
+                            <a href="{{ route('products.show', $fbt->slug) }}" class="size-20 rounded-xl overflow-hidden bg-surface shrink-0 border border-ui-border">
+                                <img
+                                    src="{{ $fbt->primaryImage?->image_path ?? 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=300&q=80' }}"
+                                    alt="{{ $fbt->name }}"
+                                    class="size-full object-cover"
+                                    loading="lazy"
+                                >
+                            </a>
+                            <div class="min-w-0 flex-1">
+                                <p class="text-[10px] font-bold uppercase tracking-wider text-muted">{{ $fbt->category?->name }}</p>
+                                <h3 class="font-display font-semibold text-heading text-sm truncate mt-0.5">
+                                    <a href="{{ route('products.show', $fbt->slug) }}" class="hover:text-primary transition">{{ $fbt->name }}</a>
+                                </h3>
+                                <p class="text-xs font-bold text-accent mt-1">{{ number_format($fbt->base_price, 0, ',', '.') }}₫</p>
+                            </div>
+                            <a
+                                href="{{ route('products.show', $fbt->slug) }}"
+                                class="shrink-0 size-9 rounded-xl bg-surface border border-ui-border flex items-center justify-center text-heading hover:border-primary hover:text-primary transition"
+                                title="Xem sản phẩm"
+                            >
+                                <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                            </a>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        @endif
+
+        <!-- Recently Viewed Products Section -->
+        @if ($recentlyViewed->isNotEmpty())
+            <div class="mt-16 sm:mt-24">
+                <div class="mb-8">
+                    <p class="eyebrow">Lịch sử xem hàng</p>
+                    <h2 class="mt-1 font-display text-2xl sm:text-3xl font-semibold text-heading">Sản phẩm bạn vừa xem</h2>
+                </div>
+
+                <div class="grid gap-x-5 gap-y-10 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+                    @foreach ($recentlyViewed as $rv)
+                        <article class="product-card group">
+                            <div class="product-media">
+                                <a href="{{ route('products.show', $rv->slug) }}" class="block size-full">
+                                    <img
+                                        src="{{ $rv->primaryImage?->image_path ?? 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=900&q=80' }}"
+                                        alt="{{ $rv->name }}"
+                                        class="size-full object-cover transition duration-700 group-hover:scale-105"
+                                        loading="lazy"
+                                    >
+                                </a>
+                                <a href="{{ route('products.show', $rv->slug) }}" class="quick-add">
+                                    Xem chi tiết
+                                </a>
+                            </div>
+                            <div class="px-2 pt-5">
+                                <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">{{ $rv->category?->name }}</p>
+                                <h3 class="mt-2 font-display text-[1.25rem] font-semibold leading-snug text-heading">
+                                    <a class="transition-colors hover:text-accent" href="{{ route('products.show', $rv->slug) }}">{{ $rv->name }}</a>
+                                </h3>
+                                <div class="mt-3 flex items-center gap-2">
+                                    <span class="text-[15px] font-bold tracking-tight text-body">{{ number_format((float) $rv->base_price, 0, ',', '.') }}₫</span>
                                 </div>
                             </div>
                         </article>

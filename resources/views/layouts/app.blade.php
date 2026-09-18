@@ -136,11 +136,32 @@
                                             <svg viewBox="0 0 24 24" class="size-4 text-muted" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007ZM8.625 10.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm7.5 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"/></svg>
                                             <span>Lịch sử đơn hàng</span>
                                         </a>
-                                    @else
-                                        <span class="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-muted/60 cursor-not-allowed">
-                                            <svg viewBox="0 0 24 24" class="size-4 text-muted/40" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007ZM8.625 10.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm7.5 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"/></svg>
-                                            <span>Lịch sử đơn hàng</span>
-                                        </span>
+                                    @endif
+
+                                    @if (Route::has('account.wishlist'))
+                                        <a href="{{ route('account.wishlist') }}" class="flex items-center gap-2.5 rounded-lg px-2.5 py-2 hover:bg-surface-alt hover:text-heading transition-colors">
+                                            <svg viewBox="0 0 24 24" class="size-4 text-muted" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.8 5.7a5.5 5.5 0 0 0-7.8 0L12 6.8l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 22l8.8-8.5a5.5 5.5 0 0 0 0-7.8Z"/></svg>
+                                            <span>Sản phẩm yêu thích</span>
+                                        </a>
+                                    @endif
+
+                                    @if (Route::has('account.loyalty'))
+                                        <a href="{{ route('account.loyalty') }}" class="flex items-center gap-2.5 rounded-lg px-2.5 py-2 hover:bg-surface-alt hover:text-heading transition-colors">
+                                            <svg viewBox="0 0 24 24" class="size-4 text-muted" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 6v12M9 9h6"/></svg>
+                                            <span>Điểm thưởng & Hạng TV</span>
+                                        </a>
+                                    @endif
+
+                                    @if (Route::has('account.notifications'))
+                                        <a href="{{ route('account.notifications') }}" class="flex items-center justify-between rounded-lg px-2.5 py-2 hover:bg-surface-alt hover:text-heading transition-colors">
+                                            <div class="flex items-center gap-2.5">
+                                                <svg viewBox="0 0 24 24" class="size-4 text-muted" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"/></svg>
+                                                <span>Thông báo</span>
+                                            </div>
+                                            @if (auth()->user()->unreadNotifications->count() > 0)
+                                                <span class="size-2 rounded-full bg-rose-500"></span>
+                                            @endif
+                                        </a>
                                     @endif
 
                                     @if (auth()->user()->isAdmin() && Route::has('admin.dashboard'))

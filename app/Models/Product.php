@@ -56,6 +56,29 @@ class Product extends Model
         return $this->hasMany(Review::class);
     }
 
+    public function wishlists(): HasMany
+    {
+        return $this->hasMany(Wishlist::class);
+    }
+
+    public function favoritedByUsers(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'wishlists')->withTimestamps();
+    }
+
+    public function isFavoritedBy(?User $user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        if ($this->relationLoaded('favoritedByUsers')) {
+            return $this->favoritedByUsers->contains('id', $user->id);
+        }
+
+        return $this->wishlists()->where('user_id', $user->id)->exists();
+    }
+
     public function orderItems(): \Illuminate\Database\Eloquent\Relations\HasManyThrough
     {
         return $this->hasManyThrough(

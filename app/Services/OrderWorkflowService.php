@@ -2,9 +2,14 @@
 
 namespace App\Services;
 
+use App\Mail\OrderStatusChangedMail;
+use App\Models\LoyaltyTransaction;
 use App\Models\Order;
 use App\Models\ProductVariant;
+use App\Notifications\OrderStatusUpdatedNotification;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 
 class OrderWorkflowService
@@ -94,6 +99,12 @@ class OrderWorkflowService
             $lockedOrder->order_status = $newStatus;
             $lockedOrder->save();
 
+            if ($lockedOrder->order_status === Order::STATUS_COMPLETED && $lockedOrder->payment_status === 'paid') {
+                $this->awardLoyaltyPoints($lockedOrder);
+            }
+
+            $this->notifyCustomer($lockedOrder, $newStatus);
+
             return $lockedOrder;
         });
     }
@@ -156,6 +167,9 @@ class OrderWorkflowService
             $lockedOrder->order_status = Order::STATUS_CANCELED;
             $lockedOrder->save();
 
+            $this->refundLoyaltyPoints($lockedOrder);
+            $this->notifyCustomer($lockedOrder, Order::STATUS_CANCELED);
+
             return $lockedOrder;
         });
     }
@@ -195,7 +209,97 @@ class OrderWorkflowService
             }
             $lockedOrder->save();
 
+            if ($lockedOrder->order_status === Order::STATUS_COMPLETED) {
+                $this->awardLoyaltyPoints($lockedOrder);
+            }
+
             return $lockedOrder;
         });
+    }
+
+    /**
+     * Award loyalty points when an order is completed & paid.
+     */
+    protected function awardLoyaltyPoints(Order $order): void
+    {
+        if (! $order->user_id) {
+            return;
+        }
+
+        $alreadyAwarded = LoyaltyTransaction::where('order_id', $order->id)
+            ->where('type', 'earn')
+            ->exists();
+
+        if ($alreadyAwarded) {
+            return;
+        }
+
+        // 1 point per 10,000 VND
+        $points = (int) floor($order->total_price / 10000);
+        if ($points > 0) {
+            $user = $order->user;
+            if ($user) {
+                $user->increment('loyalty_points', $points);
+                $user->recalculateTier();
+
+                LoyaltyTransaction::create([
+                    'user_id' => $user->id,
+                    'order_id' => $order->id,
+                    'points' => $points,
+                    'type' => 'earn',
+                    'description' => "Tích điểm từ đơn hàng hoàn tất #{$order->order_code}",
+                ]);
+            }
+        }
+    }
+
+    /**
+     * Refund redeemed loyalty points when an order is canceled.
+     */
+    protected function refundLoyaltyPoints(Order $order): void
+    {
+        if (! $order->user_id || $order->points_used <= 0) {
+            return;
+        }
+
+        $alreadyRefunded = LoyaltyTransaction::where('order_id', $order->id)
+            ->where('type', 'refund')
+            ->exists();
+
+        if ($alreadyRefunded) {
+            return;
+        }
+
+        $user = $order->user;
+        if ($user) {
+            $user->increment('loyalty_points', $order->points_used);
+            $user->recalculateTier();
+
+            LoyaltyTransaction::create([
+                'user_id' => $user->id,
+                'order_id' => $order->id,
+                'points' => $order->points_used,
+                'type' => 'refund',
+                'description' => "Hoàn lại {$order->points_used} điểm từ đơn hàng đã hủy #{$order->order_code}",
+            ]);
+        }
+    }
+
+    /**
+     * Notify customer about status transition via notification and email.
+     */
+    protected function notifyCustomer(Order $order, string $newStatus): void
+    {
+        try {
+            if ($order->user) {
+                $order->user->notify(new OrderStatusUpdatedNotification($order, $newStatus));
+            }
+
+            if ($order->customer_email) {
+                Mail::to($order->customer_email)->send(new OrderStatusChangedMail($order, $newStatus));
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Failed to dispatch order status notification/email: ' . $e->getMessage());
+        }
     }
 }
