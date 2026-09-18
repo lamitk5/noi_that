@@ -19,7 +19,7 @@
                 </h1>
                 <p class="hero-reveal hero-reveal-late mt-8 max-w-xl text-base leading-8 text-white/78 sm:text-lg">Nội thất tinh giản từ vật liệu tự nhiên, được tuyển chọn để mỗi góc nhà đều mang cảm giác ấm áp và riêng biệt.</p>
                 <div class="hero-reveal hero-reveal-late mt-10 flex flex-wrap gap-4">
-                    <a href="#san-pham" class="button-primary">Khám phá sản phẩm <span aria-hidden="true">→</span></a>
+                    <a href="{{ route('products.index') }}" class="button-primary">Khám phá sản phẩm <span aria-hidden="true">→</span></a>
                     <a href="#bo-suu-tap" class="button-ghost">Xem bộ sưu tập <span aria-hidden="true">↗</span></a>
                 </div>
             </div>
@@ -67,7 +67,7 @@
                     <p class="eyebrow">Danh mục nổi bật</p>
                     <h2 class="section-title">Tìm cảm hứng cho từng không gian</h2>
                 </div>
-                <a href="#" class="text-link">Xem tất cả <span aria-hidden="true">→</span></a>
+                <a href="{{ route('products.index') }}" class="text-link">Xem tất cả <span aria-hidden="true">→</span></a>
             </div>
 
             @php
@@ -81,7 +81,7 @@
 
             <div class="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-12">
                 @forelse ($categories->take(3) as $category)
-                    <a href="#" class="category-card reveal-on-scroll group min-h-[360px] {{ $loop->first ? 'md:col-span-2 lg:col-span-7 lg:row-span-2 lg:min-h-[560px]' : 'lg:col-span-5 lg:min-h-[270px]' }}" data-delay="{{ $loop->index * 90 }}">
+                    <a href="{{ route('products.index', ['category' => $category->slug]) }}" class="category-card reveal-on-scroll group min-h-[360px] {{ $loop->first ? 'md:col-span-2 lg:col-span-7 lg:row-span-2 lg:min-h-[560px]' : 'lg:col-span-5 lg:min-h-[270px]' }}" data-delay="{{ $loop->index * 90 }}">
                         <img
                             src="{{ $categoryImages[$category->slug] ?? 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1000&q=85' }}"
                             alt="Nội thất {{ $category->name }}"

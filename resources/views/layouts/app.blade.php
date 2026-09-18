@@ -42,10 +42,10 @@
             </a>
 
             <nav class="hidden items-center gap-8 lg:flex" aria-label="Điều hướng chính">
-                <a href="{{ route('home') }}" class="nav-link is-active">Trang chủ</a>
-                <a href="#san-pham" class="nav-link">Sản phẩm</a>
-                <a href="#bo-suu-tap" class="nav-link">Bộ sưu tập</a>
-                <a href="#ve-chung-toi" class="nav-link">Về Mộc An</a>
+                <a href="{{ route('home') }}" class="nav-link {{ request()->routeIs('home') ? 'is-active' : '' }}">Trang chủ</a>
+                <a href="{{ route('products.index') }}" class="nav-link {{ request()->routeIs('products.*') ? 'is-active' : '' }}">Sản phẩm</a>
+                <a href="{{ route('home') }}#bo-suu-tap" class="nav-link">Bộ sưu tập</a>
+                <a href="{{ route('home') }}#ve-chung-toi" class="nav-link">Về Mộc An</a>
                 <a href="#lien-he" class="nav-link">Liên hệ</a>
             </nav>
 
@@ -244,9 +244,9 @@
         <nav id="mobile-menu" class="hidden border-t border-ui-border bg-header px-5 py-4 lg:hidden" aria-label="Điều hướng di động">
             <div class="mx-auto flex max-w-7xl flex-col">
                 <a href="{{ route('home') }}" class="mobile-nav-link">Trang chủ</a>
-                <a href="#san-pham" class="mobile-nav-link">Sản phẩm</a>
-                <a href="#bo-suu-tap" class="mobile-nav-link">Bộ sưu tập</a>
-                <a href="#ve-chung-toi" class="mobile-nav-link">Về Mộc An</a>
+                <a href="{{ route('products.index') }}" class="mobile-nav-link">Sản phẩm</a>
+                <a href="{{ route('home') }}#bo-suu-tap" class="mobile-nav-link">Bộ sưu tập</a>
+                <a href="{{ route('home') }}#ve-chung-toi" class="mobile-nav-link">Về Mộc An</a>
                 <a href="#lien-he" class="mobile-nav-link">Liên hệ</a>
             </div>
         </nav>

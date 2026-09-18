@@ -50,4 +50,21 @@ class ThemeSwitcherTest extends TestCase
         $response->assertSee('bg-surface-alt');
         $response->assertSee('text-heading');
     }
+
+    public function test_catalog_page_contains_theme_switcher_and_tokens(): void
+    {
+        $response = $this->get(route('products.index'));
+
+        $response->assertStatus(200);
+        $response->assertSee('moc-an-theme');
+        $response->assertSee("setTheme('moss')", false);
+        $response->assertSee("setTheme('wood')", false);
+        $response->assertSee("setTheme('cream')", false);
+        $response->assertSee("setTheme('blue')", false);
+        $response->assertSee("setTheme('black')", false);
+        $response->assertSee('bg-page');
+        $response->assertSee('bg-surface');
+        $response->assertSee('text-heading');
+        $response->assertSee('border-ui-border');
+    }
 }
