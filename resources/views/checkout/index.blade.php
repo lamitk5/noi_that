@@ -181,6 +181,42 @@
                             </div>
                         </label>
 
+                        <!-- VNPAY Option -->
+                        <label class="flex items-start gap-3.5 p-4 rounded-2xl border border-ui-border bg-surface-alt hover:border-primary/60 cursor-pointer transition has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                            <input
+                                type="radio"
+                                name="payment_method"
+                                value="vnpay"
+                                class="mt-1 size-4 text-primary focus:ring-primary border-ui-border"
+                                {{ old('payment_method') === 'vnpay' ? 'checked' : '' }}
+                            >
+                            <div class="space-y-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="font-semibold text-heading text-sm">VNPAY - ATM / Ngân hàng / QR</span>
+                                    <span class="rounded bg-sky-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-sky-600 dark:text-sky-400">Trực tuyến</span>
+                                </div>
+                                <p class="text-xs text-muted">Thanh toán an toàn qua cổng VNPAY bằng ứng dụng ngân hàng, thẻ ATM nội địa hoặc quét mã VNPAY-QR.</p>
+                            </div>
+                        </label>
+
+                        <!-- MoMo Option -->
+                        <label class="flex items-start gap-3.5 p-4 rounded-2xl border border-ui-border bg-surface-alt hover:border-primary/60 cursor-pointer transition has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                            <input
+                                type="radio"
+                                name="payment_method"
+                                value="momo"
+                                class="mt-1 size-4 text-primary focus:ring-primary border-ui-border"
+                                {{ old('payment_method') === 'momo' ? 'checked' : '' }}
+                            >
+                            <div class="space-y-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="font-semibold text-heading text-sm">Ví MoMo</span>
+                                    <span class="rounded bg-pink-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-pink-600 dark:text-pink-400">Ví điện tử</span>
+                                </div>
+                                <p class="text-xs text-muted">Thanh toán nhanh chóng bằng ứng dụng Ví điện tử MoMo.</p>
+                            </div>
+                        </label>
+
                         @error('payment_method')
                             <p class="mt-1 text-xs text-rose-500">{{ $message }}</p>
                         @enderror

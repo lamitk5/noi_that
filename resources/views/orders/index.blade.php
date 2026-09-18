@@ -43,6 +43,9 @@
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border {{ $statusClasses[$order->order_status] ?? 'bg-surface-alt text-body border-ui-border' }}">
                                         {{ $statusLabels[$order->order_status] ?? $order->order_status }}
                                     </span>
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border {{ $order->payment_status === 'paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : ($order->payment_status === 'failed' ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-amber-50 text-amber-700 border-amber-200') }}">
+                                        {{ $order->payment_status === 'paid' ? 'Đã thanh toán' : ($order->payment_status === 'failed' ? 'Thanh toán lỗi' : 'Chưa thanh toán') }}
+                                    </span>
                                 </div>
                                 <p class="mt-1 text-xs text-muted">
                                     Đặt ngày {{ $order->created_at ? $order->created_at->format('d/m/Y H:i') : '' }}

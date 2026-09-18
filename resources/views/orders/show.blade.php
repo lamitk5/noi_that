@@ -60,10 +60,23 @@
                     <div>
                         <span class="text-muted block mb-1">Thanh toán</span>
                         <span class="font-medium text-heading">
-                            {{ $order->payment_method === 'cod' ? 'COD' : 'Chuyển khoản' }}
+                            @php
+                                $methodNames = [
+                                    'cod' => 'COD',
+                                    'bank_transfer' => 'Chuyển khoản',
+                                    'vnpay' => 'VNPAY',
+                                    'momo' => 'MoMo',
+                                ];
+                                $paymentStatusLabels = [
+                                    'paid' => 'Đã thanh toán',
+                                    'pending' => 'Chờ thanh toán',
+                                    'failed' => 'Thanh toán thất bại',
+                                ];
+                            @endphp
+                            {{ $methodNames[$order->payment_method] ?? strtoupper($order->payment_method) }}
                         </span>
-                        <span class="text-[11px] text-muted">
-                            ({{ $order->payment_status === 'paid' ? 'Đã thanh toán' : 'Chưa thanh toán' }})
+                        <span class="text-[11px] block mt-0.5 {{ $order->payment_status === 'paid' ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : ($order->payment_status === 'failed' ? 'text-rose-500 font-semibold' : 'text-amber-600 dark:text-amber-400') }}">
+                            ({{ $paymentStatusLabels[$order->payment_status] ?? $order->payment_status }})
                         </span>
                     </div>
                     <div>
@@ -73,6 +86,25 @@
                         </span>
                     </div>
                 </div>
+
+                @if (in_array($order->payment_method, ['vnpay', 'momo']) && $order->payment_status !== 'paid' && $order->order_status !== 'canceled')
+                    <div class="mt-6 pt-5 border-t border-ui-border flex flex-col sm:flex-row items-center justify-between gap-4 bg-surface-alt/50 -mx-6 -mb-6 p-6 rounded-b-3xl">
+                        <div class="text-xs text-muted">
+                            <span class="font-bold text-heading block text-sm mb-0.5">Đơn hàng chưa được thanh toán</span>
+                            <span>Bạn có thể hoàn tất thanh toán ngay bằng cổng {{ strtoupper($order->payment_method) }}.</span>
+                        </div>
+                        <form method="POST" action="{{ route('payments.' . $order->payment_method . '.create', $order->order_code) }}" class="shrink-0 w-full sm:w-auto">
+                            @csrf
+                            <button
+                                type="submit"
+                                class="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-primary-foreground shadow-md shadow-primary/20 transition hover:opacity-95 hover:-translate-y-0.5 cursor-pointer"
+                            >
+                                <span>Thanh toán lại qua {{ strtoupper($order->payment_method) }}</span>
+                                <span aria-hidden="true">→</span>
+                            </button>
+                        </form>
+                    </div>
+                @endif
             </div>
 
             <!-- Items Table -->

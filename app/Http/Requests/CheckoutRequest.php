@@ -19,7 +19,7 @@ class CheckoutRequest extends FormRequest
             'customer_email' => ['nullable', 'email', 'max:255'],
             'shipping_address' => ['required', 'string', 'max:500'],
             'note' => ['nullable', 'string', 'max:1000'],
-            'payment_method' => ['required', 'string', 'in:cod,bank_transfer'],
+            'payment_method' => ['required', 'string', 'in:cod,bank_transfer,vnpay,momo'],
             'checkout_token' => ['required', 'string'],
         ];
     }

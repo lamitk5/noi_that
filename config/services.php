@@ -35,4 +35,17 @@ return [
         ],
     ],
 
+    'vnpay' => [
+        'url' => env('VNPAY_PAYMENT_URL', 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html'),
+        'tmn_code' => env('VNPAY_TMN_CODE'),
+        'hash_secret' => env('VNPAY_HASH_SECRET'),
+    ],
+
+    'momo' => [
+        'url' => env('MOMO_PAYMENT_URL', 'https://test-payment.momo.vn/v2/gateway/api/create'),
+        'partner_code' => env('MOMO_PARTNER_CODE'),
+        'access_key' => env('MOMO_ACCESS_KEY'),
+        'secret_key' => env('MOMO_SECRET_KEY'),
+    ],
+
 ];

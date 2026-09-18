@@ -7,6 +7,8 @@ use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\OrderHistoryController;
+use App\Http\Controllers\Payments\MomoController;
+use App\Http\Controllers\Payments\VnpayController;
 use App\Http\Controllers\ProductController;
 use Illuminate\Support\Facades\Route;
 
@@ -19,6 +21,12 @@ Route::post('/gio-hang', [CartController::class, 'store'])->name('cart.store');
 Route::patch('/gio-hang/{variant}', [CartController::class, 'update'])->name('cart.update');
 Route::delete('/gio-hang/{variant}', [CartController::class, 'destroy'])->name('cart.destroy');
 Route::delete('/gio-hang', [CartController::class, 'clear'])->name('cart.clear');
+
+// Public Payment Callbacks & IPNs
+Route::get('/thanh-toan/vnpay/return', [VnpayController::class, 'return'])->name('payments.vnpay.return');
+Route::get('/api/payment/vnpay/ipn', [VnpayController::class, 'ipn'])->name('payments.vnpay.ipn');
+Route::get('/thanh-toan/momo/return', [MomoController::class, 'return'])->name('payments.momo.return');
+Route::post('/api/payment/momo/ipn', [MomoController::class, 'ipn'])->name('payments.momo.ipn');
 
 Route::middleware('guest')->group(function () {
     Route::get('/dang-nhap', [AuthenticatedSessionController::class, 'create'])->name('login');
@@ -34,6 +42,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/thanh-toan', [CheckoutController::class, 'index'])->name('checkout.index');
     Route::post('/thanh-toan', [CheckoutController::class, 'store'])->name('checkout.store');
     Route::get('/dat-hang-thanh-cong/{order:order_code}', [CheckoutController::class, 'success'])->name('checkout.success');
+
+    // Payment Initiation / Retry
+    Route::post('/thanh-toan/vnpay/{order:order_code}', [VnpayController::class, 'create'])->name('payments.vnpay.create');
+    Route::post('/thanh-toan/momo/{order:order_code}', [MomoController::class, 'create'])->name('payments.momo.create');
 
     Route::get('/tai-khoan', [AccountController::class, 'index'])->name('account.index');
     Route::get('/tai-khoan/chinh-sua', [AccountController::class, 'edit'])->name('account.edit');

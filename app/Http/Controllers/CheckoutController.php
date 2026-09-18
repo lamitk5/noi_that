@@ -79,6 +79,14 @@ class CheckoutController extends Controller
             // Invalidate token after order created
             session()->forget('checkout_token');
 
+            if ($order->payment_method === 'vnpay') {
+                return redirect()->route('payments.vnpay.create', $order->order_code);
+            }
+
+            if ($order->payment_method === 'momo') {
+                return redirect()->route('payments.momo.create', $order->order_code);
+            }
+
             return redirect()
                 ->route('checkout.success', $order->order_code)
                 ->with('success', 'Đặt hàng thành công! Cảm ơn bạn đã tin tưởng Mộc An.');
