@@ -205,18 +205,13 @@
                         </div>
 
                         <div class="space-y-3 pt-2">
-                            <button
-                                type="button"
-                                class="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 text-sm font-bold text-primary-foreground shadow-sm transition hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                                disabled
-                                title="Tính năng thanh toán sẽ được kích hoạt tại Giai đoạn 5"
+                            <a
+                                href="{{ route('checkout.index') }}"
+                                class="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 text-sm font-bold text-primary-foreground shadow-sm transition hover:opacity-95"
                             >
                                 <span>Tiến hành thanh toán</span>
                                 <span aria-hidden="true">→</span>
-                            </button>
-                            <p class="text-[11px] text-center text-muted">
-                                Bước thanh toán sẽ được kích hoạt ở giai đoạn tiếp theo.
-                            </p>
+                            </a>
                         </div>
 
                         <div class="pt-4 border-t border-ui-border space-y-2.5 text-xs text-muted">

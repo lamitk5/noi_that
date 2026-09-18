@@ -56,12 +56,20 @@
                             </div>
                         </div>
 
-                        <div class="pt-4 grid sm:grid-cols-2 gap-4 text-xs text-muted">
-                            <div>
-                                <span class="font-semibold text-heading">Người nhận:</span> {{ $order->customer_name }} ({{ $order->customer_phone }})
+                        <div class="pt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 text-xs text-muted">
+                            <div class="grid sm:grid-cols-2 gap-4 flex-1">
+                                <div>
+                                    <span class="font-semibold text-heading">Người nhận:</span> {{ $order->customer_name }} ({{ $order->customer_phone }})
+                                </div>
+                                <div>
+                                    <span class="font-semibold text-heading">Địa chỉ:</span> {{ $order->shipping_address }}
+                                </div>
                             </div>
-                            <div>
-                                <span class="font-semibold text-heading">Địa chỉ:</span> {{ $order->shipping_address }}
+                            <div class="sm:text-right shrink-0">
+                                <a href="{{ route('orders.show', $order->order_code) }}" class="inline-flex items-center gap-1 font-semibold text-primary hover:underline">
+                                    <span>Xem chi tiết</span>
+                                    <span aria-hidden="true">→</span>
+                                </a>
                             </div>
                         </div>
                     </div>

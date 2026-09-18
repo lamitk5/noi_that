@@ -1,0 +1,271 @@
+@extends('layouts.app')
+
+@section('title', 'Thanh toán đơn hàng | Mộc An')
+
+@section('content')
+<div class="min-h-[70vh] py-12 px-4 sm:px-6 lg:px-8 bg-page">
+    <div class="max-w-6xl mx-auto">
+        <!-- Breadcrumbs -->
+        <nav class="mb-6 flex items-center gap-2 text-xs text-muted" aria-label="Breadcrumb">
+            <a href="{{ route('home') }}" class="hover:text-heading transition">Trang chủ</a>
+            <span>/</span>
+            <a href="{{ route('cart.index') }}" class="hover:text-heading transition">Giỏ hàng</a>
+            <span>/</span>
+            <span class="text-heading font-medium" aria-current="page">Thanh toán</span>
+        </nav>
+
+        <div class="mb-8">
+            <span class="text-[11px] font-bold uppercase tracking-[0.2em] text-accent">Xác nhận đơn hàng</span>
+            <h1 class="mt-1 font-display text-3xl font-semibold text-heading sm:text-4xl">Thanh toán</h1>
+            <p class="mt-2 text-sm text-muted">Vui lòng kiểm tra thông tin nhận hàng và lựa chọn phương thức thanh toán.</p>
+        </div>
+
+        @if (session('error'))
+            <div class="mb-6 rounded-2xl border border-rose-200 bg-rose-50/80 p-4 text-sm text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300" role="alert">
+                <div class="flex items-center gap-2">
+                    <svg viewBox="0 0 24 24" class="size-5 shrink-0 text-rose-600 dark:text-rose-400" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    <span>{{ session('error') }}</span>
+                </div>
+            </div>
+        @endif
+
+        <form method="POST" action="{{ route('checkout.store') }}" class="grid lg:grid-cols-12 gap-8 items-start">
+            @csrf
+            <input type="hidden" name="checkout_token" value="{{ $checkoutToken }}">
+
+            <!-- Left Column: Shipping & Payment -->
+            <div class="lg:col-span-7 space-y-8">
+                <!-- Customer & Shipping Information -->
+                <div class="rounded-3xl border border-ui-border bg-surface p-6 sm:p-8 shadow-sm">
+                    <div class="flex items-center gap-3 border-b border-ui-border pb-4 mb-6">
+                        <span class="grid size-8 place-items-center rounded-full bg-primary/10 text-primary font-bold text-sm">1</span>
+                        <h2 class="font-display text-xl font-bold text-heading">Thông tin giao hàng</h2>
+                    </div>
+
+                    <div class="space-y-5">
+                        <div>
+                            <label for="customer_name" class="block text-xs font-bold uppercase tracking-wider text-heading mb-1.5">
+                                Họ và tên người nhận <span class="text-rose-500">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                id="customer_name"
+                                name="customer_name"
+                                value="{{ old('customer_name', $user->name) }}"
+                                required
+                                autocomplete="name"
+                                placeholder="Ví dụ: Nguyễn Văn A"
+                                class="w-full rounded-xl border border-ui-border bg-surface-alt px-4 py-3 text-sm text-heading placeholder:text-muted focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary @error('customer_name') border-rose-500 @enderror"
+                            >
+                            @error('customer_name')
+                                <p class="mt-1 text-xs text-rose-500">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div class="grid sm:grid-cols-2 gap-5">
+                            <div>
+                                <label for="customer_phone" class="block text-xs font-bold uppercase tracking-wider text-heading mb-1.5">
+                                    Số điện thoại <span class="text-rose-500">*</span>
+                                </label>
+                                <input
+                                    type="tel"
+                                    id="customer_phone"
+                                    name="customer_phone"
+                                    value="{{ old('customer_phone') }}"
+                                    required
+                                    autocomplete="tel"
+                                    placeholder="0912345678"
+                                    class="w-full rounded-xl border border-ui-border bg-surface-alt px-4 py-3 text-sm text-heading placeholder:text-muted focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary @error('customer_phone') border-rose-500 @enderror"
+                                >
+                                @error('customer_phone')
+                                    <p class="mt-1 text-xs text-rose-500">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                            <div>
+                                <label for="customer_email" class="block text-xs font-bold uppercase tracking-wider text-heading mb-1.5">
+                                    Email thông báo
+                                </label>
+                                <input
+                                    type="email"
+                                    id="customer_email"
+                                    name="customer_email"
+                                    value="{{ old('customer_email', $user->email) }}"
+                                    autocomplete="email"
+                                    placeholder="example@domain.com"
+                                    class="w-full rounded-xl border border-ui-border bg-surface-alt px-4 py-3 text-sm text-heading placeholder:text-muted focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary @error('customer_email') border-rose-500 @enderror"
+                                >
+                                @error('customer_email')
+                                    <p class="mt-1 text-xs text-rose-500">{{ $message }}</p>
+                                @enderror
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="shipping_address" class="block text-xs font-bold uppercase tracking-wider text-heading mb-1.5">
+                                Địa chỉ nhận hàng <span class="text-rose-500">*</span>
+                            </label>
+                            <textarea
+                                id="shipping_address"
+                                name="shipping_address"
+                                rows="3"
+                                required
+                                autocomplete="street-address"
+                                placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố..."
+                                class="w-full rounded-xl border border-ui-border bg-surface-alt px-4 py-3 text-sm text-heading placeholder:text-muted focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary @error('shipping_address') border-rose-500 @enderror"
+                            >{{ old('shipping_address') }}</textarea>
+                            @error('shipping_address')
+                                <p class="mt-1 text-xs text-rose-500">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div>
+                            <label for="note" class="block text-xs font-bold uppercase tracking-wider text-heading mb-1.5">
+                                Ghi chú đơn hàng (tùy chọn)
+                            </label>
+                            <textarea
+                                id="note"
+                                name="note"
+                                rows="2"
+                                placeholder="Ghi chú về thời gian giao hàng, chỉ dẫn đường đi..."
+                                class="w-full rounded-xl border border-ui-border bg-surface-alt px-4 py-3 text-sm text-heading placeholder:text-muted focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary @error('note') border-rose-500 @enderror"
+                            >{{ old('note') }}</textarea>
+                            @error('note')
+                                <p class="mt-1 text-xs text-rose-500">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payment Method Selection -->
+                <div class="rounded-3xl border border-ui-border bg-surface p-6 sm:p-8 shadow-sm">
+                    <div class="flex items-center gap-3 border-b border-ui-border pb-4 mb-6">
+                        <span class="grid size-8 place-items-center rounded-full bg-primary/10 text-primary font-bold text-sm">2</span>
+                        <h2 class="font-display text-xl font-bold text-heading">Phương thức thanh toán</h2>
+                    </div>
+
+                    <div class="space-y-4">
+                        <!-- COD Option -->
+                        <label class="flex items-start gap-3.5 p-4 rounded-2xl border border-ui-border bg-surface-alt hover:border-primary/60 cursor-pointer transition has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                            <input
+                                type="radio"
+                                name="payment_method"
+                                value="cod"
+                                class="mt-1 size-4 text-primary focus:ring-primary border-ui-border"
+                                {{ old('payment_method', 'cod') === 'cod' ? 'checked' : '' }}
+                            >
+                            <div class="space-y-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="font-semibold text-heading text-sm">Thanh toán khi nhận hàng (COD)</span>
+                                    <span class="rounded bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Tiện lợi</span>
+                                </div>
+                                <p class="text-xs text-muted">Bạn sẽ thanh toán tiền mặt trực tiếp cho nhân viên vận chuyển khi kiểm tra và nhận hàng.</p>
+                            </div>
+                        </label>
+
+                        <!-- Bank Transfer Option -->
+                        <label class="flex items-start gap-3.5 p-4 rounded-2xl border border-ui-border bg-surface-alt hover:border-primary/60 cursor-pointer transition has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                            <input
+                                type="radio"
+                                name="payment_method"
+                                value="bank_transfer"
+                                class="mt-1 size-4 text-primary focus:ring-primary border-ui-border"
+                                {{ old('payment_method') === 'bank_transfer' ? 'checked' : '' }}
+                            >
+                            <div class="space-y-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="font-semibold text-heading text-sm">Chuyển khoản ngân hàng</span>
+                                    <span class="rounded bg-blue-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">An toàn</span>
+                                </div>
+                                <p class="text-xs text-muted">Thông tin tài khoản ngân hàng chi tiết sẽ được hiển thị ngay sau khi bạn hoàn tất đặt hàng.</p>
+                            </div>
+                        </label>
+
+                        @error('payment_method')
+                            <p class="mt-1 text-xs text-rose-500">{{ $message }}</p>
+                        @enderror
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Order Summary -->
+            <div class="lg:col-span-5 space-y-6">
+                <div class="rounded-3xl border border-ui-border bg-surface p-6 sm:p-8 shadow-sm sticky top-28">
+                    <h2 class="font-display text-xl font-bold text-heading border-b border-ui-border pb-4 mb-4">
+                        Đơn hàng của bạn ({{ $items->count() }} sản phẩm)
+                    </h2>
+
+                    <!-- Items List -->
+                    <div class="divide-y divide-ui-border max-h-80 overflow-y-auto pr-1 space-y-3">
+                        @foreach ($items as $item)
+                            <div class="flex items-center gap-4 pt-3 first:pt-0">
+                                <div class="size-16 rounded-xl border border-ui-border bg-surface-alt overflow-hidden shrink-0">
+                                    @if ($item->product->primaryImage)
+                                        <img src="{{ $item->product->primaryImage->image_path }}" alt="{{ $item->product->name }}" class="size-full object-cover">
+                                    @else
+                                        <div class="size-full flex items-center justify-center text-muted">
+                                            <svg viewBox="0 0 24 24" class="size-6" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                        </div>
+                                    @endif
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <h3 class="font-medium text-heading text-sm truncate">{{ $item->product->name }}</h3>
+                                    <p class="text-xs text-muted">
+                                        {{ $item->variant->color }} - {{ $item->variant->size }}
+                                    </p>
+                                    <p class="text-xs text-muted mt-0.5">
+                                        {{ $item->quantity }} × {{ number_format($item->unit_price, 0, ',', '.') }}₫
+                                    </p>
+                                </div>
+                                <div class="text-right shrink-0">
+                                    <span class="font-display text-sm font-bold text-heading">
+                                        {{ number_format($item->line_total, 0, ',', '.') }}₫
+                                    </span>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+
+                    <!-- Price Calculations -->
+                    <div class="space-y-3 pt-6 border-t border-ui-border mt-4 text-sm">
+                        <div class="flex justify-between text-muted">
+                            <span>Tạm tính</span>
+                            <span class="font-semibold text-heading">{{ number_format($subtotal, 0, ',', '.') }}₫</span>
+                        </div>
+                        <div class="flex justify-between text-muted">
+                            <span>Phí vận chuyển</span>
+                            <span class="font-semibold text-emerald-600 dark:text-emerald-400">
+                                {{ $shippingFee > 0 ? number_format($shippingFee, 0, ',', '.') . '₫' : 'Miễn phí' }}
+                            </span>
+                        </div>
+                        <div class="flex justify-between items-baseline pt-4 border-t border-ui-border">
+                            <div>
+                                <span class="font-bold text-heading block">Tổng thanh toán</span>
+                                <span class="text-[11px] text-muted">(Đã bao gồm thuế VAT nếu có)</span>
+                            </div>
+                            <span class="font-display text-2xl font-bold text-primary">
+                                {{ number_format($totalPrice, 0, ',', '.') }}₫
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div class="pt-6">
+                        <button
+                            type="submit"
+                            class="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-4 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/20 transition hover:opacity-95 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
+                        >
+                            <span>Xác nhận đặt hàng</span>
+                            <span aria-hidden="true">→</span>
+                        </button>
+                    </div>
+
+                    <p class="text-center text-[11px] text-muted mt-3">
+                        Bằng việc bấm đặt hàng, bạn đồng ý với Điều khoản mua hàng & Bảo mật của Mộc An.
+                    </p>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+@endsection
