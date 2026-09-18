@@ -237,10 +237,10 @@
                         </div>
                     </div>
                 </div>
-                <button class="icon-button relative" type="button" aria-label="Giỏ hàng">
+                <a href="{{ route('cart.index') }}" class="icon-button relative" aria-label="Giỏ hàng">
                     <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 4h2l2 11h10l2-8H6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9" cy="19" r="1"/><circle cx="17" cy="19" r="1"/></svg>
-                    <span class="absolute right-0.5 top-0.5 grid size-4 place-items-center rounded-full bg-accent text-[9px] font-bold text-accent-foreground">0</span>
-                </button>
+                    <span class="absolute right-0.5 top-0.5 grid size-4 place-items-center rounded-full bg-accent text-[9px] font-bold text-accent-foreground">{{ $cartCount ?? 0 }}</span>
+                </a>
                 <button id="menu-toggle" class="icon-button lg:hidden" type="button" aria-label="Mở menu" aria-expanded="false">
                     <svg id="menu-open-icon" viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h16" stroke-linecap="round"/></svg>
                     <svg id="menu-close-icon" viewBox="0 0 24 24" class="hidden size-5" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m6 6 12 12M18 6 6 18" stroke-linecap="round"/></svg>
@@ -252,6 +252,10 @@
             <div class="mx-auto flex max-w-7xl flex-col">
                 <a href="{{ route('home') }}" class="mobile-nav-link">Trang chủ</a>
                 <a href="{{ route('products.index') }}" class="mobile-nav-link">Sản phẩm</a>
+                <a href="{{ route('cart.index') }}" class="mobile-nav-link flex items-center justify-between">
+                    <span>Giỏ hàng</span>
+                    <span class="rounded-full bg-accent px-2 py-0.5 text-xs font-semibold text-accent-foreground">{{ $cartCount ?? 0 }}</span>
+                </a>
                 <a href="{{ route('home') }}#bo-suu-tap" class="mobile-nav-link">Bộ sưu tập</a>
                 <a href="{{ route('home') }}#ve-chung-toi" class="mobile-nav-link">Về Mộc An</a>
                 <a href="#lien-he" class="mobile-nav-link">Liên hệ</a>

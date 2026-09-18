@@ -3,6 +3,7 @@
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\CartController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\OrderHistoryController;
 use App\Http\Controllers\ProductController;
@@ -11,6 +12,12 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/san-pham', [ProductController::class, 'index'])->name('products.index');
 Route::get('/san-pham/{product:slug}', [ProductController::class, 'show'])->name('products.show');
+
+Route::get('/gio-hang', [CartController::class, 'index'])->name('cart.index');
+Route::post('/gio-hang', [CartController::class, 'store'])->name('cart.store');
+Route::patch('/gio-hang/{variant}', [CartController::class, 'update'])->name('cart.update');
+Route::delete('/gio-hang/{variant}', [CartController::class, 'destroy'])->name('cart.destroy');
+Route::delete('/gio-hang', [CartController::class, 'clear'])->name('cart.clear');
 
 Route::middleware('guest')->group(function () {
     Route::get('/dang-nhap', [AuthenticatedSessionController::class, 'create'])->name('login');

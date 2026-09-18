@@ -221,26 +221,32 @@
                         <span class="text-xs text-muted" x-text="stockStatusMessage"></span>
                     </div>
 
-                    <!-- Cart Buttons (Disabled state in Phase 2 until Cart is built in Phase 4) -->
-                    <div class="flex flex-col sm:flex-row items-center gap-3 pt-2">
-                        <button
-                            type="button"
-                            class="w-full sm:flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 text-sm font-bold text-primary-foreground shadow-sm transition hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                            :disabled="isOutOfStock"
-                            title="Tính năng thêm vào giỏ sẽ khả dụng ở giai đoạn Giỏ hàng"
-                        >
-                            <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 4h2l2 11h10l2-8H6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9" cy="19" r="1"/><circle cx="17" cy="19" r="1"/></svg>
-                            <span>Thêm vào giỏ</span>
-                        </button>
-                        <button
-                            type="button"
-                            class="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-ui-border bg-surface px-5 py-3.5 text-sm font-bold text-heading hover:border-primary transition"
-                            aria-label="Thêm vào danh sách yêu thích"
-                        >
-                            <svg viewBox="0 0 24 24" class="size-5 text-muted hover:text-red-500 transition-colors" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20.8 5.7a5.5 5.5 0 0 0-7.8 0L12 6.8l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 22l8.8-8.5a5.5 5.5 0 0 0 0-7.8Z"/></svg>
-                            <span class="sm:hidden">Yêu thích</span>
-                        </button>
-                    </div>
+                    <!-- Cart Form -->
+                    <form method="POST" action="{{ route('cart.store') }}" class="pt-2">
+                        @csrf
+                        <input type="hidden" name="variant_id" :value="selectedVariantId">
+                        <input type="hidden" name="quantity" :value="quantity">
+
+                        <div class="flex flex-col sm:flex-row items-center gap-3">
+                            <button
+                                type="submit"
+                                class="w-full sm:flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 text-sm font-bold text-primary-foreground shadow-sm transition hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                                :disabled="isOutOfStock || !selectedVariantId"
+                                title="Thêm sản phẩm vào giỏ hàng"
+                            >
+                                <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 4h2l2 11h10l2-8H6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9" cy="19" r="1"/><circle cx="17" cy="19" r="1"/></svg>
+                                <span>Thêm vào giỏ</span>
+                            </button>
+                            <button
+                                type="button"
+                                class="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-ui-border bg-surface px-5 py-3.5 text-sm font-bold text-heading hover:border-primary transition"
+                                aria-label="Thêm vào danh sách yêu thích"
+                            >
+                                <svg viewBox="0 0 24 24" class="size-5 text-muted hover:text-red-500 transition-colors" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20.8 5.7a5.5 5.5 0 0 0-7.8 0L12 6.8l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 22l8.8-8.5a5.5 5.5 0 0 0 0-7.8Z"/></svg>
+                                <span class="sm:hidden">Yêu thích</span>
+                            </button>
+                        </div>
+                    </form>
                 </div>
 
                 <!-- Commitment & Value Props -->
