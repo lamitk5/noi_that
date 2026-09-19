@@ -26,6 +26,9 @@ class DatabaseSeeder extends Seeder
             ['name' => 'Khách hàng Demo', 'password' => Hash::make('Customer@123'), 'role' => 'customer'],
         );
 
-        $this->call(ProductCatalogSeeder::class);
+        $this->call([
+            ProductCatalogSeeder::class,
+            DemoDataSeeder::class,
+        ]);
     }
 }
