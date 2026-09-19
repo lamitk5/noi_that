@@ -37,6 +37,15 @@ class CheckoutController extends Controller
         $token = Str::random(40);
         session()->put('checkout_token', $token);
 
+        // Record behavioral tracking
+        app(\App\Services\Analytics\BehavioralTracker::class)->track(
+            $request,
+            \App\Models\UserEvent::EVENT_CHECKOUT_STARTED,
+            'cart',
+            null,
+            ['items_count' => $items->count(), 'subtotal' => (float) $this->cartService->subtotal()]
+        );
+
         $user = $request->user();
         $subtotal = $this->cartService->subtotal();
         $shippingFee = (float) config('shop.shipping_fee', 0);

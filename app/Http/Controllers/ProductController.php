@@ -68,6 +68,15 @@ class ProductController extends Controller
         // Record browsing history
         $recommendationService->recordView($product);
 
+        // Record behavioral tracking
+        app(\App\Services\Analytics\BehavioralTracker::class)->track(
+            request(),
+            \App\Models\UserEvent::EVENT_VIEW_PRODUCT,
+            'product',
+            $product->id,
+            ['name' => $product->name, 'price' => (float) $product->base_price]
+        );
+
         $reviewsCount = $product->reviews()->count();
         $reviewsAvg = $reviewsCount > 0 ? round((float) $product->reviews()->avg('rating'), 1) : 0;
         $reviews = $product->reviews()->with('user')->latest()->paginate(5, ['*'], 'reviews_page')->withQueryString();

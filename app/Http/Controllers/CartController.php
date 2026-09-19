@@ -26,6 +26,14 @@ class CartController extends Controller
 
         $cartService->add((int) $validated['variant_id'], (int) $validated['quantity']);
 
+        app(\App\Services\Analytics\BehavioralTracker::class)->track(
+            $request,
+            \App\Models\UserEvent::EVENT_ADD_TO_CART,
+            'product_variant',
+            (int) $validated['variant_id'],
+            ['quantity' => (int) $validated['quantity']]
+        );
+
         return redirect()->route('cart.index')->with('status', 'Đã thêm sản phẩm vào giỏ hàng.');
     }
 

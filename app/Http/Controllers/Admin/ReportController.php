@@ -98,6 +98,8 @@ class ReportController extends Controller
             ->orderBy('date')
             ->get();
 
+        $behavioralSummary = app(\App\Services\Analytics\BehavioralTracker::class)->getAnalyticsSummary();
+
         return view('admin.reports.index', [
             'preset' => $preset,
             'startDate' => $startDate->toDateString(),
@@ -108,6 +110,7 @@ class ReportController extends Controller
                 'aov' => $averageOrderValue,
                 'items_sold' => $totalItemsSold,
             ],
+            'behavioralSummary' => $behavioralSummary,
             'paymentBreakdown' => $paymentBreakdown,
             'topProducts' => $topProducts,
             'dailyRecords' => $dailyRecords,

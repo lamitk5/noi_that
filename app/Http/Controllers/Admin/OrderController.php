@@ -89,6 +89,19 @@ class OrderController extends Controller
         try {
             $this->orderWorkflowService->transition($order, $validated['status']);
 
+            // Auto dispatch shipping tracking if transitioned to shipping
+            if ($validated['status'] === 'shipping' && empty($order->tracking_code)) {
+                $shippingManager = app(\App\Services\Shipping\ShippingManager::class);
+                $carrier = $request->input('shipping_carrier', 'ghn');
+                $shipment = $shippingManager->createShipment($order->order_code, $carrier);
+
+                $order->update([
+                    'shipping_carrier' => $shipment['provider'],
+                    'tracking_code' => $shipment['tracking_code'],
+                    'shipped_at' => now(),
+                ]);
+            }
+
             return redirect()
                 ->route('admin.orders.show', $order->order_code)
                 ->with('success', 'Đã cập nhật trạng thái đơn hàng thành công.');

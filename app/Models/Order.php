@@ -45,6 +45,9 @@ class Order extends Model
         'payment_method',
         'payment_status',
         'order_status',
+        'shipping_carrier',
+        'tracking_code',
+        'shipped_at',
     ];
 
     protected function casts(): array
@@ -55,6 +58,7 @@ class Order extends Model
             'discount_amount' => 'decimal:2',
             'points_discount' => 'decimal:2',
             'points_used' => 'integer',
+            'shipped_at' => 'datetime',
         ];
     }
 

@@ -55,13 +55,17 @@ Route::get('/chinh-sach-bao-hanh', [CmsPageController::class, 'show'])->defaults
 Route::get('/chinh-sach-doi-tra', [CmsPageController::class, 'show'])->defaults('slug', 'chinh-sach-doi-tra')->name('pages.return-policy');
 Route::get('/trang/{slug}', [CmsPageController::class, 'show'])->name('pages.show');
 
-// Guest Authentication
+// Guest Authentication & Social Login
 Route::middleware('guest')->group(function () {
     Route::get('/dang-nhap', [AuthenticatedSessionController::class, 'create'])->name('login');
     Route::post('/dang-nhap', [AuthenticatedSessionController::class, 'store'])->name('login.store');
 
     Route::get('/dang-ky', [RegisteredUserController::class, 'create'])->name('register');
     Route::post('/dang-ky', [RegisteredUserController::class, 'store'])->name('register.store');
+
+    // Social Authentication (Google, Facebook)
+    Route::get('/auth/{provider}/redirect', [\App\Http\Controllers\Auth\SocialAuthController::class, 'redirect'])->name('auth.social.redirect');
+    Route::get('/auth/{provider}/callback', [\App\Http\Controllers\Auth\SocialAuthController::class, 'callback'])->name('auth.social.callback');
 });
 
 // Authenticated Customer Area

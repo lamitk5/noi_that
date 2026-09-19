@@ -95,8 +95,23 @@
                                     </div>
                                 </div>
                             @endforeach
-                        </div>
                     </div>
+
+                    @if ($order->tracking_code)
+                        <div class="mt-6 pt-6 border-t border-ui-border flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl bg-surface-alt p-4">
+                            <div>
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-muted">Đơn vị vận chuyển & Mã vận đơn</span>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <span class="font-bold text-heading text-sm">{{ strtoupper($order->shipping_carrier ?? 'GHN') }} Express:</span>
+                                    <code class="px-2 py-0.5 rounded bg-surface border border-ui-border font-mono text-xs text-primary font-bold">{{ $order->tracking_code }}</code>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="size-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                <span class="text-xs text-muted">Đang trên đường giao đến bạn</span>
+                            </div>
+                        </div>
+                    @endif
                 </div>
             @endif
 

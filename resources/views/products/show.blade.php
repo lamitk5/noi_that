@@ -287,6 +287,56 @@
                                 <span class="sm:hidden">Yêu thích</span>
                             </a>
                         @endauth
+
+                        <!-- Social Share Modal/Dropdown -->
+                        <div x-data="{ shareOpen: false, copied: false }" class="relative w-full sm:w-auto">
+                            <button
+                                @click="shareOpen = !shareOpen"
+                                type="button"
+                                class="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-ui-border bg-surface px-4 py-3.5 text-sm font-bold text-heading hover:border-primary transition cursor-pointer"
+                                title="Chia sẻ sản phẩm"
+                            >
+                                <svg class="size-5 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.7">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z" />
+                                </svg>
+                                <span class="text-xs sm:hidden">Chia sẻ</span>
+                            </button>
+
+                            <div
+                                x-show="shareOpen"
+                                @click.outside="shareOpen = false"
+                                x-cloak
+                                class="absolute right-0 bottom-full sm:bottom-auto sm:top-full mt-2 mb-2 w-56 rounded-2xl border border-ui-border bg-surface p-3 shadow-xl z-30 space-y-1.5 text-xs"
+                            >
+                                <div class="font-bold text-heading pb-1 border-b border-ui-border text-[11px] uppercase tracking-wider">Chia sẻ sản phẩm</div>
+                                <a
+                                    :href="'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(window.location.href)"
+                                    target="_blank"
+                                    rel="noopener"
+                                    class="flex items-center gap-2.5 p-2 rounded-xl hover:bg-surface-alt text-heading hover:text-blue-600 transition"
+                                >
+                                    <span class="size-6 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs">f</span>
+                                    <span>Facebook</span>
+                                </a>
+                                <a
+                                    :href="'https://twitter.com/intent/tweet?url=' + encodeURIComponent(window.location.href) + '&text=' + encodeURIComponent('{{ $product->name }} tại Mộc An')"
+                                    target="_blank"
+                                    rel="noopener"
+                                    class="flex items-center gap-2.5 p-2 rounded-xl hover:bg-surface-alt text-heading hover:text-sky-500 transition"
+                                >
+                                    <span class="size-6 rounded-full bg-black text-white flex items-center justify-center font-bold text-xs">𝕏</span>
+                                    <span>Twitter / X</span>
+                                </a>
+                                <button
+                                    type="button"
+                                    @click="navigator.clipboard.writeText(window.location.href); copied = true; setTimeout(() => copied = false, 2000)"
+                                    class="w-full flex items-center gap-2.5 p-2 rounded-xl hover:bg-surface-alt text-heading text-left transition cursor-pointer"
+                                >
+                                    <span class="size-6 rounded-full bg-stone-200 dark:bg-stone-700 text-heading flex items-center justify-center text-xs">🔗</span>
+                                    <span x-text="copied ? 'Đã sao chép!' : 'Sao chép liên kết'"></span>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

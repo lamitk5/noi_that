@@ -95,6 +95,38 @@
         </div>
     </div>
 
+    <!-- Behavioral & Conversion Funnel Cards -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="p-4 rounded-2xl bg-surface border border-ui-border">
+            <div class="text-[11px] font-semibold text-muted uppercase tracking-wider">Lượt xem sản phẩm</div>
+            <div class="text-xl font-bold font-display text-heading mt-1">
+                {{ number_format($behavioralSummary['total_views'] ?? 0) }}
+            </div>
+            <div class="text-[10px] text-muted mt-0.5">Hành vi người dùng</div>
+        </div>
+        <div class="p-4 rounded-2xl bg-surface border border-ui-border">
+            <div class="text-[11px] font-semibold text-muted uppercase tracking-wider">Lượt thêm vào giỏ</div>
+            <div class="text-xl font-bold font-display text-heading mt-1">
+                {{ number_format($behavioralSummary['total_cart_adds'] ?? 0) }}
+            </div>
+            <div class="text-[10px] text-muted mt-0.5">Sự quan tâm mua hàng</div>
+        </div>
+        <div class="p-4 rounded-2xl bg-surface border border-ui-border">
+            <div class="text-[11px] font-semibold text-muted uppercase tracking-wider">Bắt đầu thanh toán</div>
+            <div class="text-xl font-bold font-display text-heading mt-1">
+                {{ number_format($behavioralSummary['total_checkouts'] ?? 0) }}
+            </div>
+            <div class="text-[10px] text-muted mt-0.5">Vào trang Checkout</div>
+        </div>
+        <div class="p-4 rounded-2xl bg-surface border border-ui-border">
+            <div class="text-[11px] font-semibold text-muted uppercase tracking-wider">Tỷ lệ bỏ quên giỏ hàng</div>
+            <div class="text-xl font-bold font-display text-amber-600 dark:text-amber-400 mt-1">
+                {{ $behavioralSummary['cart_abandonment_rate'] ?? 0 }}%
+            </div>
+            <div class="text-[10px] text-muted mt-0.5">(Thêm giỏ - Checkout) / Thêm giỏ</div>
+        </div>
+    </div>
+
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Payment Methods Breakdown -->
         <div class="lg:col-span-1 p-5 rounded-2xl bg-surface border border-ui-border space-y-4">
