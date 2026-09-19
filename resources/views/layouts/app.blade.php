@@ -44,9 +44,10 @@
             <nav class="hidden items-center gap-8 lg:flex" aria-label="Điều hướng chính">
                 <a href="{{ route('home') }}" class="nav-link {{ request()->routeIs('home') ? 'is-active' : '' }}">Trang chủ</a>
                 <a href="{{ route('products.index') }}" class="nav-link {{ request()->routeIs('products.*') ? 'is-active' : '' }}">Sản phẩm</a>
-                <a href="{{ route('home') }}#bo-suu-tap" class="nav-link">Bộ sưu tập</a>
-                <a href="{{ route('home') }}#ve-chung-toi" class="nav-link">Về Mộc An</a>
-                <a href="#lien-he" class="nav-link">Liên hệ</a>
+                <a href="{{ route('posts.index') }}" class="nav-link {{ request()->routeIs('posts.*') ? 'is-active' : '' }}">Tin tức & Mẹo</a>
+                <a href="{{ route('faq.index') }}" class="nav-link {{ request()->routeIs('faq.*') ? 'is-active' : '' }}">Hỏi đáp (FAQ)</a>
+                <a href="{{ route('pages.about') }}" class="nav-link {{ request()->routeIs('pages.about') ? 'is-active' : '' }}">Về Mộc An</a>
+                <a href="{{ route('pages.contact') }}" class="nav-link {{ request()->routeIs('pages.contact*') ? 'is-active' : '' }}">Liên hệ</a>
             </nav>
 
             <div class="flex items-center gap-1 sm:gap-2">
@@ -149,6 +150,13 @@
                                         <a href="{{ route('account.loyalty') }}" class="flex items-center gap-2.5 rounded-lg px-2.5 py-2 hover:bg-surface-alt hover:text-heading transition-colors">
                                             <svg viewBox="0 0 24 24" class="size-4 text-muted" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 6v12M9 9h6"/></svg>
                                             <span>Điểm thưởng & Hạng TV</span>
+                                        </a>
+                                    @endif
+
+                                    @if (Route::has('account.tickets.index'))
+                                        <a href="{{ route('account.tickets.index') }}" class="flex items-center gap-2.5 rounded-lg px-2.5 py-2 hover:bg-surface-alt hover:text-heading transition-colors">
+                                            <svg viewBox="0 0 24 24" class="size-4 text-muted" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+                                            <span>Phiếu hỗ trợ (Tickets)</span>
                                         </a>
                                     @endif
 
@@ -303,11 +311,13 @@
                 </div>
             </div>
             <div>
-                <h3 class="footer-title">Hỗ trợ</h3>
+                <h3 class="footer-title">Hỗ trợ & Thông tin</h3>
                 <div class="mt-5 flex flex-col gap-3 text-sm text-white/65">
-                    <a href="#" class="hover:text-white">Chính sách giao hàng</a>
-                    <a href="#" class="hover:text-white">Bảo hành & đổi trả</a>
-                    <a href="#" class="hover:text-white">Câu hỏi thường gặp</a>
+                    <a href="{{ route('pages.purchase-policy') }}" class="hover:text-white">Chính sách mua hàng</a>
+                    <a href="{{ route('pages.warranty-policy') }}" class="hover:text-white">Bảo hành 24 tháng</a>
+                    <a href="{{ route('pages.return-policy') }}" class="hover:text-white">Chính sách đổi trả</a>
+                    <a href="{{ route('faq.index') }}" class="hover:text-white">Câu hỏi thường gặp (FAQ)</a>
+                    <a href="{{ route('pages.contact') }}" class="hover:text-white">Liên hệ & Góp ý</a>
                 </div>
             </div>
             <div>
@@ -326,5 +336,8 @@
             </div>
         </div>
     </footer>
+
+    {{-- Live Support Floating Widget --}}
+    <x-live-support-widget />
 </body>
 </html>

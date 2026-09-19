@@ -77,6 +77,11 @@ class User extends Authenticatable
         return $this->hasMany(LoyaltyTransaction::class)->latest();
     }
 
+    public function supportTickets(): HasMany
+    {
+        return $this->hasMany(SupportTicket::class)->latest('last_reply_at');
+    }
+
     public function recalculateTier(): string
     {
         $points = (int) $this->loyalty_points;

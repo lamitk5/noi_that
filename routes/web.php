@@ -5,17 +5,26 @@ use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\CmsPageController;
+use App\Http\Controllers\FaqController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OrderHistoryController;
 use App\Http\Controllers\Payments\MomoController;
 use App\Http\Controllers\Payments\VnpayController;
+use App\Http\Controllers\PostController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ReviewController;
+use App\Http\Controllers\TicketController;
+use App\Http\Controllers\WishlistController;
 use Illuminate\Support\Facades\Route;
 
+// Storefront Home & Catalog
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/san-pham', [ProductController::class, 'index'])->name('products.index');
 Route::get('/san-pham/{product:slug}', [ProductController::class, 'show'])->name('products.show');
 
+// Shopping Cart
 Route::get('/gio-hang', [CartController::class, 'index'])->name('cart.index');
 Route::post('/gio-hang', [CartController::class, 'store'])->name('cart.store');
 Route::patch('/gio-hang/{variant}', [CartController::class, 'update'])->name('cart.update');
@@ -28,6 +37,25 @@ Route::get('/api/payment/vnpay/ipn', [VnpayController::class, 'ipn'])->name('pay
 Route::get('/thanh-toan/momo/return', [MomoController::class, 'return'])->name('payments.momo.return');
 Route::post('/api/payment/momo/ipn', [MomoController::class, 'ipn'])->name('payments.momo.ipn');
 
+// Storefront FAQ
+Route::get('/cau-hoi-thuong-gap', [FaqController::class, 'index'])->name('faq.index');
+
+// Storefront Blog / Posts
+Route::get('/tin-tuc', [PostController::class, 'index'])->name('posts.index');
+Route::get('/tin-tuc/{slug}', [PostController::class, 'show'])->name('posts.show');
+
+// Storefront Contact & Inquiries
+Route::get('/lien-he', [CmsPageController::class, 'contact'])->name('pages.contact');
+Route::post('/lien-he', [CmsPageController::class, 'submitContact'])->name('pages.contact.store');
+
+// Storefront CMS Static Pages (Specific shortcuts & generic fallback)
+Route::get('/gioi-thieu', [CmsPageController::class, 'show'])->defaults('slug', 'gioi-thieu')->name('pages.about');
+Route::get('/chinh-sach-mua-hang', [CmsPageController::class, 'show'])->defaults('slug', 'chinh-sach-mua-hang')->name('pages.purchase-policy');
+Route::get('/chinh-sach-bao-hanh', [CmsPageController::class, 'show'])->defaults('slug', 'chinh-sach-bao-hanh')->name('pages.warranty-policy');
+Route::get('/chinh-sach-doi-tra', [CmsPageController::class, 'show'])->defaults('slug', 'chinh-sach-doi-tra')->name('pages.return-policy');
+Route::get('/trang/{slug}', [CmsPageController::class, 'show'])->name('pages.show');
+
+// Guest Authentication
 Route::middleware('guest')->group(function () {
     Route::get('/dang-nhap', [AuthenticatedSessionController::class, 'create'])->name('login');
     Route::post('/dang-nhap', [AuthenticatedSessionController::class, 'store'])->name('login.store');
@@ -36,6 +64,7 @@ Route::middleware('guest')->group(function () {
     Route::post('/dang-ky', [RegisteredUserController::class, 'store'])->name('register.store');
 });
 
+// Authenticated Customer Area
 Route::middleware('auth')->group(function () {
     Route::post('/dang-xuat', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 
@@ -53,18 +82,25 @@ Route::middleware('auth')->group(function () {
     Route::get('/tai-khoan/don-hang', [OrderHistoryController::class, 'index'])->name('orders.index');
     Route::get('/tai-khoan/don-hang/{order:order_code}', [OrderHistoryController::class, 'show'])->name('orders.show');
 
+    // Customer Support Tickets
+    Route::get('/tai-khoan/ho-tro', [TicketController::class, 'index'])->name('account.tickets.index');
+    Route::get('/tai-khoan/ho-tro/tao-moi', [TicketController::class, 'create'])->name('account.tickets.create');
+    Route::post('/tai-khoan/ho-tro', [TicketController::class, 'store'])->name('account.tickets.store');
+    Route::get('/tai-khoan/ho-tro/{ticket:ticket_code}', [TicketController::class, 'show'])->name('account.tickets.show');
+    Route::post('/tai-khoan/ho-tro/{ticket:ticket_code}/phan-hoi', [TicketController::class, 'reply'])->name('account.tickets.reply');
+
     // Wishlist
-    Route::get('/tai-khoan/yeu-thich', [\App\Http\Controllers\WishlistController::class, 'index'])->name('account.wishlist');
-    Route::post('/san-pham/{product:slug}/yeu-thich', [\App\Http\Controllers\WishlistController::class, 'toggle'])->name('wishlist.toggle');
-    Route::delete('/tai-khoan/yeu-thich/{product:slug}', [\App\Http\Controllers\WishlistController::class, 'destroy'])->name('wishlist.destroy');
+    Route::get('/tai-khoan/yeu-thich', [WishlistController::class, 'index'])->name('account.wishlist');
+    Route::post('/san-pham/{product:slug}/yeu-thich', [WishlistController::class, 'toggle'])->name('wishlist.toggle');
+    Route::delete('/tai-khoan/yeu-thich/{product:slug}', [WishlistController::class, 'destroy'])->name('wishlist.destroy');
 
     // Loyalty Points & Rewards
     Route::get('/tai-khoan/diem-thuong', [AccountController::class, 'loyalty'])->name('account.loyalty');
 
     // Notifications
-    Route::get('/tai-khoan/thong-bao', [\App\Http\Controllers\NotificationController::class, 'index'])->name('account.notifications');
-    Route::patch('/tai-khoan/thong-bao-tat-ca', [\App\Http\Controllers\NotificationController::class, 'markAllAsRead'])->name('account.notifications.read-all');
-    Route::patch('/tai-khoan/thong-bao/{id}', [\App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('account.notifications.read');
+    Route::get('/tai-khoan/thong-bao', [NotificationController::class, 'index'])->name('account.notifications');
+    Route::patch('/tai-khoan/thong-bao-tat-ca', [NotificationController::class, 'markAllAsRead'])->name('account.notifications.read-all');
+    Route::patch('/tai-khoan/thong-bao/{id}', [NotificationController::class, 'markAsRead'])->name('account.notifications.read');
 
     // Checkout Voucher & Loyalty Points
     Route::post('/thanh-toan/ma-giam-gia', [CheckoutController::class, 'applyVoucher'])->name('checkout.apply-voucher');
@@ -73,11 +109,12 @@ Route::middleware('auth')->group(function () {
     Route::delete('/thanh-toan/diem-thuong', [CheckoutController::class, 'removePoints'])->name('checkout.remove-points');
 
     // Product Reviews
-    Route::post('/san-pham/{product:slug}/danh-gia', [\App\Http\Controllers\ReviewController::class, 'store'])->name('reviews.store');
-    Route::patch('/danh-gia/{review}', [\App\Http\Controllers\ReviewController::class, 'update'])->name('reviews.update');
-    Route::delete('/danh-gia/{review}', [\App\Http\Controllers\ReviewController::class, 'destroy'])->name('reviews.destroy');
+    Route::post('/san-pham/{product:slug}/danh-gia', [ReviewController::class, 'store'])->name('reviews.store');
+    Route::patch('/danh-gia/{review}', [ReviewController::class, 'update'])->name('reviews.update');
+    Route::delete('/danh-gia/{review}', [ReviewController::class, 'destroy'])->name('reviews.destroy');
 });
 
+// Admin Dashboard & Backoffice
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [\App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('dashboard');
     Route::get('/don-hang', [\App\Http\Controllers\Admin\OrderController::class, 'index'])->name('orders.index');
@@ -118,4 +155,25 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
 
     // Reports & Analytics
     Route::get('bao-cao', [\App\Http\Controllers\Admin\ReportController::class, 'index'])->name('reports.index');
+
+    // Support Tickets (Customer Inquiries)
+    Route::get('ho-tro', [\App\Http\Controllers\Admin\TicketController::class, 'index'])->name('tickets.index');
+    Route::get('ho-tro/{ticket:ticket_code}', [\App\Http\Controllers\Admin\TicketController::class, 'show'])->name('tickets.show');
+    Route::patch('ho-tro/{ticket:ticket_code}/trang-thai', [\App\Http\Controllers\Admin\TicketController::class, 'updateStatus'])->name('tickets.update-status');
+    Route::post('ho-tro/{ticket:ticket_code}/phan-hoi', [\App\Http\Controllers\Admin\TicketController::class, 'reply'])->name('tickets.reply');
+
+    // FAQs
+    Route::resource('cau-hoi-thuong-gap', \App\Http\Controllers\Admin\FaqController::class)
+        ->parameters(['cau-hoi-thuong-gap' => 'faq'])
+        ->names('faqs');
+
+    // CMS Pages
+    Route::resource('trang-tinh', \App\Http\Controllers\Admin\CmsPageController::class)
+        ->parameters(['trang-tinh' => 'page'])
+        ->names('pages');
+
+    // Blog / Posts
+    Route::resource('bai-viet', \App\Http\Controllers\Admin\PostController::class)
+        ->parameters(['bai-viet' => 'post'])
+        ->names('posts');
 });
