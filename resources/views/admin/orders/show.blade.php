@@ -336,6 +336,36 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Shipment & Tracking Card -->
+            @if ($order->tracking_code || $order->order_status === 'shipping' || $order->order_status === 'completed')
+                <div class="rounded-3xl border border-ui-border bg-surface p-6 shadow-xs text-xs space-y-3">
+                    <h2 class="font-display text-base font-bold text-heading pb-3 border-b border-ui-border">
+                        Thông tin vận chuyển
+                    </h2>
+
+                    <div class="space-y-3">
+                        <div>
+                            <span class="text-muted block text-[11px]">Đơn vị vận chuyển:</span>
+                            <span class="font-bold text-heading uppercase">{{ $order->shipping_carrier ?? 'GHN Express' }}</span>
+                        </div>
+                        @if ($order->tracking_code)
+                            <div>
+                                <span class="text-muted block text-[11px]">Mã vận đơn:</span>
+                                <code class="px-2 py-0.5 rounded bg-surface-alt border border-ui-border font-mono text-xs text-primary font-bold inline-block mt-0.5">
+                                    {{ $order->tracking_code }}
+                                </code>
+                            </div>
+                        @endif
+                        @if ($order->shipped_at)
+                            <div>
+                                <span class="text-muted block text-[11px]">Thời gian gửi hàng:</span>
+                                <span class="text-heading font-medium">{{ $order->shipped_at->format('d/m/Y H:i') }}</span>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            @endif
         </div>
     </div>
 </div>

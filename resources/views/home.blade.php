@@ -224,7 +224,7 @@
                         <p class="mt-2 text-sm leading-6 text-muted">Tinh gọn, linh hoạt và phù hợp nhiều diện tích.</p>
                     </div>
                 </div>
-                <a href="#" class="text-link mt-9 inline-flex">Tìm hiểu về chúng tôi <span aria-hidden="true">→</span></a>
+                <a href="{{ route('pages.about') }}" class="text-link mt-9 inline-flex">Tìm hiểu về chúng tôi <span aria-hidden="true">→</span></a>
             </div>
         </div>
     </section>

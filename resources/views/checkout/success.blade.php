@@ -41,12 +41,20 @@
                     </div>
                     <div>
                         <span class="font-semibold text-heading">Hình thức:</span>
-                        {{ $order->payment_method === 'cod' ? 'Thanh toán khi nhận hàng (COD)' : 'Chuyển khoản ngân hàng' }}
+                        @php
+                            $paymentLabels = [
+                                'cod' => 'Thanh toán khi nhận hàng (COD)',
+                                'bank_transfer' => 'Chuyển khoản ngân hàng',
+                                'vnpay' => 'Thanh toán qua VNPAY',
+                                'momo' => 'Thanh toán qua Ví MoMo',
+                            ];
+                        @endphp
+                        {{ $paymentLabels[$order->payment_method] ?? $order->payment_method }}
                     </div>
                     <div>
                         <span class="font-semibold text-heading">Trạng thái:</span>
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                            Chờ xác nhận
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold {{ $order->payment_status === 'paid' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-amber-500/10 text-amber-600 dark:text-amber-400' }}">
+                            {{ $order->payment_status === 'paid' ? 'Đã thanh toán' : 'Chờ xác nhận' }}
                         </span>
                     </div>
                 </div>

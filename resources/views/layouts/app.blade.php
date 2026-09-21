@@ -279,15 +279,16 @@
 
         <nav id="mobile-menu" class="hidden border-t border-ui-border bg-header px-5 py-4 lg:hidden" aria-label="Điều hướng di động">
             <div class="mx-auto flex max-w-7xl flex-col">
-                <a href="{{ route('home') }}" class="mobile-nav-link">Trang chủ</a>
-                <a href="{{ route('products.index') }}" class="mobile-nav-link">Sản phẩm</a>
+                <a href="{{ route('home') }}" class="mobile-nav-link {{ request()->routeIs('home') ? 'is-active' : '' }}">Trang chủ</a>
+                <a href="{{ route('products.index') }}" class="mobile-nav-link {{ request()->routeIs('products.*') ? 'is-active' : '' }}">Sản phẩm</a>
+                <a href="{{ route('posts.index') }}" class="mobile-nav-link {{ request()->routeIs('posts.*') ? 'is-active' : '' }}">Tin tức & Mẹo</a>
+                <a href="{{ route('faq.index') }}" class="mobile-nav-link {{ request()->routeIs('faq.*') ? 'is-active' : '' }}">Hỏi đáp (FAQ)</a>
+                <a href="{{ route('pages.about') }}" class="mobile-nav-link {{ request()->routeIs('pages.about') ? 'is-active' : '' }}">Về Mộc An</a>
+                <a href="{{ route('pages.contact') }}" class="mobile-nav-link {{ request()->routeIs('pages.contact*') ? 'is-active' : '' }}">Liên hệ</a>
                 <a href="{{ route('cart.index') }}" class="mobile-nav-link flex items-center justify-between">
                     <span>Giỏ hàng</span>
                     <span class="rounded-full bg-accent px-2 py-0.5 text-xs font-semibold text-accent-foreground">{{ $cartCount ?? 0 }}</span>
                 </a>
-                <a href="{{ route('home') }}#bo-suu-tap" class="mobile-nav-link">Bộ sưu tập</a>
-                <a href="{{ route('home') }}#ve-chung-toi" class="mobile-nav-link">Về Mộc An</a>
-                <a href="#lien-he" class="mobile-nav-link">Liên hệ</a>
             </div>
         </nav>
     </header>

@@ -1,59 +1,97 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# NỘI THẤT MỘC AN — E-COMMERCE PLATFORM
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+> Nền tảng Thương mại Điện tử Nội thất Cao cấp xây dựng trên nền tảng **Laravel 11**, **Vite**, **Tailwind CSS** và **Alpine.js**.
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## 🌟 ĐẶC ĐIỂM NỔI BẬT
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- **Kiến trúc Hiện đại:** Laravel 11.x, tuân thủ nguyên tắc SOLID, Clean Architecture và MVC chuẩn mực.
+- **Trải nghiệm Đa giao diện (Multi-theme System):** 5 phong cách thiết kế độc đáo: *Mộc An (Mặc định)*, *Vintage Cổ Điển*, *Modern Hiện Đại*, *Minimalist Tối Giản*, *Luxury Sang Trọng*.
+- **Quản lý Sản phẩm & Biến thể Đa cấp:** Hỗ trợ sản phẩm đơn và biến thể theo Kích thước, Màu sắc, Chất liệu với giá và tồn kho riêng biệt theo SKU.
+- **Quản trị Tồn kho Nguyên tử (Atomic Inventory):** Khóa giao dịch DB Transaction chống oversell khi có nhiều người cùng đặt hàng.
+- **Thanh toán Đa dạng:** Tiền mặt (COD), Chuyển khoản ngân hàng, Tích hợp cổng thanh toán trực tuyến VNPAY Sandbox & MoMo Sandbox.
+- **Vòng đời Đơn hàng Toàn diện:** Quy trình khép kín: *Chờ xác nhận → Đã xác nhận → Đang đóng gói → Đang giao hàng (Tự động cấp mã vận đơn GHN/GHTK) → Hoàn thành*. Hỗ trợ hủy đơn và hoàn kho tự động.
+- **Chăm sóc Khách hàng & Loyalty:** Hệ thống tích điểm thành viên (Loyalty Tiers: Đồng, Bạc, Vàng, Kim Cương), Mã khuyến mãi Voucher, Đánh giá sản phẩm đã mua (Verified Reviews), Hệ thống Ticket hỗ trợ & Hỏi đáp FAQ.
+- **Quản trị Toàn năng (Admin Panel):** Dashboard trực quan, Báo cáo doanh thu thời gian thực, Phân tích giỏ hàng bị bỏ quên (Cart Abandonment), Quản lý Kho, Đơn hàng, CMS Tin tức và Khách hàng.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+---
 
-## Learning Laravel
+## 🚀 HƯỚNG DẪN CÀI ĐẶT & CHẠY ỨNG DỤNG
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+### 1. Yêu cầu hệ thống
+- **PHP** >= 8.2 (extensions: `pdo_sqlite` hoặc `pdo_mysql`, `mbstring`, `openssl`, `curl`)
+- **Composer** >= 2.0
+- **Node.js** >= 20.x & **npm** >= 10.x
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### 2. Cài đặt các gói phụ thuộc
 
-## Laravel Sponsors
+```bash
+composer install
+npm install
+```
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### 3. Cấu hình Môi trường & Cơ sở dữ liệu
 
-### Premium Partners
+```bash
+cp .env.example .env
+php artisan key:generate
+```
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+Cấu hình kết nối DB trong file `.env` (mặc định hỗ trợ sẵn SQLite):
+```env
+DB_CONNECTION=sqlite
+```
 
-## Contributing
+### 4. Nạp cơ sở dữ liệu mẫu (Seed Data)
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+```bash
+php artisan migrate --seed
+```
 
-## Code of Conduct
+### 5. Build Assets và Khởi động Server
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```bash
+# Build assets giao diện
+npm run build
 
-## Security Vulnerabilities
+# Chạy server ứng dụng
+php artisan serve
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Truy cập hệ thống tại: `http://127.0.0.1:8000`
 
-## License
+---
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## 🔑 TÀI KHOẢN TRẢI NGHIỆM (DEMO ACCOUNTS)
+
+| Vai trò | Email đăng nhập | Mật khẩu | Chức năng chính |
+| :--- | :--- | :--- | :--- |
+| **Quản trị viên (Admin)** | `admin@mocan.test` | `Admin@123` | Toàn quyền Quản trị, Kho hàng, Đơn hàng, Doanh thu, CMS |
+| **Khách hàng thân thiết (VIP)** | `customer@mocan.test` | `Customer@123` | Mua hàng, Giỏ hàng, Áp dụng Voucher, Đánh giá sản phẩm |
+
+---
+
+## 📖 TÀI LIỆU HƯỚNG DẪN DEMO CHI TIẾT
+
+Chi tiết từng bước kịch bản demo Khách hàng và Quản trị viên được trình bày đầy đủ tại:
+👉 **[Tài liệu Hướng dẫn Demo & Nghiệm thu (DEMO_GUIDE.md)](docs/DEMO_GUIDE.md)**
+
+---
+
+## 🧪 KIỂM THỬ TỰ ĐỘNG (AUTOMATED TESTING)
+
+Hệ thống đạt tiêu chuẩn kiểm thử khắt khe với 100% tests vượt qua:
+
+```bash
+php artisan test
+```
+
+- **Kết quả:** `268 PASS / 0 FAIL / 992 assertions`
+- **Độ bao phủ:** Unit Test & Feature Test bao phủ trọn vẹn Luồng Giỏ hàng, Đặt hàng, Khóa tồn kho, Trừ điểm, Cổng thanh toán Sandbox, Vòng đời Đơn hàng và Phân quyền Admin.
+
+---
+
+## 📄 BẢN QUYỀN
+
+Dự án được xây dựng và phát triển cho môn học PTHT Thương mại Điện tử. Mọi quyền được bảo lưu.
