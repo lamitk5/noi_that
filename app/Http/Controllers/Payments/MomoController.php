@@ -175,6 +175,15 @@ class MomoController extends Controller
             }
         });
 
+        // If payment succeeded, trigger GHN DEV shipment creation idempotently
+        if ((int) ($data['resultCode'] ?? -1) === 0) {
+            try {
+                app(\App\Services\Shipping\ShippingManager::class)->ensureShipmentCreated($transaction->order->fresh());
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning("GHN shipment creation failed for MoMo order #{$transaction->order->order_code}: " . $e->getMessage());
+            }
+        }
+
         // MoMo expects HTTP 204 No Content
         return response()->noContent(204);
     }

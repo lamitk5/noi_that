@@ -48,4 +48,23 @@ return [
         'secret_key' => env('MOMO_SECRET_KEY'),
     ],
 
+    'ghn' => [
+        'base_url' => env('GHN_BASE_URL', 'https://dev-online-gateway.ghn.vn/shiip/public-api'),
+        'token' => env('GHN_TOKEN'),
+        'shop_id' => env('GHN_SHOP_ID') ?: 219637,
+        'verify_ssl' => filter_var(env('GHN_VERIFY_SSL', false), FILTER_VALIDATE_BOOL),
+        'from_name' => env('GHN_FROM_NAME', 'Mộc An'),
+        'from_phone' => env('GHN_FROM_PHONE', '19006868'),
+        'from_address' => env('GHN_FROM_ADDRESS', '123 Nguyễn Huệ'),
+        'from_province_name' => env('GHN_FROM_PROVINCE_NAME', 'Hà Nội'),
+        'from_district_name' => env('GHN_FROM_DISTRICT_NAME', 'Quận Nam Từ Liêm'),
+        'from_ward_name' => env('GHN_FROM_WARD_NAME', 'Phường Mỹ Đình 1'),
+        'from_district_id' => (int) env('GHN_FROM_DISTRICT_ID', 3440),
+        'from_ward_code' => env('GHN_FROM_WARD_CODE', '13004'),
+        'default_weight' => (int) env('GHN_DEFAULT_WEIGHT', 200),
+        'timeout' => (int) env('GHN_TIMEOUT', 15),
+        'service_type_id' => (int) env('GHN_SERVICE_TYPE_ID', 2),
+        'required_note' => env('GHN_REQUIRED_NOTE', 'KHONGCHOXEMHANG'),
+    ],
+
 ];

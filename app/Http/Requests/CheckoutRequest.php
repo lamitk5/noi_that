@@ -22,6 +22,13 @@ class CheckoutRequest extends FormRequest
             'payment_method' => ['required', 'string', 'in:cod,bank_transfer,vnpay,momo'],
             'checkout_token' => ['required', 'string'],
             'save_address' => ['nullable', 'boolean'],
+            'province_id' => ['nullable', 'integer', 'min:1'],
+            'to_district_id' => ['nullable', 'integer', 'min:1'],
+            'to_ward_code' => ['nullable', 'string', 'max:20'],
+            'province' => ['nullable', 'string', 'max:255'],
+            'district' => ['nullable', 'string', 'max:255'],
+            'ward' => ['nullable', 'string', 'max:255'],
+            'shipping_fee' => ['nullable', 'numeric'],
         ];
     }
 

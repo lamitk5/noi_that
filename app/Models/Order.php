@@ -48,6 +48,12 @@ class Order extends Model
         'shipping_carrier',
         'tracking_code',
         'shipped_at',
+        'shipping_status',
+        'ghn_order_code',
+        'ghn_total_fee',
+        'to_district_id',
+        'to_ward_code',
+        'shipping_last_synced_at',
     ];
 
     protected function casts(): array
@@ -59,6 +65,9 @@ class Order extends Model
             'points_discount' => 'decimal:2',
             'points_used' => 'integer',
             'shipped_at' => 'datetime',
+            'ghn_total_fee' => 'integer',
+            'to_district_id' => 'integer',
+            'shipping_last_synced_at' => 'datetime',
         ];
     }
 

@@ -175,18 +175,23 @@
                             @endforeach
                     </div>
 
-                    @if ($order->tracking_code)
+                    @if ($order->ghn_order_code || $order->tracking_code)
                         <div class="mt-6 pt-6 border-t border-ui-border flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl bg-surface-alt p-4">
                             <div>
                                 <span class="text-[10px] font-bold uppercase tracking-wider text-muted">Đơn vị vận chuyển & Mã vận đơn</span>
                                 <div class="flex items-center gap-2 mt-1">
-                                    <span class="font-bold text-heading text-sm">{{ strtoupper($order->shipping_carrier ?? 'GHN') }} Express:</span>
-                                    <code class="px-2 py-0.5 rounded bg-surface border border-ui-border font-mono text-xs text-primary font-bold">{{ $order->tracking_code }}</code>
+                                    <span class="font-bold text-heading text-sm">Giao Hàng Nhanh (GHN Express):</span>
+                                    <code class="px-2 py-0.5 rounded bg-surface border border-ui-border font-mono text-xs text-primary font-bold">{{ $order->ghn_order_code ?? $order->tracking_code }}</code>
                                 </div>
+                                @if($order->shipping_status)
+                                    <p class="text-xs text-muted mt-1">
+                                        Trạng thái GHN: <span class="font-semibold text-heading">{{ $order->shipping_status_label ?? $order->shipping_status }}</span>
+                                    </p>
+                                @endif
                             </div>
                             <div class="flex items-center gap-2">
                                 <span class="size-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                                <span class="text-xs text-muted">Đang trên đường giao đến bạn</span>
+                                <span class="text-xs text-muted">GHN DEV Sandbox</span>
                             </div>
                         </div>
                     @endif
@@ -368,6 +373,17 @@
                     <div>
                         <span class="font-semibold text-heading">Địa chỉ nhận hàng:</span> {{ $order->shipping_address }}
                     </div>
+                    @if ($order->ghn_order_code)
+                        <div>
+                            <span class="font-semibold text-heading">Vận đơn GHN:</span>
+                            <span class="font-mono font-bold text-primary">{{ $order->ghn_order_code }}</span>
+                            @if($order->shipping_status)
+                                <span class="ml-1.5 px-2 py-0.5 rounded bg-surface-alt border border-ui-border text-[11px] font-medium text-heading">
+                                    {{ $order->shipping_status_label ?? $order->shipping_status }}
+                                </span>
+                            @endif
+                        </div>
+                    @endif
                     @if ($order->note)
                         <div class="sm:col-span-2">
                             <span class="font-semibold text-heading">Ghi chú:</span> {{ $order->note }}

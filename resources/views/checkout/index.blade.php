@@ -38,11 +38,18 @@
             </div>
         @endif
 
-        <div class="grid lg:grid-cols-12 gap-8 items-start">
+        <div class="grid lg:grid-cols-12 gap-8 items-start" x-data="checkoutApp()">
             <!-- Left Column: Shipping & Payment Form -->
             <form id="checkout-form" method="POST" action="{{ route('checkout.store') }}" class="lg:col-span-7 space-y-8">
                 @csrf
                 <input type="hidden" name="checkout_token" value="{{ $checkoutToken }}">
+                <input type="hidden" name="province_id" :value="selectedProvinceId">
+                <input type="hidden" name="to_district_id" :value="selectedDistrictId">
+                <input type="hidden" name="to_ward_code" :value="selectedWardCode">
+                <input type="hidden" name="province" :value="provinceName">
+                <input type="hidden" name="district" :value="districtName">
+                <input type="hidden" name="ward" :value="wardName">
+                <input type="hidden" name="shipping_fee" :value="shippingFee">
 
                 <!-- Customer & Shipping Information -->
                 <div class="rounded-3xl border border-ui-border bg-surface p-6 sm:p-8 shadow-sm">
@@ -51,22 +58,7 @@
                         <h2 class="font-display text-xl font-bold text-heading">Thông tin giao hàng</h2>
                     </div>
 
-                    <div class="space-y-5" x-data="{
-                        savedAddresses: {{ \Illuminate\Support\Js::from($addresses) }},
-                        selectedAddressId: '{{ $defaultAddress?->id ?? '' }}',
-                        name: @js(old('customer_name', $defaultAddress?->recipient_name ?? $user->name)),
-                        phone: @js(old('customer_phone', $defaultAddress?->phone ?? '')),
-                        address: @js(old('shipping_address', $defaultAddress?->address_line ?? '')),
-                        applyAddress(id) {
-                            if (!id) return;
-                            const found = this.savedAddresses.find(a => a.id == id);
-                            if (found) {
-                                this.name = found.recipient_name;
-                                this.phone = found.phone;
-                                this.address = found.address_line;
-                            }
-                        }
-                    }">
+                    <div class="space-y-5">
                         @if($addresses->isNotEmpty())
                             <div class="p-3.5 rounded-2xl bg-surface-alt border border-ui-border">
                                 <div class="flex items-center justify-between mb-2">
@@ -153,9 +145,74 @@
                             </div>
                         </div>
 
+                        <!-- Location Selectors (GHN Cascading) -->
+                        <div class="grid sm:grid-cols-3 gap-4">
+                            <div>
+                                <label for="province_select" class="block text-xs font-bold uppercase tracking-wider text-heading mb-1.5">
+                                    Tỉnh / Thành phố <span class="text-rose-500">*</span>
+                                </label>
+                                <select
+                                    id="province_select"
+                                    x-model="selectedProvinceId"
+                                    @change="onProvinceChange()"
+                                    class="w-full rounded-xl border border-ui-border bg-surface-alt px-3 py-2.5 text-xs text-heading focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary @error('province_id') border-rose-500 @enderror"
+                                >
+                                    <option value="">-- Chọn Tỉnh / Thành --</option>
+                                    <template x-for="p in provinces" :key="p.ProvinceID">
+                                        <option :value="p.ProvinceID" x-text="p.ProvinceName" :selected="p.ProvinceID == selectedProvinceId"></option>
+                                    </template>
+                                </select>
+                                @error('province_id')
+                                    <p class="mt-1 text-xs text-rose-500">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                            <div>
+                                <label for="district_select" class="block text-xs font-bold uppercase tracking-wider text-heading mb-1.5">
+                                    Quận / Huyện <span class="text-rose-500">*</span>
+                                </label>
+                                <select
+                                    id="district_select"
+                                    x-model="selectedDistrictId"
+                                    @change="onDistrictChange()"
+                                    :disabled="!selectedProvinceId || districts.length === 0"
+                                    class="w-full rounded-xl border border-ui-border bg-surface-alt px-3 py-2.5 text-xs text-heading focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-60 disabled:cursor-not-allowed @error('to_district_id') border-rose-500 @enderror"
+                                >
+                                    <option value="">-- Chọn Quận / Huyện --</option>
+                                    <template x-for="d in districts" :key="d.DistrictID">
+                                        <option :value="d.DistrictID" x-text="d.DistrictName" :selected="d.DistrictID == selectedDistrictId"></option>
+                                    </template>
+                                </select>
+                                @error('to_district_id')
+                                    <p class="mt-1 text-xs text-rose-500">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                            <div>
+                                <label for="ward_select" class="block text-xs font-bold uppercase tracking-wider text-heading mb-1.5">
+                                    Phường / Xã <span class="text-rose-500">*</span>
+                                </label>
+                                <select
+                                    id="ward_select"
+                                    x-model="selectedWardCode"
+                                    @change="onWardChange()"
+                                    :disabled="!selectedDistrictId || wards.length === 0"
+                                    class="w-full rounded-xl border border-ui-border bg-surface-alt px-3 py-2.5 text-xs text-heading focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-60 disabled:cursor-not-allowed @error('to_ward_code') border-rose-500 @enderror"
+                                >
+                                    <option value="">-- Chọn Phường / Xã --</option>
+                                    <template x-for="w in wards" :key="w.WardCode">
+                                        <option :value="String(w.WardCode)" x-text="w.WardName" :selected="String(w.WardCode) === String(selectedWardCode)"></option>
+                                    </template>
+                                </select>
+                                @error('to_ward_code')
+                                    <p class="mt-1 text-xs text-rose-500">{{ $message }}</p>
+                                @enderror
+                            </div>
+                        </div>
+
                         <div>
                             <label for="shipping_address" class="block text-xs font-bold uppercase tracking-wider text-heading mb-1.5">
-                                Địa chỉ nhận hàng <span class="text-rose-500">*</span>
+                                Địa chỉ nhận hàng cụ thể <span class="text-rose-500">*</span>
                             </label>
                             <textarea
                                 id="shipping_address"
@@ -164,7 +221,7 @@
                                 rows="3"
                                 required
                                 autocomplete="street-address"
-                                placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố..."
+                                placeholder="Số nhà, tên ngõ/ngách, tên đường..."
                                 class="w-full rounded-xl border border-ui-border bg-surface-alt px-4 py-3 text-sm text-heading placeholder:text-muted focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary @error('shipping_address') border-rose-500 @enderror"
                             >{{ old('shipping_address', $defaultAddress?->address_line ?? '') }}</textarea>
                             @error('shipping_address')
@@ -407,11 +464,25 @@
                             <span class="font-semibold text-heading">{{ number_format($subtotal, 0, ',', '.') }}₫</span>
                         </div>
                         <div class="flex justify-between text-muted">
-                            <span>Phí vận chuyển</span>
+                            <span class="flex items-center gap-1.5">
+                                <span>Phí vận chuyển (GHN)</span>
+                                <span class="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary">DEV</span>
+                            </span>
                             <span class="font-semibold text-emerald-600 dark:text-emerald-400">
-                                {{ $shippingFee > 0 ? number_format($shippingFee, 0, ',', '.') . '₫' : 'Miễn phí' }}
+                                <template x-if="isCalculatingFee">
+                                    <span class="text-xs text-muted inline-flex items-center gap-1">
+                                        <svg class="animate-spin size-3.5" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                        Đang tính...
+                                    </span>
+                                </template>
+                                <template x-if="!isCalculatingFee">
+                                    <span x-text="shippingFee > 0 ? formatMoney(shippingFee) : (selectedWardCode ? '0₫' : 'Chưa tính')">{{ $shippingFee > 0 ? number_format($shippingFee, 0, ',', '.') . '₫' : 'Miễn phí' }}</span>
+                                </template>
                             </span>
                         </div>
+                        <template x-if="feeError">
+                            <p class="text-[11px] text-rose-500 text-right" x-text="feeError"></p>
+                        </template>
                         @if ($voucherDiscount > 0)
                             <div class="flex justify-between text-emerald-600 dark:text-emerald-400">
                                 <span>Giảm giá voucher ({{ $appliedVoucher?->code }})</span>
@@ -429,7 +500,7 @@
                                 <span class="font-bold text-heading block">Tổng thanh toán</span>
                                 <span class="text-[11px] text-muted">(Đã bao gồm thuế VAT nếu có)</span>
                             </div>
-                            <span class="font-display text-2xl font-bold text-primary">
+                            <span class="font-display text-2xl font-bold text-primary" x-text="formatMoney(totalPrice)">
                                 {{ number_format($totalPrice, 0, ',', '.') }}₫
                             </span>
                         </div>
@@ -455,4 +526,207 @@
         </div>
     </div>
 </div>
+
+<script>
+function checkoutApp() {
+    return {
+        savedAddresses: @json($addresses),
+        selectedAddressId: '{{ $defaultAddress?->id ?? '' }}',
+        name: @js(old('customer_name', $defaultAddress?->recipient_name ?? $user->name)),
+        phone: @js(old('customer_phone', $defaultAddress?->phone ?? '')),
+        address: @js(old('shipping_address', $defaultAddress?->address_line ?? '')),
+
+        provinces: [],
+        districts: [],
+        wards: [],
+
+        selectedProvinceId: '{{ old('province_id', $defaultAddress?->province_id ?? '') }}',
+        selectedDistrictId: '{{ old('to_district_id', $defaultAddress?->district_id ?? '') }}',
+        selectedWardCode: '{{ old('to_ward_code', $defaultAddress?->ward_code ?? '') }}',
+
+        provinceName: @js(old('province', $defaultAddress?->city ?? '')),
+        districtName: @js(old('district', $defaultAddress?->district ?? '')),
+        wardName: @js(old('ward', $defaultAddress?->ward ?? '')),
+
+        subtotal: {{ (float) $subtotal }},
+        voucherDiscount: {{ (float) $voucherDiscount }},
+        pointsDiscount: {{ (float) $pointsDiscount }},
+        shippingFee: {{ (float) $shippingFee }},
+        isCalculatingFee: false,
+        feeError: null,
+
+        get totalPrice() {
+            return Math.max(0, this.subtotal + this.shippingFee - this.voucherDiscount - this.pointsDiscount);
+        },
+
+        formatMoney(val) {
+            return new Intl.NumberFormat('vi-VN').format(Math.round(val)) + '₫';
+        },
+
+        async init() {
+            await this.loadProvinces();
+            if (this.selectedProvinceId) {
+                await this.loadDistricts(this.selectedProvinceId);
+                if (this.selectedDistrictId) {
+                    await this.loadWards(this.selectedDistrictId);
+                    if (this.selectedWardCode && !this.shippingFee) {
+                        await this.calculateFee();
+                    }
+                }
+            }
+        },
+
+        async loadProvinces() {
+            try {
+                const res = await fetch('/locations/provinces', { headers: { 'Accept': 'application/json' } });
+                if (res.ok) {
+                    const json = await res.json();
+                    this.provinces = json.data || [];
+                    if (!this.selectedProvinceId && this.provinceName) {
+                        const match = this.provinces.find(p => p.ProvinceName === this.provinceName);
+                        if (match) {
+                            this.selectedProvinceId = String(match.ProvinceID);
+                            await this.loadDistricts(match.ProvinceID);
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Lỗi tải danh sách tỉnh/thành', e);
+            }
+        },
+
+        async onProvinceChange() {
+            this.selectedDistrictId = '';
+            this.selectedWardCode = '';
+            this.districts = [];
+            this.wards = [];
+            this.districtName = '';
+            this.wardName = '';
+            this.shippingFee = 0;
+
+            const prov = this.provinces.find(p => String(p.ProvinceID) === String(this.selectedProvinceId));
+            this.provinceName = prov ? prov.ProvinceName : '';
+
+            if (this.selectedProvinceId) {
+                await this.loadDistricts(this.selectedProvinceId);
+            }
+        },
+
+        async loadDistricts(provinceId) {
+            try {
+                const res = await fetch(`/locations/districts/${provinceId}`, { headers: { 'Accept': 'application/json' } });
+                if (res.ok) {
+                    const json = await res.json();
+                    this.districts = json.data || [];
+                    if (!this.selectedDistrictId && this.districtName) {
+                        const match = this.districts.find(d => d.DistrictName === this.districtName);
+                        if (match) {
+                            this.selectedDistrictId = String(match.DistrictID);
+                            await this.loadWards(match.DistrictID);
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Lỗi tải quận/huyện', e);
+            }
+        },
+
+        async onDistrictChange() {
+            this.selectedWardCode = '';
+            this.wards = [];
+            this.wardName = '';
+            this.shippingFee = 0;
+
+            const dist = this.districts.find(d => String(d.DistrictID) === String(this.selectedDistrictId));
+            this.districtName = dist ? dist.DistrictName : '';
+
+            if (this.selectedDistrictId) {
+                await this.loadWards(this.selectedDistrictId);
+            }
+        },
+
+        async loadWards(districtId) {
+            try {
+                const res = await fetch(`/locations/wards/${districtId}`, { headers: { 'Accept': 'application/json' } });
+                if (res.ok) {
+                    const json = await res.json();
+                    this.wards = json.data || [];
+                    if (!this.selectedWardCode && this.wardName) {
+                        const match = this.wards.find(w => w.WardName === this.wardName);
+                        if (match) {
+                            this.selectedWardCode = String(match.WardCode);
+                            await this.calculateFee();
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Lỗi tải phường/xã', e);
+            }
+        },
+
+        async onWardChange() {
+            const ward = this.wards.find(w => String(w.WardCode) === String(this.selectedWardCode));
+            this.wardName = ward ? ward.WardName : '';
+            if (this.selectedDistrictId && this.selectedWardCode) {
+                await this.calculateFee();
+            }
+        },
+
+        async calculateFee() {
+            if (!this.selectedDistrictId || !this.selectedWardCode) return;
+            this.isCalculatingFee = true;
+            this.feeError = null;
+            try {
+                const res = await fetch('/locations/calculate-fee', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('input[name=_token]')?.value || '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({
+                        to_district_id: parseInt(this.selectedDistrictId, 10),
+                        to_ward_code: String(this.selectedWardCode)
+                    })
+                });
+                const data = await res.json();
+                if (res.ok && typeof data.shipping_fee === 'number') {
+                    this.shippingFee = Number(data.shipping_fee);
+                } else {
+                    this.feeError = data.message || 'Không thể tính phí giao hàng GHN';
+                }
+            } catch (e) {
+                this.feeError = 'Lỗi kết nối khi tính phí vận chuyển GHN';
+            } finally {
+                this.isCalculatingFee = false;
+            }
+        },
+
+        async applyAddress(id) {
+            if (!id) return;
+            const found = this.savedAddresses.find(a => a.id == id);
+            if (found) {
+                this.name = found.recipient_name;
+                this.phone = found.phone;
+                this.address = found.address_line;
+                if (found.province_id) {
+                    this.selectedProvinceId = String(found.province_id);
+                    this.provinceName = found.city || '';
+                    await this.loadDistricts(found.province_id);
+                    if (found.district_id) {
+                        this.selectedDistrictId = String(found.district_id);
+                        this.districtName = found.district || '';
+                        await this.loadWards(found.district_id);
+                        if (found.ward_code) {
+                            this.selectedWardCode = String(found.ward_code);
+                            this.wardName = found.ward || '';
+                            await this.calculateFee();
+                        }
+                    }
+                }
+            }
+        }
+    };
+}
+</script>
 @endsection

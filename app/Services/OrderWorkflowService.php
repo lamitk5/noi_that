@@ -146,6 +146,17 @@ class OrderWorkflowService
                 }
             }
 
+            // If GHN shipment exists, confirm remote state and cancel on GHN DEV first
+            if ($lockedOrder->ghn_order_code) {
+                try {
+                    app(\App\Services\Shipping\ShippingManager::class)->cancelShipment($lockedOrder);
+                } catch (\App\Exceptions\GHNException $e) {
+                    throw ValidationException::withMessages([
+                        'order' => 'Không thể hủy đơn hàng vì vận đơn GHN không cho phép hủy hoặc đang giao.',
+                    ]);
+                }
+            }
+
             // Restore variant stocks atomically with lockForUpdate in sorted order
             $items = $lockedOrder->items;
             $variantIds = $items->pluck('product_variant_id')->filter()->unique()->values()->all();
@@ -208,6 +219,13 @@ class OrderWorkflowService
                 $lockedOrder->note = trim(($lockedOrder->note ? $lockedOrder->note . ' | ' : '') . $note);
             }
             $lockedOrder->save();
+
+            // Trigger GHN DEV shipment creation idempotently
+            try {
+                app(\App\Services\Shipping\ShippingManager::class)->ensureShipmentCreated($lockedOrder);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning("GHN shipment creation failed for Bank Transfer order #{$lockedOrder->order_code}: " . $e->getMessage());
+            }
 
             if ($lockedOrder->order_status === Order::STATUS_COMPLETED) {
                 $this->awardLoyaltyPoints($lockedOrder);

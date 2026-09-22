@@ -8,6 +8,7 @@ use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\CmsPageController;
 use App\Http\Controllers\FaqController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\LocationController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OrderHistoryController;
 use App\Http\Controllers\Payments\MomoController;
@@ -21,6 +22,12 @@ use App\Http\Controllers\TicketController;
 use App\Http\Controllers\UserAddressController;
 use App\Http\Controllers\WishlistController;
 use Illuminate\Support\Facades\Route;
+
+// GHN Delivery Locations & Shipping Fee API
+Route::get('/locations/provinces', [LocationController::class, 'provinces'])->name('locations.provinces');
+Route::get('/locations/districts/{provinceId}', [LocationController::class, 'districts'])->name('locations.districts');
+Route::get('/locations/wards/{districtId}', [LocationController::class, 'wards'])->name('locations.wards');
+Route::post('/locations/calculate-fee', [LocationController::class, 'calculateFee'])->name('locations.calculate-fee');
 
 // Storefront Home & Catalog
 Route::get('/', [HomeController::class, 'index'])->name('home');
@@ -162,6 +169,7 @@ Route::middleware(['auth', 'admin', 'admin.audit'])->prefix('admin')->name('admi
     Route::get('/don-hang/{order:order_code}', [\App\Http\Controllers\Admin\OrderController::class, 'show'])->name('orders.show');
     Route::match(['post', 'patch'], '/don-hang/{order:order_code}/trang-thai', [\App\Http\Controllers\Admin\OrderController::class, 'updateStatus'])->name('orders.update-status');
     Route::match(['post', 'patch'], '/don-hang/{order:order_code}/xac-nhan-thanh-toan', [\App\Http\Controllers\Admin\OrderController::class, 'markPaid'])->name('orders.mark-paid');
+    Route::post('/don-hang/{order:order_code}/tao-van-don-ghn', [\App\Http\Controllers\Admin\OrderController::class, 'retryGhnShipment'])->name('orders.retry-ghn');
 
     // Categories
     Route::resource('danh-muc', \App\Http\Controllers\Admin\CategoryController::class)

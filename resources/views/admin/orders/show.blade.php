@@ -91,6 +91,19 @@
                     </form>
                 @endif
 
+                @if (!$order->ghn_order_code && $order->order_status !== 'canceled')
+                    <form method="POST" action="{{ route('admin.orders.retry-ghn', $order->order_code) }}">
+                        @csrf
+                        <button
+                            type="submit"
+                            class="inline-flex items-center gap-1.5 rounded-xl border border-primary/30 bg-primary/10 hover:bg-primary/20 text-xs font-bold text-primary px-4 py-2.5 transition cursor-pointer"
+                        >
+                            <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 18H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3.19M15 6h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-3.19"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>
+                            <span>Tạo vận đơn GHN DEV</span>
+                        </button>
+                    </form>
+                @endif
+
                 {{-- Forward Progression Actions --}}
                 @if (in_array('confirmed', $allowedStatuses, true))
                     <form method="POST" action="{{ route('admin.orders.update-status', $order->order_code) }}">
@@ -338,34 +351,81 @@
             </div>
 
             <!-- Shipment & Tracking Card -->
-            @if ($order->tracking_code || $order->order_status === 'shipping' || $order->order_status === 'completed')
-                <div class="rounded-3xl border border-ui-border bg-surface p-6 shadow-xs text-xs space-y-3">
-                    <h2 class="font-display text-base font-bold text-heading pb-3 border-b border-ui-border">
-                        Thông tin vận chuyển
+            <div class="rounded-3xl border border-ui-border bg-surface p-6 shadow-xs text-xs space-y-3">
+                <div class="flex items-center justify-between pb-3 border-b border-ui-border">
+                    <h2 class="font-display text-base font-bold text-heading">
+                        Vận chuyển (GHN DEV)
                     </h2>
+                    @if ($order->ghn_order_code)
+                        <span class="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                            <span class="size-2 rounded-full bg-emerald-500"></span>
+                            Đã tạo vận đơn
+                        </span>
+                    @else
+                        <span class="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-600 dark:text-amber-400">
+                            <span class="size-2 rounded-full bg-amber-500"></span>
+                            Chưa tạo vận đơn
+                        </span>
+                    @endif
+                </div>
 
-                    <div class="space-y-3">
-                        <div>
-                            <span class="text-muted block text-[11px]">Đơn vị vận chuyển:</span>
-                            <span class="font-bold text-heading uppercase">{{ $order->shipping_carrier ?? 'GHN Express' }}</span>
-                        </div>
-                        @if ($order->tracking_code)
-                            <div>
-                                <span class="text-muted block text-[11px]">Mã vận đơn:</span>
-                                <code class="px-2 py-0.5 rounded bg-surface-alt border border-ui-border font-mono text-xs text-primary font-bold inline-block mt-0.5">
-                                    {{ $order->tracking_code }}
-                                </code>
-                            </div>
-                        @endif
-                        @if ($order->shipped_at)
-                            <div>
-                                <span class="text-muted block text-[11px]">Thời gian gửi hàng:</span>
-                                <span class="text-heading font-medium">{{ $order->shipped_at->format('d/m/Y H:i') }}</span>
-                            </div>
+                <div class="space-y-2.5">
+                    <div>
+                        <span class="text-muted block text-[11px]">Đơn vị vận chuyển:</span>
+                        <span class="font-bold text-heading uppercase">Giao Hàng Nhanh (GHN DEV Sandbox)</span>
+                    </div>
+                    <div>
+                        <span class="text-muted block text-[11px]">Mã vận đơn GHN:</span>
+                        @if ($order->ghn_order_code)
+                            <code class="px-2 py-0.5 rounded bg-surface-alt border border-ui-border font-mono text-xs text-primary font-bold inline-block mt-0.5">
+                                {{ $order->ghn_order_code }}
+                            </code>
+                        @else
+                            <span class="text-muted italic">Chưa phát hành</span>
                         @endif
                     </div>
+                    <div>
+                        <span class="text-muted block text-[11px]">Trạng thái giao vận:</span>
+                        <span class="font-semibold text-heading">{{ $order->shipping_status_label ?? $order->shipping_status ?? 'Chờ xử lý' }}</span>
+                    </div>
+                    <div>
+                        <span class="text-muted block text-[11px]">Cước phí vận chuyển GHN:</span>
+                        <span class="font-semibold text-heading">
+                            {{ number_format((float) ($order->ghn_total_fee ?: $order->shipping_fee), 0, ',', '.') }}₫
+                        </span>
+                    </div>
+                    @if ($order->to_district_id && $order->to_ward_code)
+                        <div class="pt-2 border-t border-ui-border text-[11px] text-muted">
+                            <span>Mã tuyến: District {{ $order->to_district_id }} / Ward {{ $order->to_ward_code }}</span>
+                        </div>
+                    @endif
+                    @if ($order->shipped_at)
+                        <div>
+                            <span class="text-muted block text-[11px]">Thời gian gửi hàng:</span>
+                            <span class="text-heading font-medium">{{ $order->shipped_at->format('d/m/Y H:i') }}</span>
+                        </div>
+                    @endif
                 </div>
-            @endif
+
+                @if (!empty($shippingTimeline))
+                    <div class="mt-4 pt-3 border-t border-ui-border">
+                        <span class="text-[11px] font-bold uppercase tracking-wider text-muted block mb-2">Nhật ký hành trình</span>
+                        <div class="space-y-2 max-h-48 overflow-y-auto pr-1">
+                            @foreach ($shippingTimeline as $log)
+                                <div class="p-2 rounded-xl bg-surface-alt border border-ui-border text-[11px]">
+                                    <div class="flex justify-between font-semibold text-heading">
+                                        <span>{{ $log['status'] ?? '' }}</span>
+                                        <span class="text-muted text-[10px]">{{ $log['time'] ?? '' }}</span>
+                                    </div>
+                                    @if (!empty($log['description']))
+                                        <p class="text-muted mt-0.5">{{ $log['description'] }}</p>
+                                    @endif
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+            </div>
         </div>
     </div>
 </div>

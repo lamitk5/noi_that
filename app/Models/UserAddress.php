@@ -19,12 +19,17 @@ class UserAddress extends Model
         'district',
         'city',
         'is_default',
+        'province_id',
+        'district_id',
+        'ward_code',
     ];
 
     protected function casts(): array
     {
         return [
             'is_default' => 'boolean',
+            'province_id' => 'integer',
+            'district_id' => 'integer',
         ];
     }
 

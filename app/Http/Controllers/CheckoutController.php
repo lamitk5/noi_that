@@ -142,6 +142,12 @@ class CheckoutController extends Controller
                         'address_line' => $request->input('shipping_address'),
                     ],
                     [
+                        'city' => $request->input('province'),
+                        'district' => $request->input('district'),
+                        'ward' => $request->input('ward'),
+                        'province_id' => $request->input('province_id'),
+                        'district_id' => $request->input('to_district_id'),
+                        'ward_code' => $request->input('to_ward_code'),
                         'label' => 'Địa chỉ nhận hàng',
                         'is_default' => ! $hasDefault,
                     ]

@@ -182,6 +182,15 @@ class VnpayController extends Controller
             }
         });
 
+        // If payment succeeded, trigger GHN DEV shipment creation idempotently
+        if ($request->query('vnp_ResponseCode') === '00' && $request->query('vnp_TransactionStatus') === '00') {
+            try {
+                app(\App\Services\Shipping\ShippingManager::class)->ensureShipmentCreated($transaction->order->fresh());
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning("GHN shipment creation failed for VNPAY order #{$transaction->order->order_code}: " . $e->getMessage());
+            }
+        }
+
         return response()->json([
             'RspCode' => '00',
             'Message' => 'Confirm Success',

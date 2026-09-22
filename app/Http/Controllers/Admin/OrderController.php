@@ -67,10 +67,12 @@ class OrderController extends Controller
         }]);
 
         $allowedStatuses = $this->orderWorkflowService->getAllowedNextStatuses($order);
+        $shippingTimeline = app(\App\Services\Shipping\ShippingManager::class)->getTrackingTimeline($order->tracking_code ?: ($order->ghn_order_code ?? ''), $order);
 
         return view('admin.orders.show', [
             'order' => $order,
             'allowedStatuses' => $allowedStatuses,
+            'shippingTimeline' => $shippingTimeline,
         ]);
     }
 
@@ -98,13 +100,12 @@ class OrderController extends Controller
                 $order->update([
                     'shipping_carrier' => $shipment['provider'],
                     'tracking_code' => $shipment['tracking_code'],
-                    'shipped_at' => now(),
                 ]);
             }
 
             return redirect()
                 ->route('admin.orders.show', $order->order_code)
-                ->with('success', 'Đã cập nhật trạng thái đơn hàng thành công.');
+                ->with('success', "Đã cập nhật trạng thái đơn hàng sang \"{$order->fresh()->statusLabel()}\".");
         } catch (ValidationException $e) {
             $message = collect($e->errors())->flatten()->first() ?: 'Không thể cập nhật trạng thái đơn hàng.';
 
@@ -135,5 +136,29 @@ class OrderController extends Controller
                 ->withErrors($e->errors())
                 ->with('error', $message);
         }
+    }
+
+    /**
+     * Controlled retry to create GHN DEV shipment.
+     */
+    public function retryGhnShipment(Order $order): RedirectResponse
+    {
+        if ($order->ghn_order_code) {
+            return redirect()
+                ->route('admin.orders.show', $order->order_code)
+                ->with('info', 'Đơn hàng này đã có mã vận đơn GHN DEV: ' . $order->ghn_order_code);
+        }
+
+        $created = app(\App\Services\Shipping\ShippingManager::class)->ensureShipmentCreated($order);
+
+        if ($created) {
+            return redirect()
+                ->route('admin.orders.show', $order->order_code)
+                ->with('success', 'Đã tạo vận đơn GHN DEV thành công: ' . $order->fresh()->ghn_order_code);
+        }
+
+        return redirect()
+            ->route('admin.orders.show', $order->order_code)
+            ->with('error', 'Không thể tạo vận đơn GHN DEV. Vui lòng kiểm tra địa chỉ và cấu hình kết nối.');
     }
 }

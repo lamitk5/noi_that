@@ -12,7 +12,8 @@ use Illuminate\Validation\ValidationException;
 class CheckoutService
 {
     public function __construct(
-        protected CartService $cartService
+        protected CartService $cartService,
+        protected \App\Services\Shipping\ShippingManager $shippingManager
     ) {}
 
     /**
@@ -108,7 +109,28 @@ class CheckoutService
                 }
             }
 
-            $shippingFee = (float) config('shop.shipping_fee', 0);
+            $toDistrictId = ! empty($data['to_district_id']) ? (int) $data['to_district_id'] : null;
+            $toWardCode = ! empty($data['to_ward_code']) ? (string) $data['to_ward_code'] : null;
+
+            $itemsForWeight = collect($itemsData)->map(fn ($i) => (object) [
+                'variant' => $i['variant'],
+                'quantity' => $i['quantity'],
+            ]);
+            $orderWeight = $this->shippingManager->getGhnOrderService()->weightForItems($itemsForWeight);
+
+            $shippingFee = 0.0;
+            if ($toDistrictId && $toWardCode && $this->shippingManager->getGhnService()->isConfigured()) {
+                try {
+                    $feeData = $this->shippingManager->getGhnService()->calculateFee($toDistrictId, $toWardCode, $orderWeight);
+                    $shippingFee = (float) ($feeData['total'] ?? $feeData['service_fee'] ?? $feeData['fee'] ?? 0);
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning('GHN calculateFee failed during checkout: ' . $e->getMessage());
+                    $shippingFee = (float) config('shop.shipping_fee', 80000);
+                }
+            } else {
+                $shippingFee = (float) config('shop.shipping_fee', 0);
+            }
+
             $totalPrice = max(0, $subtotal + $shippingFee - $discountAmount - $pointsDiscount);
 
             $orderCode = $this->generateOrderCode();
@@ -120,6 +142,8 @@ class CheckoutService
                 'customer_phone' => $data['customer_phone'],
                 'customer_email' => $data['customer_email'] ?? $user->email,
                 'shipping_address' => $data['shipping_address'],
+                'to_district_id' => $toDistrictId,
+                'to_ward_code' => $toWardCode,
                 'note' => $data['note'] ?? null,
                 'total_price' => $totalPrice,
                 'shipping_fee' => $shippingFee,
@@ -130,6 +154,7 @@ class CheckoutService
                 'payment_method' => $data['payment_method'],
                 'payment_status' => 'pending',
                 'order_status' => 'pending',
+                'shipping_status' => 'pending',
             ]);
 
             if ($voucherId) {
@@ -165,6 +190,15 @@ class CheckoutService
 
             return $order;
         });
+
+        // COD order: create GHN DEV waybill once immediately after local transaction commits
+        if ($order->payment_method === 'cod') {
+            try {
+                $this->shippingManager->ensureShipmentCreated($order);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning("GHN shipment creation failed for COD order #{$order->order_code}: " . $e->getMessage());
+            }
+        }
 
         // Clear cart and checkout session state
         $this->cartService->clear();
