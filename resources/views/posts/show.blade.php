@@ -2,6 +2,47 @@
 
 @section('title', $post->title . ' | Cảm Hứng Mộc An')
 
+@section('seo')
+@php
+    $postImage = $post->featured_image ?: 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1200&q=80';
+    $postDescription = $post->excerpt ?: str($post->content)->limit(160);
+
+    $articleSchema = [
+        '@context' => 'https://schema.org',
+        '@type' => 'BlogPosting',
+        'headline' => $post->title,
+        'image' => [$postImage],
+        'description' => $postDescription,
+        'datePublished' => ($post->published_at ?? $post->created_at)->toIso8601String(),
+        'dateModified' => $post->updated_at->toIso8601String(),
+        'author' => [
+            '@type' => 'Person',
+            'name' => $post->author?->name ?? 'Ban biên tập Mộc An'
+        ],
+        'publisher' => [
+            '@type' => 'Organization',
+            'name' => 'Mộc An',
+            'logo' => [
+                '@type' => 'ImageObject',
+                'url' => asset('images/logo.png')
+            ]
+        ],
+        'mainEntityOfPage' => [
+            '@type' => 'WebPage',
+            '@id' => route('posts.show', $post->slug)
+        ]
+    ];
+@endphp
+<x-seo-meta
+    :title="$post->title . ' | Cảm Hứng Mộc An'"
+    :description="$postDescription"
+    :image="$postImage"
+    :url="route('posts.show', $post->slug)"
+    type="article"
+    :schema="$articleSchema"
+/>
+@endsection
+
 @section('content')
 <div class="min-h-[70vh] py-12 px-4 sm:px-6 lg:px-8 bg-page">
     <div class="max-w-4xl mx-auto">

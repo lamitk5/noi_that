@@ -2,6 +2,56 @@
 
 @section('title', $product->name . ' | Mộc An')
 
+@section('seo')
+@php
+    $productImage = $product->primaryImage?->image_path ?? 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1200&q=80';
+    $productDescription = $product->short_description ?: "Sản phẩm {$product->name} từ Mộc An với thiết kế tinh tế, gỗ tự nhiên cao cấp và bảo hành 24 tháng.";
+    $minPrice = (float) ($product->variants->min('price') ?? $product->base_price);
+    $isAvailable = $product->variants->sum('stock') > 0;
+
+    $productSchema = [
+        '@context' => 'https://schema.org',
+        '@type' => 'Product',
+        'name' => $product->name,
+        'image' => [$productImage],
+        'description' => $productDescription,
+        'sku' => $product->sku,
+        'brand' => [
+            '@type' => 'Brand',
+            'name' => 'Mộc An'
+        ],
+        'offers' => [
+            '@type' => 'Offer',
+            'url' => route('products.show', $product->slug),
+            'priceCurrency' => 'VND',
+            'price' => $minPrice,
+            'itemCondition' => 'https://schema.org/NewCondition',
+            'availability' => $isAvailable ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+            'seller' => [
+                '@type' => 'Organization',
+                'name' => 'Mộc An'
+            ]
+        ]
+    ];
+
+    if ($reviewsCount > 0) {
+        $productSchema['aggregateRating'] = [
+            '@type' => 'AggregateRating',
+            'ratingValue' => $reviewsAvg,
+            'reviewCount' => $reviewsCount
+        ];
+    }
+@endphp
+<x-seo-meta
+    :title="$product->name . ' | Mộc An'"
+    :description="$productDescription"
+    :image="$productImage"
+    :url="route('products.show', $product->slug)"
+    type="product"
+    :schema="$productSchema"
+/>
+@endsection
+
 @section('content')
 <div class="bg-page min-h-screen py-8 sm:py-12">
     <div class="page-shell">

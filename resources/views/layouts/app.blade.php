@@ -3,9 +3,13 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Mộc An - Nội thất hiện đại cho không gian sống Việt.">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Mộc An | Nội thất hiện đại')</title>
+    @hasSection('seo')
+        @yield('seo')
+    @else
+        <x-seo-meta />
+    @endif
     <script>
         (function() {
             try {

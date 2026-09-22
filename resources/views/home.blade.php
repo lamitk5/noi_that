@@ -2,6 +2,45 @@
 
 @section('title', 'Mộc An | Nội thất cho tổ ấm Việt')
 
+@section('seo')
+<x-seo-meta
+    title="Mộc An | Nội Thất Tối Giản & Tinh Tế Cho Không Gian Sống Việt"
+    description="Mộc An mang đến các bộ sưu tập nội thất gỗ tự nhiên chất lượng cao: bàn ăn, ghế sofa, giường ngủ, kệ tủ phong cách hiện đại và ấm áp."
+    :url="route('home')"
+    type="website"
+    :schema="[
+        [
+            '@context' => 'https://schema.org',
+            '@type' => 'Organization',
+            'name' => 'Mộc An',
+            'url' => route('home'),
+            'logo' => asset('images/logo.png'),
+            'contactPoint' => [
+                '@type' => 'ContactPoint',
+                'telephone' => '1900 6868',
+                'contactType' => 'customer service',
+                'areaServed' => 'VN',
+                'availableLanguage' => 'Vietnamese'
+            ]
+        ],
+        [
+            '@context' => 'https://schema.org',
+            '@type' => 'WebSite',
+            'name' => 'Mộc An',
+            'url' => route('home'),
+            'potentialAction' => [
+                '@type' => 'SearchAction',
+                'target' => [
+                    '@type' => 'EntryPoint',
+                    'urlTemplate' => route('products.index') . '?q={search_term_string}'
+                ],
+                'query-input' => 'required name=search_term_string'
+            ]
+        ]
+    ]"
+/>
+@endsection
+
 @section('content')
     @if (\App\Models\SiteSetting::get('show_hero', '1') == '1')
     <section class="relative isolate min-h-[690px] overflow-hidden bg-[#ded8cb]">
