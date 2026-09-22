@@ -640,5 +640,9 @@
             <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5"/></svg>
         </button>
     </div>
+
+    <!-- Mộc An AI Shopping Assistant Widget -->
+    <x-ai-chat-widget />
 </body>
 </html>
+
