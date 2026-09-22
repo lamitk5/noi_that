@@ -207,6 +207,10 @@ class DemoDataSeeder extends Seeder
                     'order_status' => 'completed',
                     'shipping_carrier' => 'ghn',
                     'tracking_code' => 'GHN-DEMO998877',
+                    'ghn_order_code' => 'GHN-DEMO998877',
+                    'shipping_status' => 'delivered',
+                    'to_district_id' => 1442,
+                    'to_ward_code' => '20101',
                     'shipped_at' => now()->subDays(3),
                 ]
             );
