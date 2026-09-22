@@ -20,7 +20,7 @@
 - [x] Task 10: Role Guards, Rate Limiting & Admin Audit Logging
 - [x] Task 11: Operational Readiness, Health Checks & Error Views
 - [x] Phase 4 Checkpoint
-- [ ] Task 12: Cross-Device UI/UX Polish, Accessibility & Motion
+- [x] Task 12: Cross-Device UI/UX Polish, Accessibility & Motion
 - [ ] Task 13: Full Regression Suite, Code Hygiene & Release Readiness Checklist
 - [ ] Phase 5 Checkpoint
 
