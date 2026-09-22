@@ -67,7 +67,7 @@ class TicketController extends Controller
 
     public function show(Request $request, SupportTicket $ticket): View
     {
-        if ($ticket->user_id !== $request->user()->id) {
+        if ($ticket->user_id !== $request->user()->id && $request->user()->role !== 'admin') {
             abort(403, 'Bạn không có quyền xem yêu cầu này.');
         }
 
@@ -78,7 +78,7 @@ class TicketController extends Controller
 
     public function reply(Request $request, SupportTicket $ticket): RedirectResponse
     {
-        if ($ticket->user_id !== $request->user()->id) {
+        if ($ticket->user_id !== $request->user()->id && $request->user()->role !== 'admin') {
             abort(403, 'Bạn không có quyền phản hồi yêu cầu này.');
         }
 

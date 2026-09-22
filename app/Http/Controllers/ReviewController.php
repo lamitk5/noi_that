@@ -72,7 +72,7 @@ class ReviewController extends Controller
      */
     public function destroy(Request $request, Review $review): RedirectResponse
     {
-        if ($request->user()->id !== $review->user_id) {
+        if ($request->user()->id !== $review->user_id && $request->user()->role !== 'admin') {
             abort(403, 'Bạn không có quyền xóa đánh giá này.');
         }
 
