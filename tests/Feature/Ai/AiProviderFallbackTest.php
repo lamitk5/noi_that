@@ -318,4 +318,167 @@ class AiProviderFallbackTest extends TestCase
             return true;
         });
     }
+
+    public function test_empty_thought_signature_edge_case(): void
+    {
+        $provider = new GeminiProvider('test-api-key', 'gemini-3.8-flash', 10);
+
+        Http::fake([
+            'https://generativelanguage.googleapis.com/*' => Http::response([
+                'candidates' => [
+                    [
+                        'content' => [
+                            'parts' => [['text' => 'Phản hồi khi không có thoughtSignature']],
+                        ],
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        $messages = [
+            ['role' => 'user', 'content' => 'Xin chào'],
+            [
+                'role' => 'assistant',
+                'content' => '',
+                'tool_calls' => [
+                    ['name' => 'search_products', 'arguments' => ['query' => 'bàn']], // thoughtSignature is null/omitted
+                ],
+            ],
+            ['role' => 'tool', 'name' => 'search_products', 'content' => 'Kết quả'],
+        ];
+
+        $res = $provider->chat($messages);
+        $this->assertEquals('Phản hồi khi không có thoughtSignature', $res['content']);
+
+        Http::assertSent(function ($request) {
+            $contents = $request->data()['contents'] ?? [];
+            $modelPart = $contents[1]['parts'][0];
+            $this->assertArrayHasKey('functionCall', $modelPart);
+            $this->assertArrayNotHasKey('thoughtSignature', $modelPart);
+            return true;
+        });
+    }
+
+    public function test_function_call_roundtrip_to_final_answer(): void
+    {
+        $provider = new GeminiProvider('test-api-key', 'gemini-3.8-flash', 10);
+
+        Http::fake([
+            'https://generativelanguage.googleapis.com/*' => Http::sequence()
+                ->push([
+                    'candidates' => [
+                        [
+                            'content' => [
+                                'parts' => [
+                                    [
+                                        'functionCall' => [
+                                            'name' => 'search_products',
+                                            'args' => ['query' => 'sofa'],
+                                        ],
+                                        'thoughtSignature' => 'thought_sig_roundtrip',
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ], 200)
+                ->push([
+                    'candidates' => [
+                        [
+                            'content' => [
+                                'parts' => [
+                                    ['text' => 'Đây là các mẫu sofa Mộc An tốt nhất cho bạn.'],
+                                ],
+                            ],
+                        ],
+                    ],
+                ], 200),
+        ]);
+
+        $service = app(AiAssistantService::class);
+        $service->setProvider($provider);
+
+        $category = \App\Models\Category::create(['name' => 'Phòng khách', 'slug' => 'phong-khach', 'is_active' => true]);
+        $product = \App\Models\Product::create([
+            'category_id' => $category->id,
+            'name' => 'Sofa Gỗ Sồi Mộc An',
+            'slug' => 'sofa-go-soi-moc-an',
+            'sku' => 'SF-01',
+            'base_price' => 10000000,
+            'is_active' => true,
+        ]);
+        \App\Models\ProductVariant::create([
+            'product_id' => $product->id,
+            'sku' => 'SF-01-V1',
+            'price' => 10000000,
+            'stock' => 5,
+        ]);
+
+        $customer = User::factory()->create(['role' => 'customer']);
+        $conversation = $service->getOrCreateConversation($customer, 'test_session');
+
+        $result = $service->sendMessage($conversation, 'Tìm sofa', ['user' => $customer, 'session_id' => 'test_session']);
+
+        $this->assertTrue($result['success']);
+        $this->assertEquals('Đây là các mẫu sofa Mộc An tốt nhất cho bạn.', $result['message']['content']);
+        $this->assertNotEmpty($result['message']['cards']);
+    }
+
+    public function test_provider_timeout_triggers_friendly_support_fallback(): void
+    {
+        $this->app['env'] = 'production';
+        $timeoutProvider = new class implements AiProviderInterface {
+            public function chat(array $messages, array $tools = [], array $options = []): array
+            {
+                throw new \Illuminate\Http\Client\ConnectionException('cURL error 28: Operation timed out after 30000 milliseconds');
+            }
+        };
+
+        $service = app(AiAssistantService::class);
+        $service->setProvider($timeoutProvider);
+
+        $customer = User::factory()->create(['role' => 'customer']);
+        $conversation = $service->getOrCreateConversation($customer, 'test_timeout_session');
+
+        $result = $service->sendMessage($conversation, 'Tư vấn nhanh giúp tôi', ['user' => $customer, 'session_id' => 'test_timeout_session']);
+
+        $this->assertTrue($result['success']);
+        $this->assertStringContainsString('kết nối đến hệ thống trợ lý Mộc An đang tạm thời gián đoạn', $result['message']['content']);
+        $this->assertStringContainsString('1900 6868', $result['message']['content']);
+
+        $cards = $result['message']['cards'];
+        $this->assertNotEmpty($cards);
+        $supportCard = collect($cards)->firstWhere('type', 'support_actions');
+        $this->assertNotNull($supportCard);
+    }
+
+    public function test_max_tool_loop_limit_enforced_at_five(): void
+    {
+        // Provider that loops infinitely calling a tool
+        $loopingProvider = new class implements AiProviderInterface {
+            public int $calls = 0;
+            public function chat(array $messages, array $tools = [], array $options = []): array
+            {
+                $this->calls++;
+                return [
+                    'content' => null,
+                    'tool_calls' => [
+                        ['id' => 'call_' . $this->calls, 'name' => 'get_active_vouchers', 'arguments' => []],
+                    ],
+                ];
+            }
+        };
+
+        $service = app(AiAssistantService::class);
+        $service->setProvider($loopingProvider);
+
+        $customer = User::factory()->create(['role' => 'customer']);
+        $conversation = $service->getOrCreateConversation($customer, 'test_loop_session');
+
+        $result = $service->sendMessage($conversation, 'Kiểm tra mã giảm giá', ['user' => $customer, 'session_id' => 'test_loop_session']);
+
+        $this->assertTrue($result['success']);
+        // Max loops must be exactly 5
+        $this->assertEquals(5, $loopingProvider->calls);
+    }
 }

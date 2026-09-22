@@ -218,8 +218,14 @@ class AiAssistantService
             if (!empty($h->metadata['tool_calls'])) {
                 $msgPayload['tool_calls'] = $h->metadata['tool_calls'];
             }
+            if (!empty($h->metadata['raw_parts'])) {
+                $msgPayload['raw_parts'] = $h->metadata['raw_parts'];
+            }
             if ($h->role === 'tool' && !empty($h->metadata['name'])) {
                 $msgPayload['name'] = $h->metadata['name'];
+            }
+            if ($h->role === 'tool' && !empty($h->metadata['call_id'])) {
+                $msgPayload['call_id'] = $h->metadata['call_id'];
             }
             $messagesPayload[] = $msgPayload;
         }
@@ -258,6 +264,7 @@ class AiAssistantService
                     'role' => 'assistant',
                     'content' => $assistantContent,
                     'tool_calls' => $toolCalls,
+                    'raw_parts' => $response['raw_parts'] ?? [],
                 ];
 
                 foreach ($toolCalls as $call) {
@@ -277,11 +284,15 @@ class AiAssistantService
                     }
 
                     // Feed tool result back to LLM context
-                    $messagesPayload[] = [
+                    $toolPayload = [
                         'role' => 'tool',
                         'name' => $toolName,
                         'content' => $toolResult['text'],
                     ];
+                    if (!empty($call['id'])) {
+                        $toolPayload['call_id'] = $call['id'];
+                    }
+                    $messagesPayload[] = $toolPayload;
                 }
             }
         } catch (\Throwable $e) {

@@ -153,4 +153,21 @@ class AiAssistantCoreTest extends TestCase
         $response->assertSee('Trợ lý Mộc An');
         $response->assertSee('ai-assistant-root', false);
     }
+
+    public function test_admin_can_access_ai_dashboard_and_settings(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $response = $this->actingAs($admin)->get(route('admin.ai.index'));
+        $response->assertOk();
+        $response->assertSee('Trợ lý AI');
+
+        $updateRes = $this->actingAs($admin)->post(route('admin.ai.update-settings'), [
+            'ai_enabled' => '1',
+            'ai_model' => 'gemini-3.8-flash',
+            'ai_temperature' => '0.7',
+            'ai_max_tokens' => '1500',
+        ]);
+        $updateRes->assertRedirect();
+    }
 }

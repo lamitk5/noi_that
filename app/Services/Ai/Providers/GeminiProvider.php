@@ -53,11 +53,18 @@ class GeminiProvider implements AiProviderInterface
                     ? $content
                     : ['result' => $content];
 
+                $fcResponse = [
+                    'name' => $msg['name'] ?? 'tool_result',
+                    'response' => $responseObject,
+                ];
+                if (!empty($msg['call_id'])) {
+                    $fcResponse['id'] = $msg['call_id'];
+                } elseif (!empty($msg['id'])) {
+                    $fcResponse['id'] = $msg['id'];
+                }
+
                 $toolPart = [
-                    'functionResponse' => [
-                        'name' => $msg['name'] ?? 'tool_result',
-                        'response' => $responseObject,
-                    ],
+                    'functionResponse' => $fcResponse,
                 ];
 
                 $lastIndex = count($contents) - 1;
@@ -75,7 +82,15 @@ class GeminiProvider implements AiProviderInterface
             $geminiRole = ($role === 'assistant') ? 'model' : 'user';
 
             // Check if this message was an assistant message containing function calls
-            if ($geminiRole === 'model' && !empty($msg['tool_calls'])) {
+            if ($geminiRole === 'model' && (!empty($msg['tool_calls']) || !empty($msg['raw_parts']))) {
+                if (!empty($msg['raw_parts']) && is_array($msg['raw_parts'])) {
+                    $contents[] = [
+                        'role' => 'model',
+                        'parts' => $msg['raw_parts'],
+                    ];
+                    continue;
+                }
+
                 $parts = [];
                 if (!empty($content)) {
                     $parts[] = ['text' => $content];
@@ -84,11 +99,15 @@ class GeminiProvider implements AiProviderInterface
                     if (!empty($tc['raw_part']) && is_array($tc['raw_part'])) {
                         $parts[] = $tc['raw_part'];
                     } else {
+                        $fcData = [
+                            'name' => $tc['name'],
+                            'args' => !empty($tc['arguments']) ? (object)$tc['arguments'] : (object)[],
+                        ];
+                        if (!empty($tc['id'])) {
+                            $fcData['id'] = $tc['id'];
+                        }
                         $fcPart = [
-                            'functionCall' => [
-                                'name' => $tc['name'],
-                                'args' => !empty($tc['arguments']) ? (object)$tc['arguments'] : (object)[],
-                            ],
+                            'functionCall' => $fcData,
                         ];
                         if (!empty($tc['thoughtSignature'])) {
                             $fcPart['thoughtSignature'] = $tc['thoughtSignature'];
@@ -240,6 +259,7 @@ class GeminiProvider implements AiProviderInterface
         return [
             'content' => $text ?: null,
             'tool_calls' => $toolCalls,
+            'raw_parts' => $candidate['content']['parts'] ?? [],
             'usage' => [
                 'prompt_tokens' => $usageMeta['promptTokenCount'] ?? 0,
                 'completion_tokens' => $usageMeta['candidatesTokenCount'] ?? 0,
