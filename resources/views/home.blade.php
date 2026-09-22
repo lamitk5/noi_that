@@ -323,7 +323,7 @@
                     'https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=700&q=80',
                     'https://images.unsplash.com/photo-1600566753051-f0b89df2dd90?auto=format&fit=crop&w=700&q=80',
                 ] as $image)
-                    <a href="#" class="reveal-on-scroll group relative aspect-square overflow-hidden rounded-[1.4rem] bg-surface-alt shadow-sm transition-all duration-500 hover:-translate-y-1 hover:shadow-xl" data-delay="{{ $loop->index * 80 }}">
+                    <a href="{{ route('posts.index') }}" class="reveal-on-scroll group relative aspect-square overflow-hidden rounded-[1.4rem] bg-surface-alt shadow-sm transition-all duration-500 hover:-translate-y-1 hover:shadow-xl" data-delay="{{ $loop->index * 80 }}">
                         <img src="{{ $image }}" alt="Cảm hứng không gian sống Mộc An" class="size-full object-cover transition duration-700 group-hover:scale-105">
                         <span class="absolute inset-0 grid place-items-center bg-primary/0 text-white opacity-0 transition group-hover:bg-primary/45 group-hover:opacity-100">
                             <svg viewBox="0 0 24 24" class="size-7" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>

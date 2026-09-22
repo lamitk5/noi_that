@@ -353,9 +353,9 @@
             <div>
                 <h3 class="footer-title">Khám phá</h3>
                 <div class="mt-5 flex flex-col gap-3 text-sm text-white/65">
-                    <a href="#san-pham" class="hover:text-white">Sản phẩm mới</a>
-                    <a href="#bo-suu-tap" class="hover:text-white">Bộ sưu tập</a>
-                    <a href="#" class="hover:text-white">Không gian đẹp</a>
+                    <a href="{{ route('products.index') }}" class="hover:text-white">Sản phẩm mới</a>
+                    <a href="{{ route('products.index') }}" class="hover:text-white">Bộ sưu tập</a>
+                    <a href="{{ route('posts.index') }}" class="hover:text-white">Không gian đẹp</a>
                 </div>
             </div>
             <div>
@@ -371,7 +371,7 @@
             <div>
                 <h3 class="footer-title">Nhận cảm hứng mỗi tuần</h3>
                 <p class="mt-5 text-sm leading-6 text-white/65">Ý tưởng bài trí và ưu đãi mới gửi thẳng đến bạn.</p>
-                <form class="mt-4 flex border-b border-white/30 pb-2" action="#" method="post">
+                <form class="mt-4 flex border-b border-white/30 pb-2" action="{{ route('pages.contact') }}" method="get">
                     <input class="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/40" type="email" placeholder="Email của bạn">
                     <button class="text-xs font-bold uppercase tracking-widest text-[#d8b184]" type="submit">Đăng ký</button>
                 </form>
