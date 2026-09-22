@@ -127,11 +127,11 @@ class AiAssistantService
     public function sendMessage(AiConversation $conversation, string $userMessage, array $context = []): array
     {
         // 1. Feature flag check
-        $aiEnabled = (bool) SiteSetting::get('ai_assistant_enabled', config('ai.enabled', true));
-        if (!$aiEnabled) {
+        $aiEnabled = SiteSetting::get('ai_enabled', SiteSetting::get('ai_assistant_enabled', config('ai.enabled', true)));
+        if ($aiEnabled === '0' || $aiEnabled === false || $aiEnabled === 0) {
             return [
                 'success' => false,
-                'error' => 'Trợ lý AI Mộc An hiện đang bảo trì nâng cấp. Quý khách vui lòng liên hệ hotline 1900 6868 để được hỗ trợ trực tiếp.',
+                'error' => 'Trợ lý AI Mộc An hiện đang bảo trì nâng cấp. Quý khách vui lòng liên hệ hotline ' . SiteSetting::get('site_hotline', '1900 6868') . ' để được hỗ trợ trực tiếp.',
             ];
         }
 
@@ -230,8 +230,8 @@ class AiAssistantService
                 $loopCount++;
 
                 $response = $this->provider->chat($messagesPayload, $tools, [
-                    'temperature' => (float) config('ai.temperature', 0.7),
-                    'max_tokens' => (int) config('ai.max_tokens', 1500),
+                    'temperature' => (float) SiteSetting::get('ai_temperature', config('ai.temperature', 0.7)),
+                    'max_tokens' => (int) SiteSetting::get('ai_max_tokens', config('ai.max_tokens', 1500)),
                 ]);
 
                 $totalTokens += $response['usage']['total_tokens'] ?? 0;
@@ -362,6 +362,11 @@ THÔNG TIN NGƯỜI DÙNG:
 
 {$knowledgeContext}
 PROMPT;
+
+        $customInstructions = trim((string) SiteSetting::get('ai_custom_instructions', ''));
+        if (!empty($customInstructions)) {
+            $prompt .= "\n\nHƯỚNG DẪN BỔ SUNG TỪ QUẢN TRỊ VIÊN:\n" . $customInstructions;
+        }
 
         return $prompt;
     }

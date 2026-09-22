@@ -143,4 +143,72 @@ class AiShoppingExperienceTest extends TestCase
         $response->assertOk()->assertJson(['success' => true]);
         $this->assertGreaterThanOrEqual(1, (int) $response->json('cart_count'));
     }
+
+    public function test_ai_disabled_setting_blocks_chat(): void
+    {
+        \App\Models\SiteSetting::set('ai_enabled', '0');
+
+        $response = $this->postJson(route('ai.chat'), [
+            'message' => 'Xin chào Mộc An!',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJson([
+                'success' => false,
+            ]);
+        $this->assertStringContainsString('bảo trì', $response->json('error'));
+
+        \App\Models\SiteSetting::set('ai_enabled', '1');
+    }
+
+    public function test_multiturn_conversation_preserves_context(): void
+    {
+        // Turn 1: Search products
+        $res1 = $this->actingAs($this->customer)->postJson(route('ai.chat'), [
+            'message' => 'Tìm giúp mình bàn ăn gỗ sồi',
+        ]);
+        $res1->assertOk();
+        $uuid = $res1->json('conversation_uuid');
+
+        // Turn 2: Follow-up question referencing previous message
+        $res2 = $this->actingAs($this->customer)->postJson(route('ai.chat'), [
+            'conversation_uuid' => $uuid,
+            'message' => 'Kích thước mẫu thứ 2 thế nào?',
+        ]);
+        $res2->assertOk();
+        $this->assertEquals($uuid, $res2->json('conversation_uuid'));
+
+        // Check messages in database for this conversation
+        $conv = \App\Models\AiConversation::where('uuid', $uuid)->first();
+        $this->assertGreaterThanOrEqual(4, $conv->messages()->count()); // 2 user + 2 assistant
+    }
+
+    public function test_rate_limiting_protects_ai_endpoint(): void
+    {
+        $uniqueUser = User::factory()->create(['role' => 'customer']);
+
+        for ($i = 0; $i < 30; $i++) {
+            \Illuminate\Support\Facades\RateLimiter::hit('ai_chat:u_' . $uniqueUser->id, 60);
+        }
+
+        $response = $this->actingAs($uniqueUser)->postJson(route('ai.chat'), [
+            'message' => 'Tin nhắn bị rate limit',
+        ]);
+
+        $response->assertStatus(422);
+        $this->assertStringContainsString('quá nhanh', $response->json('error'));
+    }
+
+    public function test_xss_in_user_message_is_safely_stored_and_handled(): void
+    {
+        $response = $this->actingAs($this->customer)->postJson(route('ai.chat'), [
+            'message' => '<script>alert("xss")</script><img src=x onerror=alert(1)>',
+        ]);
+
+        $response->assertOk();
+        $this->assertDatabaseHas('ai_messages', [
+            'role' => 'user',
+            'content' => '<script>alert("xss")</script><img src=x onerror=alert(1)>',
+        ]);
+    }
 }
