@@ -270,4 +270,60 @@ class OrderLifecycleHardeningTest extends TestCase
         $this->assertEquals('success', $transaction->fresh()->status);
         $this->assertEquals($firstPaidAt, $transaction->fresh()->paid_at);
     }
+
+    public function test_financial_metrics_and_revenue_strictly_enforce_order_status_completed_and_payment_status_paid(): void
+    {
+        $this->assertTrue(\Illuminate\Support\Facades\Schema::hasColumn('orders', 'order_status'), 'Canonical column orders.order_status must exist');
+        $this->assertFalse(\Illuminate\Support\Facades\Schema::hasColumn('orders', 'status'), 'Legacy column orders.status must not exist');
+
+        $admin = $this->createAdmin();
+
+        // 1. Completed but UNPAID order (e.g. COD not collected yet) -> Must NOT count in revenue
+        Order::create([
+            'order_code' => 'ORD-REV-1',
+            'customer_name' => 'Khách 1',
+            'customer_phone' => '0901111111',
+            'shipping_address' => 'HN',
+            'total_price' => 1000000,
+            'payment_method' => 'cod',
+            'payment_status' => 'pending',
+            'order_status' => 'completed',
+        ]);
+
+        // 2. PAID but shipping/pending order -> Must NOT count in final revenue
+        Order::create([
+            'order_code' => 'ORD-REV-2',
+            'customer_name' => 'Khách 2',
+            'customer_phone' => '0902222222',
+            'shipping_address' => 'HCM',
+            'total_price' => 2000000,
+            'payment_method' => 'vnpay',
+            'payment_status' => 'paid',
+            'order_status' => 'shipping',
+        ]);
+
+        // 3. Completed AND Paid order -> MUST count in revenue
+        Order::create([
+            'order_code' => 'ORD-REV-3',
+            'customer_name' => 'Khách 3',
+            'customer_phone' => '0903333333',
+            'shipping_address' => 'ĐN',
+            'total_price' => 5000000,
+            'payment_method' => 'vnpay',
+            'payment_status' => 'paid',
+            'order_status' => 'completed',
+        ]);
+
+        // Check Dashboard
+        $dashboardResponse = $this->actingAs($admin)->get(route('admin.dashboard'));
+        $dashboardResponse->assertStatus(200);
+        $stats = $dashboardResponse->viewData('stats');
+        $this->assertEquals(5000000.0, (float) $stats['revenue'], 'Dashboard revenue must only include completed AND paid orders');
+
+        // Check Reports
+        $reportResponse = $this->actingAs($admin)->get(route('admin.reports.index', ['preset' => 'all_time']));
+        $reportResponse->assertStatus(200);
+        $metrics = $reportResponse->viewData('metrics');
+        $this->assertEquals(5000000.0, (float) $metrics['total_revenue'], 'Report revenue must only include completed AND paid orders');
+    }
 }

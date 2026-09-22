@@ -109,6 +109,10 @@ class SeoController extends Controller
         $content .= "Disallow: /gio-hang\n";
         $content .= "Disallow: /tai-khoan/\n";
         $content .= "Disallow: /tai-khoan\n";
+        $content .= "Disallow: /dang-nhap\n";
+        $content .= "Disallow: /dang-ky\n";
+        $content .= "Disallow: /dat-hang-thanh-cong/\n";
+        $content .= "Disallow: /health\n";
         $content .= "Disallow: /api/\n";
         $content .= "Disallow: /api\n\n";
         $content .= "Sitemap: {$sitemapUrl}\n";

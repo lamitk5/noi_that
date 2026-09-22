@@ -14,6 +14,7 @@ class OperationalHealthCheckTest extends TestCase
         $response = $this->getJson('/health');
 
         $response->assertStatus(200)
+            ->assertHeader('X-Robots-Tag', 'noindex, nofollow')
             ->assertJsonStructure([
                 'status',
                 'database',
@@ -28,6 +29,20 @@ class OperationalHealthCheckTest extends TestCase
                 'cache' => 'connected',
                 'storage' => 'writable',
             ]);
+    }
+
+    public function test_health_check_handles_dependency_failure_safely_without_leaking_details(): void
+    {
+        \Illuminate\Support\Facades\Cache::shouldReceive('put')->andThrow(new \RuntimeException('Sensitive DB Credentials root:secret@127.0.0.1'));
+
+        $response = $this->getJson('/health');
+        $response->assertStatus(503);
+        $response->assertJson([
+            'status' => 'unhealthy',
+            'cache' => 'unreachable',
+        ]);
+        $this->assertStringNotContainsString('Sensitive DB Credentials', (string) $response->getContent());
+        $response->assertHeader('X-Robots-Tag', 'noindex, nofollow');
     }
 
     public function test_branded_error_views_exist_and_render_user_friendly_vietnamese_content(): void

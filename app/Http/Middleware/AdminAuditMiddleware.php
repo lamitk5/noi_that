@@ -5,7 +5,9 @@ namespace App\Http\Middleware;
 use App\Models\AdminAuditLog;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
+use Throwable;
 
 class AdminAuditMiddleware
 {
@@ -21,9 +23,15 @@ class AdminAuditMiddleware
         'token',
         'secret',
         'api_key',
+        'gemini_api_key',
         'card_number',
         'cvv',
-        'vnp_SecureHash',
+        'vnp_securehash',
+        'vnp_hashsecret',
+        'momo_secret_key',
+        'momo_access_key',
+        'partner_code',
+        'authorization',
     ];
 
     /**
@@ -34,19 +42,24 @@ class AdminAuditMiddleware
         $response = $next($request);
 
         if (in_array(strtoupper($request->method()), ['POST', 'PUT', 'PATCH', 'DELETE'])) {
-            $user = $request->user();
-            $action = $request->route()?->getName() ?: $request->path();
-            $sanitizedPayload = $this->sanitizePayload($request->all());
+            try {
+                $user = $request->user();
+                $action = $request->route()?->getName() ?: $request->path();
+                $sanitizedPayload = $this->sanitizePayload($request->all());
 
-            AdminAuditLog::create([
-                'user_id' => $user?->id,
-                'action' => $action,
-                'method' => strtoupper($request->method()),
-                'route' => $request->path(),
-                'ip_address' => $request->ip(),
-                'user_agent' => substr((string) $request->userAgent(), 0, 1000),
-                'payload' => $sanitizedPayload,
-            ]);
+                AdminAuditLog::create([
+                    'user_id' => $user?->id,
+                    'action' => $action,
+                    'method' => strtoupper($request->method()),
+                    'route' => $request->path(),
+                    'ip_address' => $request->ip(),
+                    'user_agent' => substr((string) $request->userAgent(), 0, 1000),
+                    'payload' => $sanitizedPayload,
+                ]);
+            } catch (Throwable $e) {
+                // Audit logging failure must never abort or break the primary administrative action
+                Log::warning('Admin audit logging failed: ' . $e->getMessage());
+            }
         }
 
         return $response;

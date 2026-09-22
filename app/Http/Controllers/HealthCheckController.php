@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Throwable;
 
@@ -23,7 +24,8 @@ class HealthCheckController extends Controller
             DB::connection()->getPdo();
             $dbStatus = 'connected';
         } catch (Throwable $e) {
-            $dbStatus = 'unreachable: ' . $e->getMessage();
+            Log::error('Health check database failure: ' . $e->getMessage());
+            $dbStatus = 'unreachable';
             $status = 'unhealthy';
             $httpCode = 503;
         }
@@ -40,7 +42,8 @@ class HealthCheckController extends Controller
                 $httpCode = 503;
             }
         } catch (Throwable $e) {
-            $cacheStatus = 'unreachable: ' . $e->getMessage();
+            Log::error('Health check cache failure: ' . $e->getMessage());
+            $cacheStatus = 'unreachable';
             $status = 'unhealthy';
             $httpCode = 503;
         }
@@ -57,7 +60,8 @@ class HealthCheckController extends Controller
                 $httpCode = 503;
             }
         } catch (Throwable $e) {
-            $storageStatus = 'unwritable: ' . $e->getMessage();
+            Log::error('Health check storage failure: ' . $e->getMessage());
+            $storageStatus = 'unwritable';
             $status = 'unhealthy';
             $httpCode = 503;
         }
@@ -69,6 +73,8 @@ class HealthCheckController extends Controller
             'storage' => $storageStatus,
             'environment' => config('app.env'),
             'timestamp' => now()->toIso8601String(),
-        ], $httpCode);
+        ], $httpCode, [
+            'X-Robots-Tag' => 'noindex, nofollow',
+        ]);
     }
 }

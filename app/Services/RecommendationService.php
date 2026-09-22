@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
 use Illuminate\Database\Eloquent\Collection;
@@ -36,8 +37,12 @@ class RecommendationService
             return $this->getSimilarProducts($product, $limit);
         }
 
-        // 2. Find order IDs containing this product
+        // 2. Find order IDs containing this product (strictly completed & paid only)
         $orderIds = OrderItem::whereIn('product_variant_id', $variantIds)
+            ->whereHas('order', function ($query) {
+                $query->where('order_status', Order::STATUS_COMPLETED)
+                    ->where('payment_status', Order::PAYMENT_PAID);
+            })
             ->pluck('order_id')
             ->unique();
 

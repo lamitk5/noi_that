@@ -93,6 +93,9 @@ class SeoRobotsSitemapTest extends TestCase
         $this->assertStringContainsString('Disallow: /thanh-toan', $content);
         $this->assertStringContainsString('Disallow: /gio-hang', $content);
         $this->assertStringContainsString('Disallow: /tai-khoan', $content);
+        $this->assertStringContainsString('Disallow: /dang-nhap', $content);
+        $this->assertStringContainsString('Disallow: /dang-ky', $content);
+        $this->assertStringContainsString('Disallow: /health', $content);
         $this->assertStringContainsString('Disallow: /api', $content);
         $this->assertStringContainsString('Sitemap: ' . url('/sitemap.xml'), $content);
     }
@@ -127,5 +130,15 @@ class SeoRobotsSitemapTest extends TestCase
         $adminResponse = $this->actingAs($admin)->get(route('admin.dashboard'));
         $adminResponse->assertStatus(200);
         $adminResponse->assertSee('<meta name="robots" content="noindex, nofollow">', false);
+
+        // 5. Auth pages (for guest)
+        \Illuminate\Support\Facades\Auth::logout();
+        $loginResponse = $this->get(route('login'));
+        $loginResponse->assertStatus(200);
+        $loginResponse->assertSee('<meta name="robots" content="noindex, nofollow">', false);
+
+        $registerResponse = $this->get(route('register'));
+        $registerResponse->assertStatus(200);
+        $registerResponse->assertSee('<meta name="robots" content="noindex, nofollow">', false);
     }
 }

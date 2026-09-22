@@ -149,4 +149,60 @@ class RecommendationTest extends TestCase
         $response->assertSee('Sản phẩm liên quan');
         $response->assertSee('Sản phẩm bạn vừa xem');
     }
+
+    public function test_frequently_bought_together_ignores_canceled_or_unpaid_orders(): void
+    {
+        $variantA = ProductVariant::create([
+            'product_id' => $this->productA->id,
+            'sku' => 'BA-M-VA-' . uniqid(),
+            'price' => 5000000,
+            'stock' => 10,
+        ]);
+
+        $variantC = ProductVariant::create([
+            'product_id' => $this->productC->id,
+            'sku' => 'GBA-M-VC-' . uniqid(),
+            'price' => 1800000,
+            'stock' => 10,
+        ]);
+
+        $user = User::factory()->create();
+
+        // Canceled order with Product A & Product C
+        $order = Order::create([
+            'user_id' => $user->id,
+            'order_code' => 'ORD-CANCELED-' . uniqid(),
+            'customer_name' => 'Test Customer',
+            'customer_phone' => '0901234567',
+            'shipping_address' => 'HCM',
+            'total_price' => 6800000,
+            'payment_method' => 'cod',
+            'payment_status' => 'pending',
+            'order_status' => 'canceled',
+        ]);
+
+        OrderItem::create([
+            'order_id' => $order->id,
+            'product_variant_id' => $variantA->id,
+            'product_name' => $this->productA->name,
+            'variant_info' => 'Tiêu chuẩn',
+            'quantity' => 1,
+            'price' => 5000000,
+        ]);
+
+        OrderItem::create([
+            'order_id' => $order->id,
+            'product_variant_id' => $variantC->id,
+            'product_name' => $this->productC->name,
+            'variant_info' => 'Tiêu chuẩn',
+            'quantity' => 1,
+            'price' => 1800000,
+        ]);
+
+        $this->assertFalse(
+            OrderItem::where('product_variant_id', $variantA->id)
+                ->whereHas('order', fn($q) => $q->where('order_status', Order::STATUS_COMPLETED)->where('payment_status', Order::PAYMENT_PAID))
+                ->exists()
+        );
+    }
 }

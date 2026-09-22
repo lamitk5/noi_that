@@ -15,7 +15,7 @@
     $siteName = 'Mộc An Nội Thất';
 
     // Check private routes or explicit robots prop
-    $isPrivate = request()->is('gio-hang*', 'thanh-toan*', 'tai-khoan*', 'admin*', 'api*');
+    $isPrivate = request()->is('gio-hang*', 'thanh-toan*', 'tai-khoan*', 'admin*', 'api*', 'dang-nhap*', 'dang-ky*', 'dat-hang-thanh-cong*', 'health*');
     $robotsMeta = $robots ?? ($isPrivate ? 'noindex, nofollow' : 'index, follow');
 @endphp
 

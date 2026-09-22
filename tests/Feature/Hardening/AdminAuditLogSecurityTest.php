@@ -58,6 +58,23 @@ class AdminAuditLogSecurityTest extends TestCase
         $this->assertDatabaseCount('admin_audit_logs', 0);
     }
 
+    public function test_audit_logging_failure_does_not_break_admin_actions(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        \Illuminate\Support\Facades\Event::listen('eloquent.creating: App\Models\AdminAuditLog', function () {
+            throw new \RuntimeException('Database lock on admin_audit_logs');
+        });
+
+        $response = $this->actingAs($admin)->post(route('admin.categories.store'), [
+            'name' => 'Bàn Tròn Gỗ Mun',
+            'is_active' => 1,
+        ]);
+
+        $response->assertRedirect(route('admin.categories.index'));
+        $this->assertDatabaseHas('categories', ['name' => 'Bàn Tròn Gỗ Mun']);
+    }
+
     public function test_checkout_rate_limiter_throttles_excessive_requests(): void
     {
         $user = User::factory()->create(['role' => 'customer']);

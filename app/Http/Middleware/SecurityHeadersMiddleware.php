@@ -21,6 +21,24 @@ class SecurityHeadersMiddleware
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
         $response->headers->set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
 
+        $cspDirectives = [
+            "default-src 'self'",
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.bunny.net",
+            "font-src 'self' data: https://fonts.gstatic.com https://fonts.bunny.net",
+            "img-src 'self' data: https: blob:",
+            "connect-src 'self'",
+            "frame-ancestors 'self'",
+            "form-action 'self'",
+            "base-uri 'self'",
+            "object-src 'none'",
+        ];
+        $response->headers->set('Content-Security-Policy', implode('; ', $cspDirectives));
+
+        if ($request->isSecure() || app()->environment('production')) {
+            $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+        }
+
         return $response;
     }
 }

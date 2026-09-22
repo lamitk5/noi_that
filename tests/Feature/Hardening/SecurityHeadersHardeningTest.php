@@ -25,6 +25,15 @@ class SecurityHeadersHardeningTest extends TestCase
         $response->assertHeader('X-Content-Type-Options', 'nosniff');
         $response->assertHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
         $response->assertHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+        $response->assertHeader('Content-Security-Policy');
+        $this->assertStringContainsString("default-src 'self'", (string) $response->headers->get('Content-Security-Policy'));
+        $this->assertStringContainsString("script-src 'self' 'unsafe-inline' 'unsafe-eval'", (string) $response->headers->get('Content-Security-Policy'));
+    }
+
+    public function test_hsts_is_sent_on_secure_requests(): void
+    {
+        $response = $this->get('https://localhost/');
+        $response->assertHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     }
 
     public function test_spoofed_or_executable_file_upload_is_rejected(): void
