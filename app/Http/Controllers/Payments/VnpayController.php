@@ -145,23 +145,36 @@ class VnpayController extends Controller
 
         // 5. Update Status
         DB::transaction(function () use ($request, $transaction) {
+            /** @var PaymentTransaction $lockedTransaction */
+            $lockedTransaction = PaymentTransaction::where('id', $transaction->id)->lockForUpdate()->first();
+            /** @var Order $lockedOrder */
+            $lockedOrder = Order::where('id', $transaction->order_id)->lockForUpdate()->first();
+
+            if (! $lockedTransaction || ! $lockedOrder) {
+                return;
+            }
+
+            if ($lockedTransaction->isSuccess() || $lockedOrder->payment_status === 'paid') {
+                return;
+            }
+
             $responseCode = $request->query('vnp_ResponseCode');
             $transactionStatus = $request->query('vnp_TransactionStatus');
             $transactionNo = $request->query('vnp_TransactionNo');
 
             if ($responseCode === '00' && $transactionStatus === '00') {
-                $transaction->update([
+                $lockedTransaction->update([
                     'status' => 'success',
                     'provider_transaction_id' => $transactionNo,
                     'response_code' => $responseCode,
                     'paid_at' => now(),
                 ]);
 
-                $transaction->order->update([
+                $lockedOrder->update([
                     'payment_status' => 'paid',
                 ]);
             } else {
-                $transaction->update([
+                $lockedTransaction->update([
                     'status' => 'failed',
                     'response_code' => $responseCode,
                     'failed_at' => now(),

@@ -139,22 +139,35 @@ class MomoController extends Controller
 
         // 6. Update Status
         DB::transaction(function () use ($data, $transaction) {
+            /** @var PaymentTransaction $lockedTransaction */
+            $lockedTransaction = PaymentTransaction::where('id', $transaction->id)->lockForUpdate()->first();
+            /** @var Order $lockedOrder */
+            $lockedOrder = Order::where('id', $transaction->order_id)->lockForUpdate()->first();
+
+            if (! $lockedTransaction || ! $lockedOrder) {
+                return;
+            }
+
+            if ($lockedTransaction->isSuccess() || $lockedOrder->payment_status === 'paid') {
+                return;
+            }
+
             $resultCode = (int) ($data['resultCode'] ?? -1);
             $transId = $data['transId'] ?? null;
 
             if ($resultCode === 0) {
-                $transaction->update([
+                $lockedTransaction->update([
                     'status' => 'success',
                     'provider_transaction_id' => $transId,
                     'response_code' => (string) $resultCode,
                     'paid_at' => now(),
                 ]);
 
-                $transaction->order->update([
+                $lockedOrder->update([
                     'payment_status' => 'paid',
                 ]);
             } else {
-                $transaction->update([
+                $lockedTransaction->update([
                     'status' => 'failed',
                     'response_code' => (string) $resultCode,
                     'failed_at' => now(),
