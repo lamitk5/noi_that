@@ -230,3 +230,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::post('tro-ly-ai/test-rag', [\App\Http\Controllers\Admin\AiDashboardController::class, 'testRag'])->name('ai.test-rag');
     Route::post('tro-ly-ai/cai-dat', [\App\Http\Controllers\Admin\AiDashboardController::class, 'updateSettings'])->name('ai.update-settings');
 });
+
+// SEO Routes
+Route::get('/sitemap.xml', [\App\Http\Controllers\SeoController::class, 'sitemap'])->name('seo.sitemap');
+Route::get('/robots.txt', [\App\Http\Controllers\SeoController::class, 'robots'])->name('seo.robots');

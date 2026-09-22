@@ -1,2 +1,14 @@
 User-agent: *
-Disallow:
+Disallow: /admin/
+Disallow: /admin
+Disallow: /checkout/
+Disallow: /thanh-toan/
+Disallow: /thanh-toan
+Disallow: /gio-hang/
+Disallow: /gio-hang
+Disallow: /tai-khoan/
+Disallow: /tai-khoan
+Disallow: /api/
+Disallow: /api
+
+Sitemap: http://localhost/sitemap.xml

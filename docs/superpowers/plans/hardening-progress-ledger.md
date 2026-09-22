@@ -11,7 +11,7 @@
 - [x] Task 4: Account Saved Addresses, Loyalty & Support Ticket Hardening
 - [x] Phase 1 Checkpoint
 - [x] Task 5: Dynamic Metadata, OpenGraph & JSON-LD Structured Data
-- [ ] Task 6: Sitemap, Robots & Noindex Protection
+- [x] Task 6: Sitemap, Robots & Noindex Protection
 - [ ] Phase 2 Checkpoint
 - [ ] Task 7: Database Composite Indexes & Query Hotspot Optimization
 - [ ] Task 8: Cache Tiering, Invalidation Hooks & Asset Optimization
