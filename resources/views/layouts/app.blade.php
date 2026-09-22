@@ -24,12 +24,14 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="bg-page text-body antialiased transition-colors duration-300">
+    @if (\App\Models\SiteSetting::get('promo_bar_enabled', '1') == '1')
     <div class="bg-primary px-4 py-2 text-center text-xs font-medium tracking-wide text-primary-foreground sm:text-xs flex items-center justify-center gap-3">
         <span class="inline-flex items-center gap-1.5 font-bold uppercase tracking-wider text-[10px] bg-white/20 px-2 py-0.5 rounded-full">Ưu đãi</span>
-        <span>Miễn phí giao hàng & lắp đặt tận phòng cho đơn từ 5.000.000₫</span>
+        <span>{{ \App\Models\SiteSetting::get('promo_bar_text', 'Miễn phí giao hàng & lắp đặt tận phòng cho đơn từ 5.000.000₫') }}</span>
         <span class="hidden md:inline text-white/60">|</span>
-        <span class="hidden md:inline text-white/80">Hotline tư vấn: <strong class="text-white">1900 6868</strong></span>
+        <span class="hidden md:inline text-white/80">Hotline: <strong class="text-white">{{ \App\Models\SiteSetting::get('site_hotline', '1900 6868') }}</strong></span>
     </div>
+    @endif
 
     <header class="site-header sticky top-0 z-50 border-b border-ui-border bg-header/95 backdrop-blur-xl">
         <div class="page-shell flex h-[76px] items-center justify-between gap-6">
@@ -377,7 +379,7 @@
         </div>
         <div class="border-t border-white/10">
             <div class="page-shell flex flex-col gap-2 py-5 text-xs text-white/45 sm:flex-row sm:items-center sm:justify-between">
-                <p>© {{ date('Y') }} Mộc An. All rights reserved.</p>
+                <p>{{ \App\Models\SiteSetting::get('footer_copyright', '© ' . date('Y') . ' Mộc An. All rights reserved.') }}</p>
                 <p>Đồ án Phát triển hệ thống thương mại điện tử</p>
             </div>
         </div>

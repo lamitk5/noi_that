@@ -203,4 +203,9 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::resource('bai-viet', \App\Http\Controllers\Admin\PostController::class)
         ->parameters(['bai-viet' => 'post'])
         ->names('posts');
+
+    // Website Appearance Customizer
+    Route::get('cai-dat/giao-dien', [\App\Http\Controllers\Admin\AppearanceController::class, 'index'])->name('appearance.index');
+    Route::post('cai-dat/giao-dien', [\App\Http\Controllers\Admin\AppearanceController::class, 'update'])->name('appearance.update');
+    Route::post('cai-dat/giao-dien/khoi-phuc', [\App\Http\Controllers\Admin\AppearanceController::class, 'resetDefaults'])->name('appearance.reset');
 });

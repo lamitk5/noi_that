@@ -3,6 +3,7 @@
 @section('title', 'Mộc An | Nội thất cho tổ ấm Việt')
 
 @section('content')
+    @if (\App\Models\SiteSetting::get('show_hero', '1') == '1')
     <section class="relative isolate min-h-[690px] overflow-hidden bg-[#ded8cb]">
         <div class="absolute inset-0 bg-[linear-gradient(90deg,rgba(24,33,28,.82)_0%,rgba(24,33,28,.56)_39%,rgba(24,33,28,.08)_70%)]"></div>
         <img
@@ -17,7 +18,7 @@
                 <h1 class="hero-reveal hero-reveal-delay mt-7 font-display text-5xl font-medium leading-[1.06] tracking-[-0.035em] sm:text-6xl lg:text-7xl">
                     Chạm vào sự<br><span class="italic text-[#e9d3b5]">an nhiên</span> trong tổ ấm
                 </h1>
-                <p class="hero-reveal hero-reveal-late mt-8 max-w-xl text-base leading-8 text-white/78 sm:text-lg">Nội thất tinh giản từ vật liệu tự nhiên, được tuyển chọn để mỗi góc nhà đều mang cảm giác ấm áp và riêng biệt.</p>
+                <p class="hero-reveal hero-reveal-late mt-8 max-w-xl text-base leading-8 text-white/78 sm:text-lg">{{ \App\Models\SiteSetting::get('hero_subtitle', 'Nội thất tinh giản từ vật liệu tự nhiên, được tuyển chọn để mỗi góc nhà đều mang cảm giác ấm áp và riêng biệt.') }}</p>
                 <div class="hero-reveal hero-reveal-late mt-10 flex flex-wrap gap-4">
                     <a href="{{ route('products.index') }}" class="button-primary">Khám phá sản phẩm <span aria-hidden="true">→</span></a>
                     <a href="#bo-suu-tap" class="button-ghost">Xem bộ sưu tập <span aria-hidden="true">↗</span></a>
@@ -33,7 +34,9 @@
             </div>
         </div>
     </section>
+    @endif
 
+    @if (\App\Models\SiteSetting::get('show_trust_badges', '1') == '1')
     <section class="border-b border-ui-border bg-surface">
         <div class="page-shell grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-ui-border py-4">
             @foreach ([
@@ -62,6 +65,7 @@
             @endforeach
         </div>
     </section>
+    @endif
 
     <section id="bo-suu-tap" class="section-space bg-page">
         <div class="page-shell">
@@ -266,6 +270,7 @@
         </div>
     </section>
 
+    @if (\App\Models\SiteSetting::get('show_testimonials', '1') == '1')
     <section id="danh-gia-khach-hang" class="section-space bg-surface">
         <div class="page-shell">
             <div class="section-heading reveal-on-scroll text-center mx-auto max-w-xl flex flex-col items-center">
@@ -302,6 +307,7 @@
             </div>
         </div>
     </section>
+    @endif
 
     <section class="section-space bg-page">
         <div class="page-shell text-center">
