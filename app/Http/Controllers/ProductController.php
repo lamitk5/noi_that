@@ -15,7 +15,7 @@ class ProductController extends Controller
         $sort = $request->input('sort', 'latest');
 
         $query = Product::query()
-            ->with(['category', 'primaryImage'])
+            ->with(['category', 'primaryImage', 'variants'])
             ->where('is_active', true);
 
         if ($searchQuery !== '') {

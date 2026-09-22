@@ -16,14 +16,14 @@ class HomeController extends Controller
             ->get();
 
         $featuredProducts = Product::query()
-            ->with(['category', 'primaryImage'])
+            ->with(['category', 'primaryImage', 'variants'])
             ->where('is_active', true)
             ->latest()
             ->limit(8)
             ->get();
 
         $bestSellers = Product::bestSelling(4)
-            ->with(['category', 'primaryImage'])
+            ->with(['category', 'primaryImage', 'variants'])
             ->get();
 
         return view('home', compact('categories', 'featuredProducts', 'bestSellers'));
