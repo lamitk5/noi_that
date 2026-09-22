@@ -234,3 +234,6 @@ Route::middleware(['auth', 'admin', 'admin.audit'])->prefix('admin')->name('admi
 // SEO Routes
 Route::get('/sitemap.xml', [\App\Http\Controllers\SeoController::class, 'sitemap'])->name('seo.sitemap');
 Route::get('/robots.txt', [\App\Http\Controllers\SeoController::class, 'robots'])->name('seo.robots');
+
+// Operational Health Check
+Route::get('/health', \App\Http\Controllers\HealthCheckController::class)->name('health');
