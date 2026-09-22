@@ -48,18 +48,27 @@ class GeminiProvider implements AiProviderInterface
             }
 
             if ($role === 'tool') {
-                // Function Response from tool execution
-                $contents[] = [
-                    'role' => 'function',
-                    'parts' => [
-                        [
-                            'functionResponse' => [
-                                'name' => $msg['name'] ?? 'tool_result',
-                                'response' => is_array($content) ? $content : ['result' => $content],
-                            ],
-                        ],
+                // In Gemini v1beta, functionResponse parts must be sent with role 'user'
+                $responseObject = (is_array($content) && !array_is_list($content))
+                    ? $content
+                    : ['result' => $content];
+
+                $toolPart = [
+                    'functionResponse' => [
+                        'name' => $msg['name'] ?? 'tool_result',
+                        'response' => $responseObject,
                     ],
                 ];
+
+                $lastIndex = count($contents) - 1;
+                if ($lastIndex >= 0 && $contents[$lastIndex]['role'] === 'user') {
+                    $contents[$lastIndex]['parts'][] = $toolPart;
+                } else {
+                    $contents[] = [
+                        'role' => 'user',
+                        'parts' => [$toolPart],
+                    ];
+                }
                 continue;
             }
 
@@ -72,12 +81,22 @@ class GeminiProvider implements AiProviderInterface
                     $parts[] = ['text' => $content];
                 }
                 foreach ($msg['tool_calls'] as $tc) {
-                    $parts[] = [
-                        'functionCall' => [
-                            'name' => $tc['name'],
-                            'args' => $tc['arguments'] ?? [],
-                        ],
-                    ];
+                    if (!empty($tc['raw_part']) && is_array($tc['raw_part'])) {
+                        $parts[] = $tc['raw_part'];
+                    } else {
+                        $fcPart = [
+                            'functionCall' => [
+                                'name' => $tc['name'],
+                                'args' => !empty($tc['arguments']) ? (object)$tc['arguments'] : (object)[],
+                            ],
+                        ];
+                        if (!empty($tc['thoughtSignature'])) {
+                            $fcPart['thoughtSignature'] = $tc['thoughtSignature'];
+                        } elseif (!empty($tc['thought_signature'])) {
+                            $fcPart['thoughtSignature'] = $tc['thought_signature'];
+                        }
+                        $parts[] = $fcPart;
+                    }
                 }
                 $contents[] = [
                     'role' => 'model',
@@ -86,12 +105,16 @@ class GeminiProvider implements AiProviderInterface
                 continue;
             }
 
-            $contents[] = [
-                'role' => $geminiRole,
-                'parts' => [
-                    ['text' => (string) $content],
-                ],
-            ];
+            $textPart = ['text' => (string) $content];
+            $lastIndex = count($contents) - 1;
+            if ($lastIndex >= 0 && $contents[$lastIndex]['role'] === $geminiRole) {
+                $contents[$lastIndex]['parts'][] = $textPart;
+            } else {
+                $contents[] = [
+                    'role' => $geminiRole,
+                    'parts' => [$textPart],
+                ];
+            }
         }
 
         $payload = [
@@ -127,18 +150,46 @@ class GeminiProvider implements AiProviderInterface
             ];
         }
 
-        $response = Http::timeout($this->timeout)
-            ->retry(2, 200, throw: false)
-            ->withHeaders([
-                'Content-Type' => 'application/json',
-                'x-goog-api-key' => $this->apiKey,
-            ])
-            ->post($url, $payload);
+        $maxRetries = 3;
+        $attempt = 0;
+        $response = null;
 
-        if (!$response->successful()) {
+        while ($attempt < $maxRetries) {
+            $attempt++;
+            $response = Http::timeout($this->timeout)
+                ->withHeaders([
+                    'Content-Type' => 'application/json',
+                    'x-goog-api-key' => $this->apiKey,
+                ])
+                ->post($url, $payload);
+
+            if ($response->successful()) {
+                break;
+            }
+
             $status = $response->status();
-            $body = $response->json();
-            $msg = $body['error']['message'] ?? $response->body();
+            // Retry on transient 503 (Model Overloaded / Service Unavailable) or 429 (Rate Limit)
+            if (in_array($status, [429, 503, 500, 504]) && $attempt < $maxRetries) {
+                $sleepSeconds = 2 * $attempt;
+                $body = $response ? $response->json() : null;
+                $msg = $body['error']['message'] ?? ($response ? $response->body() : '');
+                if (preg_match('/retry in ([0-9.]+)s/i', (string)$msg, $m)) {
+                    $needed = (int) ceil((float)$m[1]);
+                    if ($needed <= 60) {
+                        $sleepSeconds = max($sleepSeconds, $needed + 1);
+                    }
+                }
+                sleep($sleepSeconds);
+                continue;
+            }
+
+            break;
+        }
+
+        if (!$response || !$response->successful()) {
+            $status = $response ? $response->status() : 500;
+            $body = $response ? $response->json() : null;
+            $msg = $body['error']['message'] ?? ($response ? $response->body() : 'No response');
             $safeMsg = str_replace($this->apiKey, '[REDACTED_API_KEY]', (string) $msg);
             Log::error("Gemini API Error ({$status}): {$safeMsg}");
             throw new RuntimeException("Lỗi giao tiếp với AI Provider ({$status}): {$safeMsg}");
@@ -169,11 +220,18 @@ class GeminiProvider implements AiProviderInterface
             }
             if (isset($part['functionCall'])) {
                 $fc = $part['functionCall'];
-                $toolCalls[] = [
+                $toolCallItem = [
                     'id' => uniqid('call_'),
                     'name' => $fc['name'],
                     'arguments' => $fc['args'] ?? [],
+                    'raw_part' => $part,
                 ];
+                if (isset($part['thoughtSignature'])) {
+                    $toolCallItem['thoughtSignature'] = $part['thoughtSignature'];
+                } elseif (isset($part['thought_signature'])) {
+                    $toolCallItem['thoughtSignature'] = $part['thought_signature'];
+                }
+                $toolCalls[] = $toolCallItem;
             }
         }
 

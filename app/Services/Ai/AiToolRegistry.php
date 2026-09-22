@@ -168,25 +168,34 @@ class AiToolRegistry
      */
     public function execute(string $toolName, array $args, array $context): array
     {
-        $user = $context['user'] ?? Auth::user();
+        try {
+            $user = $context['user'] ?? Auth::user();
 
-        return match ($toolName) {
-            'search_products' => $this->searchProducts($args),
-            'get_product_detail' => $this->getProductDetail($args),
-            'check_inventory' => $this->checkInventory($args),
-            'compare_products' => $this->compareProducts($args),
-            'recommend_products' => $this->recommendProducts($args, $user),
-            'get_active_vouchers' => $this->getActiveVouchers($args),
-            'get_order_status' => $this->getOrderStatus($args, $user),
-            'get_recent_orders' => $this->getRecentOrders($args, $user),
-            'add_to_cart' => $this->addToCart($args, $user),
-            'create_support_ticket' => $this->createSupportTicket($args, $user),
-            default => [
-                'text' => "Công cụ '{$toolName}' không được hỗ trợ.",
+            return match ($toolName) {
+                'search_products' => $this->searchProducts($args),
+                'get_product_detail' => $this->getProductDetail($args),
+                'check_inventory' => $this->checkInventory($args),
+                'compare_products' => $this->compareProducts($args),
+                'recommend_products' => $this->recommendProducts($args, $user),
+                'get_active_vouchers' => $this->getActiveVouchers($args),
+                'get_order_status' => $this->getOrderStatus($args, $user),
+                'get_recent_orders' => $this->getRecentOrders($args, $user),
+                'add_to_cart' => $this->addToCart($args, $user),
+                'create_support_ticket' => $this->createSupportTicket($args, $user),
+                default => [
+                    'text' => "Công cụ '{$toolName}' không được hỗ trợ.",
+                    'card_type' => null,
+                    'card_data' => null,
+                ],
+            };
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning("AI Tool [{$toolName}] execution failed: " . $e->getMessage());
+            return [
+                'text' => "Đã xảy ra sự cố khi truy vấn dữ liệu cho công cụ '{$toolName}'.",
                 'card_type' => null,
                 'card_data' => null,
-            ],
-        };
+            ];
+        }
     }
 
     /**
@@ -284,6 +293,8 @@ class AiToolRegistry
 
         $cards = $products->map(function ($p) {
             $firstInStockVariant = $p->variants->firstWhere('stock', '>', 0) ?? $p->variants->first();
+            $materials = $p->variants->pluck('material')->filter()->unique()->values();
+            $colors = $p->variants->pluck('color')->filter()->unique()->values();
             return [
                 'id' => $p->id,
                 'name' => $p->name,
@@ -295,6 +306,8 @@ class AiToolRegistry
                 'image_url' => $p->primaryImage?->image_path ?? 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=400&q=80',
                 'total_stock' => $p->totalStock(),
                 'is_in_stock' => !$p->isOutOfStock(),
+                'materials' => $materials->isNotEmpty() ? $materials->join(', ') : ($p->material ?? null),
+                'colors' => $colors->isNotEmpty() ? $colors->join(', ') : null,
                 'default_variant_id' => $firstInStockVariant?->id,
                 'url' => route('products.show', $p->slug),
             ];
@@ -303,7 +316,9 @@ class AiToolRegistry
         $textSummary = "Tìm thấy " . count($cards) . " sản phẩm phù hợp:\n";
         foreach ($cards as $c) {
             $stockText = $c['is_in_stock'] ? "Còn hàng ({$c['total_stock']} sp)" : "Hết hàng";
-            $textSummary .= "- {$c['name']} (SKU: {$c['sku']}) - Giá: {$c['formatted_price']} - {$stockText}\n";
+            $matText = !empty($c['materials']) ? " | Chất liệu: {$c['materials']}" : "";
+            $colText = !empty($c['colors']) ? " | Màu: {$c['colors']}" : "";
+            $textSummary .= "- {$c['name']} (SKU: {$c['sku']}) - Giá: {$c['formatted_price']}{$matText}{$colText} - {$stockText}\n";
         }
 
         return [

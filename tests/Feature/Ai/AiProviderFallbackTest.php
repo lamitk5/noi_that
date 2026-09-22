@@ -204,4 +204,118 @@ class AiProviderFallbackTest extends TestCase
         $this->assertEquals(15000000, $result['tool_calls'][0]['arguments']['max_price']);
         $this->assertEquals(165, $result['usage']['total_tokens']);
     }
+
+    public function test_gemini_provider_formats_tool_response_with_role_user_and_preserves_thought_signature(): void
+    {
+        $provider = new GeminiProvider('test-api-key', 'gemini-3.6-flash', 10);
+
+        Http::fake([
+            'https://generativelanguage.googleapis.com/*' => Http::response([
+                'candidates' => [
+                    [
+                        'content' => [
+                            'parts' => [
+                                ['text' => 'Bàn trà gỗ Tần Bì rất hợp phòng khách hiện đại.'],
+                            ],
+                        ],
+                        'finishReason' => 'STOP',
+                    ],
+                ],
+                'usageMetadata' => ['totalTokenCount' => 150],
+            ], 200),
+        ]);
+
+        $messages = [
+            ['role' => 'user', 'content' => 'Tìm bàn phòng khách'],
+            [
+                'role' => 'assistant',
+                'content' => '',
+                'tool_calls' => [
+                    [
+                        'name' => 'search_products',
+                        'arguments' => ['query' => 'bàn'],
+                        'thoughtSignature' => 'sig_abc_123',
+                    ],
+                ],
+            ],
+            [
+                'role' => 'tool',
+                'name' => 'search_products',
+                'content' => 'Tìm thấy Bàn trà gỗ Tần Bì',
+            ],
+        ];
+
+        $res = $provider->chat($messages);
+
+        $this->assertEquals('Bàn trà gỗ Tần Bì rất hợp phòng khách hiện đại.', $res['content']);
+
+        Http::assertSent(function ($request) {
+            $data = $request->data();
+            $contents = $data['contents'] ?? [];
+
+            // Must have 3 turns: user -> model -> user (tool response)
+            $this->assertCount(3, $contents);
+
+            // Turn 1: user
+            $this->assertEquals('user', $contents[0]['role']);
+
+            // Turn 2: model with thoughtSignature preserved
+            $this->assertEquals('model', $contents[1]['role']);
+            $this->assertEquals('sig_abc_123', $contents[1]['parts'][0]['thoughtSignature']);
+
+            // Turn 3: tool result MUST have role 'user' for Gemini v1beta, NOT 'function'
+            $this->assertEquals('user', $contents[2]['role']);
+            $this->assertArrayHasKey('functionResponse', $contents[2]['parts'][0]);
+            $this->assertEquals('search_products', $contents[2]['parts'][0]['functionResponse']['name']);
+
+            return true;
+        });
+    }
+
+    public function test_gemini_provider_merges_multiple_tool_responses_into_single_user_turn(): void
+    {
+        $provider = new GeminiProvider('test-api-key', 'gemini-3.6-flash', 10);
+
+        Http::fake([
+            'https://generativelanguage.googleapis.com/*' => Http::response([
+                'candidates' => [
+                    [
+                        'content' => [
+                            'parts' => [['text' => 'Đã so sánh 2 sản phẩm']],
+                        ],
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        $messages = [
+            ['role' => 'user', 'content' => 'So sánh 2 sản phẩm'],
+            [
+                'role' => 'assistant',
+                'content' => '',
+                'tool_calls' => [
+                    ['name' => 'search_products', 'arguments' => []],
+                    ['name' => 'check_inventory', 'arguments' => []],
+                ],
+            ],
+            ['role' => 'tool', 'name' => 'search_products', 'content' => 'Kết quả 1'],
+            ['role' => 'tool', 'name' => 'check_inventory', 'content' => 'Kết quả 2'],
+        ];
+
+        $provider->chat($messages);
+
+        Http::assertSent(function ($request) {
+            $data = $request->data();
+            $contents = $data['contents'] ?? [];
+
+            // Turns must alternate: user -> model -> user (holding both tool responses)
+            $this->assertCount(3, $contents);
+            $this->assertEquals('user', $contents[2]['role']);
+            $this->assertCount(2, $contents[2]['parts']);
+            $this->assertEquals('search_products', $contents[2]['parts'][0]['functionResponse']['name']);
+            $this->assertEquals('check_inventory', $contents[2]['parts'][1]['functionResponse']['name']);
+
+            return true;
+        });
+    }
 }

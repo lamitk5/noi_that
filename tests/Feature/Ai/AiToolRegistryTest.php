@@ -226,4 +226,27 @@ class AiToolRegistryTest extends TestCase
         $this->assertNotEmpty($res['data']['ticket_code']);
         $this->assertEquals('ticket_created', $res['card']['type']);
     }
+
+    public function test_search_products_includes_materials_and_colors(): void
+    {
+        $res = $this->toolRegistry->executeTool('search_products', [
+            'query' => 'sofa',
+        ], ['user' => $this->customer]);
+
+        $this->assertTrue($res['success']);
+        $this->assertNotEmpty($res['card']['data']);
+        $card = $res['card']['data'][0];
+
+        $this->assertArrayHasKey('materials', $card);
+        $this->assertArrayHasKey('colors', $card);
+        $this->assertStringContainsString('Gỗ sồi tự nhiên', $card['materials']);
+        $this->assertStringContainsString('Màu sồi mộc', $card['colors']);
+    }
+
+    public function test_execute_handles_exceptions_gracefully(): void
+    {
+        // Testing unknown tool or unexpected condition never crashes the application
+        $res = $this->toolRegistry->execute('non_existent_tool', [], ['user' => $this->customer]);
+        $this->assertStringContainsString('không được hỗ trợ', $res['text']);
+    }
 }
