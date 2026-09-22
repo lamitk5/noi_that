@@ -51,7 +51,48 @@
                         <h2 class="font-display text-xl font-bold text-heading">Thông tin giao hàng</h2>
                     </div>
 
-                    <div class="space-y-5">
+                    <div class="space-y-5" x-data="{
+                        savedAddresses: {{ \Illuminate\Support\Js::from($addresses) }},
+                        selectedAddressId: '{{ $defaultAddress?->id ?? '' }}',
+                        name: @js(old('customer_name', $defaultAddress?->recipient_name ?? $user->name)),
+                        phone: @js(old('customer_phone', $defaultAddress?->phone ?? '')),
+                        address: @js(old('shipping_address', $defaultAddress?->address_line ?? '')),
+                        applyAddress(id) {
+                            if (!id) return;
+                            const found = this.savedAddresses.find(a => a.id == id);
+                            if (found) {
+                                this.name = found.recipient_name;
+                                this.phone = found.phone;
+                                this.address = found.address_line;
+                            }
+                        }
+                    }">
+                        @if($addresses->isNotEmpty())
+                            <div class="p-3.5 rounded-2xl bg-surface-alt border border-ui-border">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-xs font-bold uppercase tracking-wider text-heading">Địa chỉ đã lưu</span>
+                                    <a href="{{ route('account.addresses.index') }}" target="_blank" class="text-xs text-primary hover:underline">Quản lý sổ địa chỉ</a>
+                                </div>
+                                <div class="grid sm:grid-cols-2 gap-2">
+                                    @foreach($addresses as $addr)
+                                        <label class="flex items-start gap-2.5 p-2.5 rounded-xl border border-ui-border cursor-pointer transition text-xs hover:border-primary/60 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                                            <input type="radio" name="selected_saved_address" value="{{ $addr->id }}" x-model="selectedAddressId" @change="applyAddress($event.target.value)" class="mt-0.5 text-primary focus:ring-primary">
+                                            <div class="min-w-0">
+                                                <div class="font-semibold text-heading flex items-center gap-1.5">
+                                                    <span>{{ $addr->recipient_name }}</span>
+                                                    @if($addr->is_default)
+                                                        <span class="px-1.5 py-0.5 rounded text-[10px] bg-primary/10 text-primary font-medium">Mặc định</span>
+                                                    @endif
+                                                </div>
+                                                <div class="text-muted text-[11px]">{{ $addr->phone }}</div>
+                                                <div class="text-muted text-[11px] truncate">{{ $addr->address_line }}</div>
+                                            </div>
+                                        </label>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
+
                         <div>
                             <label for="customer_name" class="block text-xs font-bold uppercase tracking-wider text-heading mb-1.5">
                                 Họ và tên người nhận <span class="text-rose-500">*</span>
@@ -60,7 +101,8 @@
                                 type="text"
                                 id="customer_name"
                                 name="customer_name"
-                                value="{{ old('customer_name', $user->name) }}"
+                                value="{{ old('customer_name', $defaultAddress?->recipient_name ?? $user->name) }}"
+                                x-model="name"
                                 required
                                 autocomplete="name"
                                 placeholder="Ví dụ: Nguyễn Văn A"
@@ -80,7 +122,8 @@
                                     type="tel"
                                     id="customer_phone"
                                     name="customer_phone"
-                                    value="{{ old('customer_phone') }}"
+                                    value="{{ old('customer_phone', $defaultAddress?->phone ?? '') }}"
+                                    x-model="phone"
                                     required
                                     autocomplete="tel"
                                     placeholder="0912345678"
@@ -117,15 +160,23 @@
                             <textarea
                                 id="shipping_address"
                                 name="shipping_address"
+                                x-model="address"
                                 rows="3"
                                 required
                                 autocomplete="street-address"
                                 placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố..."
                                 class="w-full rounded-xl border border-ui-border bg-surface-alt px-4 py-3 text-sm text-heading placeholder:text-muted focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary @error('shipping_address') border-rose-500 @enderror"
-                            >{{ old('shipping_address') }}</textarea>
+                            >{{ old('shipping_address', $defaultAddress?->address_line ?? '') }}</textarea>
                             @error('shipping_address')
                                 <p class="mt-1 text-xs text-rose-500">{{ $message }}</p>
                             @enderror
+                        </div>
+
+                        <div class="flex items-center gap-2 pt-1">
+                            <input type="checkbox" id="save_address" name="save_address" value="1" class="rounded border-ui-border text-primary focus:ring-primary">
+                            <label for="save_address" class="text-xs text-muted cursor-pointer select-none">
+                                Lưu thông tin này vào sổ địa chỉ để sử dụng cho các lần mua sau
+                            </label>
                         </div>
 
                         <div>

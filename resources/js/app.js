@@ -26,6 +26,176 @@ Alpine.data('headerSettings', () => ({
     },
 }));
 
+Alpine.data('headerSearch', () => ({
+    isOpen: false,
+    query: '',
+    loading: false,
+    results: { categories: [], products: [], popular: [] },
+    timer: null,
+    openSearch() {
+        this.isOpen = true;
+        this.$nextTick(() => {
+            const input = document.getElementById('header-search-input');
+            input && input.focus();
+        });
+        if (!this.results.popular || this.results.popular.length === 0) {
+            this.fetchSuggestions('');
+        }
+    },
+    closeSearch() {
+        this.isOpen = false;
+    },
+    onInput() {
+        clearTimeout(this.timer);
+        this.timer = setTimeout(() => {
+            this.fetchSuggestions(this.query);
+        }, 250);
+    },
+    async fetchSuggestions(q) {
+        this.loading = true;
+        try {
+            const res = await fetch(`/api/search/suggestions?q=${encodeURIComponent(q)}`, {
+                headers: { 'Accept': 'application/json' }
+            });
+            if (res.ok) {
+                this.results = await res.json();
+            }
+        } catch (e) {
+            console.error('Search error:', e);
+        } finally {
+            this.loading = false;
+        }
+    }
+}));
+
+Alpine.data('quickViewModal', () => ({
+    open: false,
+    loading: false,
+    product: null,
+    selectedVariant: null,
+    quantity: 1,
+    submitting: false,
+    async openModal(productId) {
+        this.open = true;
+        this.loading = true;
+        this.product = null;
+        this.quantity = 1;
+        try {
+            const res = await fetch(`/api/products/${productId}/quick-view`, {
+                headers: { 'Accept': 'application/json' }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                this.product = data;
+                this.selectedVariant = data.variants && data.variants.length > 0 ? data.variants[0] : null;
+            } else {
+                this.closeModal();
+                window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Không thể tải thông tin sản phẩm', type: 'error' } }));
+            }
+        } catch (e) {
+            this.closeModal();
+        } finally {
+            this.loading = false;
+        }
+    },
+    closeModal() {
+        this.open = false;
+        this.product = null;
+    },
+    selectVariant(v) {
+        this.selectedVariant = v;
+        this.quantity = 1;
+    },
+    async addToCart() {
+        if (!this.selectedVariant) return;
+        this.submitting = true;
+        try {
+            const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            const res = await fetch('/api/cart/quick-add', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': token || ''
+                },
+                body: JSON.stringify({
+                    variant_id: this.selectedVariant.id,
+                    quantity: this.quantity
+                })
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: data.message || 'Đã thêm vào giỏ hàng!', type: 'success' } }));
+                // Update badge if any
+                const badges = document.querySelectorAll('.cart-count-badge');
+                badges.forEach(b => b.textContent = data.cart_count);
+                this.closeModal();
+            } else {
+                window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: data.message || 'Có lỗi xảy ra', type: 'error' } }));
+            }
+        } catch (e) {
+            window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Lỗi mạng khi thêm giỏ hàng', type: 'error' } }));
+        } finally {
+            this.submitting = false;
+        }
+    }
+}));
+
+Alpine.data('toastManager', () => ({
+    toasts: [],
+    addToast(detail) {
+        const id = Date.now() + Math.random();
+        const toast = {
+            id,
+            message: detail.message || '',
+            type: detail.type || 'info',
+            visible: true
+        };
+        this.toasts.push(toast);
+        setTimeout(() => {
+            this.removeToast(id);
+        }, detail.duration || 3200);
+    },
+    removeToast(id) {
+        const t = this.toasts.find(item => item.id === id);
+        if (t) {
+            t.visible = false;
+            setTimeout(() => {
+                this.toasts = this.toasts.filter(item => item.id !== id);
+            }, 300);
+        }
+    }
+}));
+
+// Global compare helper
+window.MocAnCompare = {
+    getList() {
+        try {
+            return JSON.parse(localStorage.getItem('moc-an-compare') || '[]');
+        } catch(e) {
+            return [];
+        }
+    },
+    toggle(id) {
+        let list = this.getList();
+        const idx = list.indexOf(id);
+        if (idx !== -1) {
+            list.splice(idx, 1);
+            window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Đã xóa khỏi danh sách so sánh', type: 'info' } }));
+        } else {
+            if (list.length >= 4) {
+                window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Chỉ có thể so sánh tối đa 4 sản phẩm cùng lúc.', type: 'error' } }));
+                return false;
+            }
+            list.push(id);
+            window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Đã thêm vào danh sách so sánh!', type: 'success' } }));
+        }
+        localStorage.setItem('moc-an-compare', JSON.stringify(list));
+        window.dispatchEvent(new CustomEvent('compare-updated', { detail: { list } }));
+        return true;
+    }
+};
+
 window.Alpine = Alpine;
 Alpine.start();
 

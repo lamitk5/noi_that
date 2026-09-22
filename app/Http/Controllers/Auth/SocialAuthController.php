@@ -50,8 +50,11 @@ class SocialAuthController extends Controller
             ]
         );
 
+        $guestCart = $request->session()->get('cart', []);
         Auth::login($user, true);
         $request->session()->regenerate();
+        $request->session()->put('cart', $guestCart);
+        app(\App\Services\CartService::class)->mergeGuestCart($user);
 
         return redirect()->intended(route('home'))
             ->with('success', 'Đăng nhập thành công qua ' . $providerName . '! Chào mừng bạn đến với Mộc An.');

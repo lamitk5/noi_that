@@ -13,6 +13,7 @@ class Wishlist extends Model
     protected $fillable = [
         'user_id',
         'product_id',
+        'price_when_added',
     ];
 
     public function user(): BelongsTo

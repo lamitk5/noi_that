@@ -25,6 +25,20 @@
             </div>
         @endif
 
+        @if (!empty($warnings))
+            <div class="mb-6 rounded-2xl bg-amber-500/10 border border-amber-500/20 p-4 text-sm font-medium text-amber-800 dark:text-amber-300 space-y-2">
+                <div class="flex items-center gap-2 font-bold text-amber-700 dark:text-amber-200">
+                    <svg viewBox="0 0 24 24" class="size-5 shrink-0 text-amber-600" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/></svg>
+                    <span>Cập nhật giỏ hàng:</span>
+                </div>
+                <ul class="list-disc list-inside space-y-1 pl-1">
+                    @foreach ($warnings as $warning)
+                        <li>{{ $warning }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
         @if ($errors->any())
             <div class="mb-6 rounded-2xl bg-red-500/10 border border-red-500/20 p-4 text-sm font-medium text-red-600 dark:text-red-400">
                 <ul class="list-disc list-inside space-y-1">

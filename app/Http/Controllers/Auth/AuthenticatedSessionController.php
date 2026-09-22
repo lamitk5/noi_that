@@ -30,7 +30,10 @@ class AuthenticatedSessionController extends Controller
             ]);
         }
 
+        $guestCart = $request->session()->get('cart', []);
         $request->session()->regenerate();
+        $request->session()->put('cart', $guestCart);
+        app(\App\Services\CartService::class)->mergeGuestCart(Auth::user());
 
         return redirect()->intended(route('home'));
     }

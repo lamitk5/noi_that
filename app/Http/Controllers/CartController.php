@@ -11,10 +11,11 @@ class CartController extends Controller
 {
     public function index(CartService $cartService): View
     {
+        $warnings = $cartService->checkInventoryAndPriceChanges();
         $items = $cartService->getItems();
         $subtotal = $cartService->subtotal();
 
-        return view('cart.index', compact('items', 'subtotal'));
+        return view('cart.index', compact('items', 'subtotal', 'warnings'));
     }
 
     public function store(Request $request, CartService $cartService): RedirectResponse
@@ -60,5 +61,30 @@ class CartController extends Controller
         $cartService->clear();
 
         return redirect()->route('cart.index')->with('status', 'Đã làm trống giỏ hàng.');
+    }
+
+    public function quickAdd(Request $request, CartService $cartService): \Illuminate\Http\JsonResponse
+    {
+        $validated = $request->validate([
+            'variant_id' => ['required', 'integer', 'exists:product_variants,id'],
+            'quantity' => ['required', 'integer', 'min:1'],
+        ]);
+
+        $cartService->add((int) $validated['variant_id'], (int) $validated['quantity']);
+
+        app(\App\Services\Analytics\BehavioralTracker::class)->track(
+            $request,
+            \App\Models\UserEvent::EVENT_ADD_TO_CART,
+            'product_variant',
+            (int) $validated['variant_id'],
+            ['quantity' => (int) $validated['quantity']]
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Đã thêm sản phẩm vào giỏ hàng thành công.',
+            'cart_count' => $cartService->count(),
+            'cart_subtotal' => number_format($cartService->subtotal(), 0, ',', '.') . ' ₫',
+        ]);
     }
 }

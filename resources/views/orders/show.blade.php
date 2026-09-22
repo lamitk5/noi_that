@@ -22,9 +22,87 @@
                     Đặt lúc {{ $order->created_at ? $order->created_at->format('d/m/Y H:i') : '' }}
                 </p>
             </div>
-            <a href="{{ route('orders.index') }}" class="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted hover:text-heading transition">
-                <span>← Trở về danh sách</span>
-            </a>
+            <div class="flex items-center gap-2">
+                <a href="{{ route('orders.index') }}" class="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted hover:text-heading transition">
+                    <span>← Trở về danh sách</span>
+                </a>
+            </div>
+        </div>
+
+        @if (session('status'))
+            <div class="mb-6 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-4 text-sm font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-3">
+                <svg viewBox="0 0 24 24" class="size-5 shrink-0 text-emerald-500" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
+                <span>{{ session('status') }}</span>
+            </div>
+        @endif
+
+        @if (session('error'))
+            <div class="mb-6 rounded-2xl bg-rose-500/10 border border-rose-500/20 p-4 text-sm font-medium text-rose-600 dark:text-rose-400 flex items-center gap-3">
+                <svg viewBox="0 0 24 24" class="size-5 shrink-0 text-rose-500" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <span>{{ session('error') }}</span>
+            </div>
+        @endif
+
+        <!-- Quick Actions Bar -->
+        <div class="mb-6 rounded-2xl border border-ui-border bg-surface p-4 shadow-xs flex flex-wrap items-center justify-between gap-3" x-data="{ copied: false }">
+            <div class="flex flex-wrap items-center gap-2">
+                <button
+                    type="button"
+                    @click="navigator.clipboard.writeText('{{ $order->order_code }}'); copied = true; setTimeout(() => copied = false, 2000)"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-ui-border bg-surface-alt hover:bg-surface text-xs font-semibold text-heading transition"
+                >
+                    <svg viewBox="0 0 24 24" class="size-4 text-muted" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                    <span x-text="copied ? 'Đã sao chép!' : 'Sao chép mã đơn'"></span>
+                </button>
+
+                <a
+                    href="{{ route('orders.print', $order->order_code) }}"
+                    target="_blank"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-ui-border bg-surface-alt hover:bg-surface text-xs font-semibold text-heading transition"
+                >
+                    <svg viewBox="0 0 24 24" class="size-4 text-muted" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
+                    <span>In hóa đơn</span>
+                </a>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+                @if (in_array($order->payment_method, ['vnpay', 'momo']) && $order->payment_status !== 'paid' && $order->order_status === 'pending')
+                    <form action="{{ route('orders.retry-payment', $order->order_code) }}" method="POST">
+                        @csrf
+                        <button
+                            type="submit"
+                            class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-primary text-xs font-bold text-primary-foreground shadow-xs hover:opacity-95 transition"
+                        >
+                            <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+                            <span>Thanh toán lại</span>
+                        </button>
+                    </form>
+                @endif
+
+                <form action="{{ route('orders.buy-again', $order->order_code) }}" method="POST">
+                    @csrf
+                    <button
+                        type="submit"
+                        class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-primary/30 bg-primary/10 hover:bg-primary/20 text-xs font-bold text-primary transition"
+                    >
+                        <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>
+                        <span>Mua lại</span>
+                    </button>
+                </form>
+
+                @if ($order->order_status === 'pending' && $order->payment_status !== 'paid')
+                    <form action="{{ route('orders.cancel', $order->order_code) }}" method="POST" onsubmit="return confirm('Bạn có chắc chắn muốn hủy đơn hàng này không? Tồn kho sản phẩm sẽ được hoàn trả.');">
+                        @csrf
+                        <button
+                            type="submit"
+                            class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-xs font-bold text-rose-600 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-400 transition"
+                        >
+                            <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
+                            <span>Hủy đơn</span>
+                        </button>
+                    </form>
+                @endif
+            </div>
         </div>
 
         <div class="space-y-6">

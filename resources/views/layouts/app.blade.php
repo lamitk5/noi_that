@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Mộc An - Nội thất hiện đại cho không gian sống Việt.">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Mộc An | Nội thất hiện đại')</title>
     <script>
         (function() {
@@ -51,9 +52,39 @@
             </nav>
 
             <div class="flex items-center gap-1 sm:gap-2">
-                <button class="icon-button hidden sm:grid" type="button" aria-label="Tìm kiếm">
+                <button
+                    class="icon-button"
+                    type="button"
+                    aria-label="Tìm kiếm sản phẩm"
+                    title="Tìm kiếm"
+                    @click="$dispatch('open-header-search')"
+                >
                     <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4" stroke-linecap="round"/></svg>
                 </button>
+
+                <a
+                    href="{{ route('products.compare') }}"
+                    class="icon-button relative hidden sm:grid"
+                    aria-label="So sánh sản phẩm"
+                    title="So sánh sản phẩm"
+                    x-data="{ count: 0 }"
+                    x-init="
+                        const updateCount = () => {
+                            try {
+                                const list = JSON.parse(localStorage.getItem('moc-an-compare') || '[]');
+                                count = list.length;
+                            } catch(e) { count = 0; }
+                        };
+                        updateCount();
+                        window.addEventListener('compare-updated', updateCount);
+                        window.addEventListener('storage', updateCount);
+                    "
+                >
+                    <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3 6h18M3 12h18m-7 6h7M7 15l-4 3 4 3"/></svg>
+                    <template x-if="count > 0">
+                        <span class="absolute right-0.5 top-0.5 grid size-4 place-items-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground" x-text="count"></span>
+                    </template>
+                </a>
                 <div
                     class="relative hidden sm:block"
                     x-data="headerSettings"
@@ -136,6 +167,13 @@
                                         <a href="{{ route('orders.index') }}" class="flex items-center gap-2.5 rounded-lg px-2.5 py-2 hover:bg-surface-alt hover:text-heading transition-colors">
                                             <svg viewBox="0 0 24 24" class="size-4 text-muted" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007ZM8.625 10.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm7.5 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"/></svg>
                                             <span>Lịch sử đơn hàng</span>
+                                        </a>
+                                    @endif
+
+                                    @if (Route::has('account.addresses.index'))
+                                        <a href="{{ route('account.addresses.index') }}" class="flex items-center gap-2.5 rounded-lg px-2.5 py-2 hover:bg-surface-alt hover:text-heading transition-colors">
+                                            <svg viewBox="0 0 24 24" class="size-4 text-muted" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/></svg>
+                                            <span>Sổ địa chỉ nhận hàng</span>
                                         </a>
                                     @endif
 
@@ -268,7 +306,7 @@
                 </div>
                 <a href="{{ route('cart.index') }}" class="icon-button relative" aria-label="Giỏ hàng">
                     <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 4h2l2 11h10l2-8H6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9" cy="19" r="1"/><circle cx="17" cy="19" r="1"/></svg>
-                    <span class="absolute right-0.5 top-0.5 grid size-4 place-items-center rounded-full bg-accent text-[9px] font-bold text-accent-foreground">{{ $cartCount ?? 0 }}</span>
+                    <span class="cart-count-badge absolute right-0.5 top-0.5 grid size-4 place-items-center rounded-full bg-accent text-[9px] font-bold text-accent-foreground">{{ $cartCount ?? 0 }}</span>
                 </a>
                 <button id="menu-toggle" class="icon-button lg:hidden" type="button" aria-label="Mở menu" aria-expanded="false">
                     <svg id="menu-open-icon" viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h16" stroke-linecap="round"/></svg>
@@ -285,9 +323,13 @@
                 <a href="{{ route('faq.index') }}" class="mobile-nav-link {{ request()->routeIs('faq.*') ? 'is-active' : '' }}">Hỏi đáp (FAQ)</a>
                 <a href="{{ route('pages.about') }}" class="mobile-nav-link {{ request()->routeIs('pages.about') ? 'is-active' : '' }}">Về Mộc An</a>
                 <a href="{{ route('pages.contact') }}" class="mobile-nav-link {{ request()->routeIs('pages.contact*') ? 'is-active' : '' }}">Liên hệ</a>
+                <a href="{{ route('products.compare') }}" class="mobile-nav-link flex items-center justify-between">
+                    <span>So sánh sản phẩm</span>
+                    <span class="text-xs text-muted">Tối đa 4</span>
+                </a>
                 <a href="{{ route('cart.index') }}" class="mobile-nav-link flex items-center justify-between">
                     <span>Giỏ hàng</span>
-                    <span class="rounded-full bg-accent px-2 py-0.5 text-xs font-semibold text-accent-foreground">{{ $cartCount ?? 0 }}</span>
+                    <span class="cart-count-badge rounded-full bg-accent px-2 py-0.5 text-xs font-semibold text-accent-foreground">{{ $cartCount ?? 0 }}</span>
                 </a>
             </div>
         </nav>
@@ -340,5 +382,233 @@
 
     {{-- Live Support Floating Widget --}}
     <x-live-support-widget />
+
+    <!-- Live Search Overlay / Modal -->
+    <div
+        x-data="headerSearch"
+        @open-header-search.window="openSearch()"
+        @keydown.escape.window="closeSearch()"
+        x-show="isOpen"
+        x-cloak
+        class="fixed inset-0 z-50 flex flex-col items-center p-4 sm:p-6 md:p-20 overflow-y-auto"
+    >
+        <div class="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity" @click="closeSearch()"></div>
+
+        <div
+            class="relative w-full max-w-2xl rounded-3xl border border-ui-border bg-surface shadow-2xl overflow-hidden z-10 my-auto"
+            @click.outside="closeSearch()"
+        >
+            <div class="flex items-center border-b border-ui-border px-4 sm:px-6 py-4">
+                <svg viewBox="0 0 24 24" class="size-5 text-muted shrink-0 mr-3" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4" stroke-linecap="round"/></svg>
+                <input
+                    id="header-search-input"
+                    type="text"
+                    x-model="query"
+                    @input="onInput()"
+                    placeholder="Tìm kiếm bàn, ghế, sofa, giường, tủ, SKU..."
+                    class="w-full bg-transparent text-base sm:text-lg text-heading placeholder:text-muted focus:outline-none"
+                >
+                <template x-if="loading">
+                    <svg class="animate-spin size-5 text-primary shrink-0 ml-2" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                    </svg>
+                </template>
+                <button type="button" @click="closeSearch()" class="p-1 rounded-lg text-muted hover:text-heading ml-2">
+                    <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <div class="max-h-[60vh] overflow-y-auto p-4 sm:p-6 space-y-5">
+                <template x-if="results.categories && results.categories.length > 0">
+                    <div>
+                        <span class="text-[11px] font-bold uppercase tracking-wider text-muted mb-2 block">Danh mục phù hợp</span>
+                        <div class="flex flex-wrap gap-2">
+                            <template x-for="cat in results.categories" :key="cat.id">
+                                <a :href="cat.url" class="px-3 py-1.5 rounded-xl border border-ui-border bg-surface-alt hover:border-primary/50 text-xs font-semibold text-heading flex items-center gap-1.5 transition">
+                                    <span x-text="cat.name"></span>
+                                    <span class="text-muted text-[10px]" x-text="'(' + cat.products_count + ')'"></span>
+                                </a>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+
+                <template x-if="results.products && results.products.length > 0">
+                    <div>
+                        <span class="text-[11px] font-bold uppercase tracking-wider text-muted mb-2 block">Sản phẩm tìm thấy</span>
+                        <div class="divide-y divide-ui-border">
+                            <template x-for="p in results.products" :key="p.id">
+                                <a :href="p.url" class="flex items-center gap-3.5 py-2.5 hover:bg-surface-alt rounded-xl px-2 transition">
+                                    <img :src="p.image || '/images/placeholder.png'" class="size-12 rounded-lg object-cover border border-ui-border shrink-0">
+                                    <div class="min-w-0 flex-1">
+                                        <div class="font-medium text-sm text-heading truncate" x-text="p.name"></div>
+                                        <div class="text-xs text-muted truncate" x-text="p.category"></div>
+                                    </div>
+                                    <div class="text-right shrink-0">
+                                        <span class="font-bold text-sm text-primary" x-text="p.formatted_price"></span>
+                                    </div>
+                                </a>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+
+                <template x-if="(!results.products || results.products.length === 0) && results.popular && results.popular.length > 0">
+                    <div>
+                        <span class="text-[11px] font-bold uppercase tracking-wider text-muted mb-2 block">Gợi ý sản phẩm nổi bật</span>
+                        <div class="divide-y divide-ui-border">
+                            <template x-for="p in results.popular" :key="p.id">
+                                <a :href="p.url" class="flex items-center gap-3.5 py-2.5 hover:bg-surface-alt rounded-xl px-2 transition">
+                                    <img :src="p.image || '/images/placeholder.png'" class="size-12 rounded-lg object-cover border border-ui-border shrink-0">
+                                    <div class="min-w-0 flex-1">
+                                        <div class="font-medium text-sm text-heading truncate" x-text="p.name"></div>
+                                        <div class="text-xs text-muted truncate" x-text="p.category"></div>
+                                    </div>
+                                    <div class="text-right shrink-0">
+                                        <span class="font-bold text-sm text-primary" x-text="p.formatted_price"></span>
+                                    </div>
+                                </a>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+
+                <template x-if="query.trim() !== '' && (!results.products || results.products.length === 0) && (!results.categories || results.categories.length === 0)">
+                    <div class="text-center py-6 text-muted text-sm">
+                        Không tìm thấy sản phẩm hoặc danh mục nào phù hợp với "<span class="font-semibold text-heading" x-text="query"></span>".
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+
+    <!-- Global Quick View Modal -->
+    <div
+        x-data="quickViewModal"
+        @open-quick-view.window="openModal($event.detail)"
+        @keydown.escape.window="closeModal()"
+        x-show="open"
+        x-cloak
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
+    >
+        <div class="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity" @click="closeModal()"></div>
+
+        <div
+            class="relative w-full max-w-3xl rounded-3xl border border-ui-border bg-surface shadow-2xl overflow-hidden z-10 my-auto"
+            @click.outside="closeModal()"
+        >
+            <button type="button" @click="closeModal()" class="absolute top-4 right-4 z-20 p-2 rounded-full bg-surface-alt/80 hover:bg-surface-alt text-muted hover:text-heading transition">
+                <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+
+            <template x-if="loading">
+                <div class="p-16 flex flex-col items-center justify-center gap-3">
+                    <svg class="animate-spin size-8 text-primary" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                    </svg>
+                    <span class="text-xs text-muted">Đang tải thông tin sản phẩm...</span>
+                </div>
+            </template>
+
+            <template x-if="!loading && product">
+                <div class="grid md:grid-cols-2">
+                    <div class="aspect-square bg-surface-alt border-b md:border-b-0 md:border-r border-ui-border relative flex items-center justify-center overflow-hidden">
+                        <img :src="product.primary_image || '/images/placeholder.png'" :alt="product.name" class="size-full object-cover">
+                    </div>
+
+                    <div class="p-6 sm:p-8 flex flex-col justify-between space-y-6">
+                        <div>
+                            <div class="text-xs uppercase tracking-wider text-accent font-bold" x-text="product.category?.name || 'Mộc An'"></div>
+                            <h2 class="font-display text-2xl font-bold text-heading mt-1" x-text="product.name"></h2>
+                            <div class="mt-3 flex items-baseline gap-3">
+                                <span class="font-display text-2xl font-bold text-primary" x-text="selectedVariant ? selectedVariant.formatted_price : product.formatted_min_price"></span>
+                            </div>
+                            <p class="text-xs text-muted mt-3 line-clamp-3" x-text="product.description"></p>
+
+                            <template x-if="product.variants && product.variants.length > 0">
+                                <div class="mt-4">
+                                    <label class="block text-xs font-bold uppercase tracking-wider text-heading mb-2">Phân loại / Kích thước</label>
+                                    <div class="flex flex-wrap gap-2">
+                                        <template x-for="v in product.variants" :key="v.id">
+                                            <button
+                                                type="button"
+                                                @click="selectVariant(v)"
+                                                :class="selectedVariant && selectedVariant.id === v.id ? 'border-primary bg-primary/5 text-primary font-bold' : 'border-ui-border text-muted hover:border-heading'"
+                                                class="px-3 py-1.5 rounded-xl border text-xs transition"
+                                            >
+                                                <span x-text="v.variant_name || (v.material + (v.color ? ' - ' + v.color : ''))"></span>
+                                            </button>
+                                        </template>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <div class="mt-4 flex items-center gap-2 text-xs">
+                                <template x-if="selectedVariant && selectedVariant.stock > 0">
+                                    <span class="text-emerald-600 font-semibold flex items-center gap-1">
+                                        <span class="size-2 rounded-full bg-emerald-500 inline-block"></span>
+                                        Còn hàng (<span x-text="selectedVariant.stock"></span> sản phẩm)
+                                    </span>
+                                </template>
+                                <template x-if="selectedVariant && selectedVariant.stock <= 0">
+                                    <span class="text-rose-600 font-semibold flex items-center gap-1">
+                                        <span class="size-2 rounded-full bg-rose-500 inline-block"></span>
+                                        Hết hàng tạm thời
+                                    </span>
+                                </template>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3 pt-4 border-t border-ui-border">
+                            <div class="flex items-center gap-3">
+                                <button
+                                    type="button"
+                                    @click="addToCart()"
+                                    :disabled="submitting || !selectedVariant || selectedVariant.stock <= 0"
+                                    class="flex-1 py-3 px-6 rounded-xl bg-primary text-primary-foreground font-bold text-sm shadow-sm hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition text-center"
+                                >
+                                    <span x-show="!submitting">Thêm vào giỏ hàng</span>
+                                    <span x-show="submitting">Đang thêm...</span>
+                                </button>
+                                <a :href="'/san-pham/' + product.slug" class="px-4 py-3 rounded-xl border border-ui-border hover:bg-surface-alt text-heading font-semibold text-xs transition">
+                                    Chi tiết
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <!-- Global Toast Notifications -->
+    <div
+        x-data="toastManager"
+        @show-toast.window="addToast($event.detail)"
+        class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm pointer-events-none"
+    >
+        <template x-for="toast in toasts" :key="toast.id">
+            <div
+                x-show="toast.visible"
+                x-transition:enter="transition ease-out duration-200"
+                x-transition:enter-start="opacity-0 translate-y-2"
+                x-transition:enter-end="opacity-100 translate-y-0"
+                x-transition:leave="transition ease-in duration-150"
+                x-transition:leave-start="opacity-100 translate-y-0"
+                x-transition:leave-end="opacity-0 translate-y-2"
+                :class="{
+                    'bg-emerald-800 text-white border-emerald-700': toast.type === 'success',
+                    'bg-rose-800 text-white border-rose-700': toast.type === 'error',
+                    'bg-surface text-heading border-ui-border shadow-lg': !toast.type || toast.type === 'info'
+                }"
+                class="pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-2xl border text-sm shadow-xl font-medium"
+            >
+                <span x-text="toast.message"></span>
+                <button @click="removeToast(toast.id)" class="opacity-70 hover:opacity-100 text-xs ml-auto">✕</button>
+            </div>
+        </template>
+    </div>
 </body>
 </html>

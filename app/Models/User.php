@@ -26,6 +26,7 @@ class User extends Authenticatable
         'role',
         'loyalty_points',
         'loyalty_tier',
+        'appearance_settings',
     ];
 
     /**
@@ -49,7 +50,23 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'loyalty_points' => 'integer',
+            'appearance_settings' => 'array',
         ];
+    }
+
+    public function addresses(): HasMany
+    {
+        return $this->hasMany(UserAddress::class);
+    }
+
+    public function defaultAddress(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(UserAddress::class)->where('is_default', true);
+    }
+
+    public function cartItems(): HasMany
+    {
+        return $this->hasMany(UserCartItem::class);
     }
 
     public function orders(): HasMany
@@ -69,7 +86,9 @@ class User extends Authenticatable
 
     public function wishlistProducts(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {
-        return $this->belongsToMany(Product::class, 'wishlists')->withTimestamps();
+        return $this->belongsToMany(Product::class, 'wishlists')
+            ->withPivot('price_when_added')
+            ->withTimestamps();
     }
 
     public function loyaltyTransactions(): HasMany

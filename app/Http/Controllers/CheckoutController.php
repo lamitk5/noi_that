@@ -78,6 +78,8 @@ class CheckoutController extends Controller
         }
 
         $totalPrice = max(0, $subtotal + $shippingFee - $voucherDiscount - $pointsDiscount);
+        $addresses = $user ? $user->addresses()->orderByDesc('is_default')->get() : collect();
+        $defaultAddress = $addresses->firstWhere('is_default', true) ?? $addresses->first();
 
         return view('checkout.index', [
             'items' => $items,
@@ -89,6 +91,8 @@ class CheckoutController extends Controller
             'pointsDiscount' => $pointsDiscount,
             'totalPrice' => $totalPrice,
             'user' => $user,
+            'addresses' => $addresses,
+            'defaultAddress' => $defaultAddress,
             'checkoutToken' => $token,
         ]);
     }
@@ -114,8 +118,25 @@ class CheckoutController extends Controller
         }
 
         try {
+            $user = $request->user();
+
+            if ($request->boolean('save_address') && $user) {
+                $hasDefault = $user->addresses()->where('is_default', true)->exists();
+                $user->addresses()->firstOrCreate(
+                    [
+                        'recipient_name' => $request->input('customer_name'),
+                        'phone' => $request->input('customer_phone'),
+                        'address_line' => $request->input('shipping_address'),
+                    ],
+                    [
+                        'label' => 'Địa chỉ nhận hàng',
+                        'is_default' => ! $hasDefault,
+                    ]
+                );
+            }
+
             $order = $this->checkoutService->checkout(
-                $request->user(),
+                $user,
                 $request->validated()
             );
 

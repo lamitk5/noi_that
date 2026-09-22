@@ -44,6 +44,7 @@ class WishlistController extends Controller
             Wishlist::create([
                 'user_id' => $user->id,
                 'product_id' => $product->id,
+                'price_when_added' => (float) $product->base_price,
             ]);
             $favorited = true;
             $message = 'Đã thêm sản phẩm vào danh sách yêu thích.';

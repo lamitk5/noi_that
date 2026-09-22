@@ -14,8 +14,11 @@ use App\Http\Controllers\Payments\MomoController;
 use App\Http\Controllers\Payments\VnpayController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ProductFeatureController;
 use App\Http\Controllers\ReviewController;
+use App\Http\Controllers\SearchController;
 use App\Http\Controllers\TicketController;
+use App\Http\Controllers\UserAddressController;
 use App\Http\Controllers\WishlistController;
 use Illuminate\Support\Facades\Route;
 
@@ -24,9 +27,16 @@ Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/san-pham', [ProductController::class, 'index'])->name('products.index');
 Route::get('/san-pham/{product:slug}', [ProductController::class, 'show'])->name('products.show');
 
+// Product Features & Smart Search
+Route::get('/so-sanh', [ProductFeatureController::class, 'compare'])->name('products.compare');
+Route::get('/api/products/compare', [ProductFeatureController::class, 'compareData'])->name('products.compare.data');
+Route::get('/api/products/{product}/quick-view', [ProductFeatureController::class, 'quickView'])->name('products.quick-view');
+Route::get('/api/search/suggestions', [SearchController::class, 'suggestions'])->name('search.suggestions');
+
 // Shopping Cart
 Route::get('/gio-hang', [CartController::class, 'index'])->name('cart.index');
 Route::post('/gio-hang', [CartController::class, 'store'])->name('cart.store');
+Route::post('/api/cart/quick-add', [CartController::class, 'quickAdd'])->name('cart.quick-add');
 Route::patch('/gio-hang/{variant}', [CartController::class, 'update'])->name('cart.update');
 Route::delete('/gio-hang/{variant}', [CartController::class, 'destroy'])->name('cart.destroy');
 Route::delete('/gio-hang', [CartController::class, 'clear'])->name('cart.clear');
@@ -83,8 +93,21 @@ Route::middleware('auth')->group(function () {
     Route::get('/tai-khoan', [AccountController::class, 'index'])->name('account.index');
     Route::get('/tai-khoan/chinh-sua', [AccountController::class, 'edit'])->name('account.edit');
     Route::patch('/tai-khoan', [AccountController::class, 'update'])->name('account.update');
+
+    // Customer Address Book
+    Route::get('/tai-khoan/dia-chi', [UserAddressController::class, 'index'])->name('account.addresses.index');
+    Route::post('/tai-khoan/dia-chi', [UserAddressController::class, 'store'])->name('account.addresses.store');
+    Route::put('/tai-khoan/dia-chi/{address}', [UserAddressController::class, 'update'])->name('account.addresses.update');
+    Route::delete('/tai-khoan/dia-chi/{address}', [UserAddressController::class, 'destroy'])->name('account.addresses.destroy');
+    Route::post('/tai-khoan/dia-chi/{address}/mac-dinh', [UserAddressController::class, 'setDefault'])->name('account.addresses.set-default');
+
+    // Order History & Actions
     Route::get('/tai-khoan/don-hang', [OrderHistoryController::class, 'index'])->name('orders.index');
     Route::get('/tai-khoan/don-hang/{order:order_code}', [OrderHistoryController::class, 'show'])->name('orders.show');
+    Route::post('/tai-khoan/don-hang/{order:order_code}/mua-lai', [OrderHistoryController::class, 'buyAgain'])->name('orders.buy-again');
+    Route::post('/tai-khoan/don-hang/{order:order_code}/huy', [OrderHistoryController::class, 'cancel'])->name('orders.cancel');
+    Route::get('/tai-khoan/don-hang/{order:order_code}/in', [OrderHistoryController::class, 'print'])->name('orders.print');
+    Route::post('/tai-khoan/don-hang/{order:order_code}/thanh-toan-lai', [OrderHistoryController::class, 'retryPayment'])->name('orders.retry-payment');
 
     // Customer Support Tickets
     Route::get('/tai-khoan/ho-tro', [TicketController::class, 'index'])->name('account.tickets.index');

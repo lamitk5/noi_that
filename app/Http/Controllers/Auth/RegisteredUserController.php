@@ -32,7 +32,10 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
+        $guestCart = $request->session()->get('cart', []);
         $request->session()->regenerate();
+        $request->session()->put('cart', $guestCart);
+        app(\App\Services\CartService::class)->mergeGuestCart($user);
 
         return redirect()->route('account.index');
     }

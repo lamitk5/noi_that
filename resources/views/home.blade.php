@@ -129,12 +129,29 @@
                             @if ($loop->iteration <= 2)
                                 <span class="absolute left-3 top-3 bg-primary px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-primary-foreground">Mới</span>
                             @endif
-                            <button class="wishlist-button" type="button" aria-label="Thêm {{ $product->name }} vào yêu thích">
+                            <button
+                                type="button"
+                                class="wishlist-button"
+                                aria-label="Thêm {{ $product->name }} vào yêu thích"
+                            >
                                 <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20.8 5.7a5.5 5.5 0 0 0-7.8 0L12 6.8l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 22l8.8-8.5a5.5 5.5 0 0 0 0-7.8Z"/></svg>
                             </button>
-                            <a href="{{ route('products.show', $product->slug) }}" class="quick-add">
-                                Xem chi tiết
-                            </a>
+                            <button
+                                type="button"
+                                class="absolute top-3 left-3 z-10 grid size-9 place-items-center rounded-full bg-surface/90 text-heading shadow-sm backdrop-blur-sm transition hover:scale-110 hover:bg-surface"
+                                @click="MocAnCompare.toggle({{ $product->id }})"
+                                title="So sánh sản phẩm"
+                                aria-label="So sánh {{ $product->name }}"
+                            >
+                                <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3 6h18M3 12h18m-7 6h7M7 15l-4 3 4 3"/></svg>
+                            </button>
+                            <button
+                                type="button"
+                                @click="$dispatch('open-quick-view', {{ $product->id }})"
+                                class="quick-add cursor-pointer"
+                            >
+                                Xem nhanh
+                            </button>
                         </div>
                         <div class="px-2 pt-5">
                             <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">{{ $product->category->name }}</p>
@@ -177,12 +194,29 @@
                                     >
                                 </a>
                                 <span class="absolute left-3 top-3 bg-accent px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-accent-foreground shadow-xs">Bán chạy</span>
-                                <button class="wishlist-button" type="button" aria-label="Thêm {{ $product->name }} vào yêu thích">
+                                <button
+                                    type="button"
+                                    class="wishlist-button"
+                                    aria-label="Thêm {{ $product->name }} vào yêu thích"
+                                >
                                     <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20.8 5.7a5.5 5.5 0 0 0-7.8 0L12 6.8l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 22l8.8-8.5a5.5 5.5 0 0 0 0-7.8Z"/></svg>
                                 </button>
-                                <a href="{{ route('products.show', $product->slug) }}" class="quick-add">
-                                    Xem chi tiết
-                                </a>
+                                <button
+                                    type="button"
+                                    class="absolute top-3 left-16 z-10 grid size-9 place-items-center rounded-full bg-surface/90 text-heading shadow-sm backdrop-blur-sm transition hover:scale-110 hover:bg-surface"
+                                    @click="MocAnCompare.toggle({{ $product->id }})"
+                                    title="So sánh sản phẩm"
+                                    aria-label="So sánh {{ $product->name }}"
+                                >
+                                    <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3 6h18M3 12h18m-7 6h7M7 15l-4 3 4 3"/></svg>
+                                </button>
+                                <button
+                                    type="button"
+                                    @click="$dispatch('open-quick-view', {{ $product->id }})"
+                                    class="quick-add cursor-pointer"
+                                >
+                                    Xem nhanh
+                                </button>
                             </div>
                             <div class="px-2 pt-5">
                                 <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">{{ $product->category?->name }}</p>
