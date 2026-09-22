@@ -21,8 +21,8 @@
 - [x] Task 11: Operational Readiness, Health Checks & Error Views
 - [x] Phase 4 Checkpoint
 - [x] Task 12: Cross-Device UI/UX Polish, Accessibility & Motion
-- [ ] Task 13: Full Regression Suite, Code Hygiene & Release Readiness Checklist
-- [ ] Phase 5 Checkpoint
+- [x] Task 13: Full Regression Suite, Code Hygiene & Release Readiness Checklist
+- [x] Phase 5 Checkpoint
 
 ## Decisions & Rulings
 - Baseline set to current HEAD `03509d3`.
