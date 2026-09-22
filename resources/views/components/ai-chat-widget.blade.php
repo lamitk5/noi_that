@@ -31,7 +31,7 @@
         <button
             type="button"
             @click="toggleChat()"
-            class="relative grid size-14 place-items-center rounded-full bg-primary text-primary-foreground shadow-2xl transition duration-300 hover:scale-105 active:scale-95 focus:outline-none focus:ring-4 focus:ring-primary/20"
+            class="relative grid size-14 place-items-center rounded-full bg-primary text-primary-foreground shadow-2xl transition duration-300 hover:scale-105 active:scale-95 focus:outline-none focus:ring-4 focus:ring-primary/20 motion-reduce:transition-none motion-reduce:hover:scale-100"
             aria-label="Mở Trợ lý AI Mộc An"
             :title="isOpen ? 'Thu nhỏ chat' : 'Mở Trợ lý Mộc An'"
         >
@@ -58,13 +58,13 @@
     <!-- Chat Modal / Floating Panel -->
     <div
         x-show="isOpen"
-        x-transition:enter="transition ease-out duration-300 transform"
+        x-transition:enter="transition ease-out duration-300 transform motion-reduce:transition-none"
         x-transition:enter-start="opacity-0 translate-y-8 scale-95"
         x-transition:enter-end="opacity-100 translate-y-0 scale-100"
-        x-transition:leave="transition ease-in duration-200 transform"
+        x-transition:leave="transition ease-in duration-200 transform motion-reduce:transition-none"
         x-transition:leave-start="opacity-100 translate-y-0 scale-100"
         x-transition:leave-end="opacity-0 translate-y-8 scale-95"
-        class="fixed bottom-0 right-0 sm:bottom-24 sm:right-6 z-50 w-full sm:w-[440px] sm:max-w-[calc(100vw-32px)] h-[85vh] sm:h-[640px] max-h-[760px] flex flex-col rounded-t-3xl sm:rounded-3xl bg-surface shadow-2xl border border-ui-border overflow-hidden backdrop-blur-xl"
+        class="fixed bottom-0 right-0 sm:bottom-24 sm:right-6 z-50 w-full sm:w-[420px] sm:max-w-[440px] h-[85dvh] sm:h-[72vh] sm:max-h-[75vh] flex flex-col rounded-t-3xl sm:rounded-3xl bg-surface shadow-2xl border border-ui-border overflow-hidden backdrop-blur-xl pb-[env(safe-area-inset-bottom)] sm:pb-0"
     >
         <!-- Header -->
         <div class="shrink-0 flex items-center justify-between px-4 py-3.5 bg-surface-alt border-b border-ui-border">
@@ -196,7 +196,7 @@
         <!-- Chat Messages Container -->
         <div
             id="ai-messages-scroll"
-            class="flex-1 overflow-y-auto p-4 space-y-4 bg-page/40"
+            class="flex-1 overflow-y-auto overscroll-contain p-4 space-y-4 bg-page/40"
         >
             <!-- Welcome Screen (When no messages) -->
             <template x-if="messages.length === 0">
@@ -262,6 +262,17 @@
                                 <span class="flex-1">Kiểm tra đơn hàng gần nhất của tôi</span>
                                 <span class="text-muted group-hover:text-primary transition">→</span>
                             </button>
+                        </div>
+
+                        <!-- Direct Support Channels Links (Integrated from legacy support) -->
+                        <div class="pt-3 border-t border-ui-border flex items-center justify-between gap-1 text-[11px] text-muted flex-wrap">
+                            <a href="{{ route('faq.index') }}" class="hover:text-primary hover:underline transition inline-flex items-center gap-1">❓ FAQ</a>
+                            <span>•</span>
+                            <a href="{{ route('account.tickets.create') }}" class="hover:text-primary hover:underline transition inline-flex items-center gap-1">🎫 Gửi hỗ trợ</a>
+                            <span>•</span>
+                            <a href="{{ route('pages.contact') }}" class="hover:text-primary hover:underline transition inline-flex items-center gap-1">📍 Liên hệ</a>
+                            <span>•</span>
+                            <a href="tel:19006868" class="font-semibold text-primary hover:underline transition inline-flex items-center gap-1">📞 1900 6868</a>
                         </div>
                     </div>
                 </div>

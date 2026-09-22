@@ -144,4 +144,64 @@ class AiProviderFallbackTest extends TestCase
             return $hasHeader && $hasCleanUrl && $hasCorrectModelEndpoint;
         });
     }
+
+    public function test_storefront_contains_only_one_floating_support_launcher(): void
+    {
+        $response = $this->get(route('home'));
+        $response->assertOk();
+
+        $content = $response->getContent();
+
+        // Must contain AI assistant launcher
+        $this->assertStringContainsString('Mở Trợ lý AI Mộc An', $content);
+        $this->assertStringContainsString('ai-assistant-root', $content);
+
+        // Must NOT contain duplicate legacy floating live support launcher
+        $this->assertStringNotContainsString('live-support-widget', $content);
+        $this->assertStringNotContainsString('support-launcher-btn', $content);
+        $this->assertStringNotContainsString('Hỗ trợ trực tuyến Mộc An', $content);
+    }
+
+    public function test_gemini_provider_parses_text_and_function_calls_correctly(): void
+    {
+        $secretKey = 'MOCAN_KEY_XYZ';
+        $provider = new GeminiProvider($secretKey, 'gemini-3.8-flash', 10);
+
+        Http::fake([
+            'https://generativelanguage.googleapis.com/*' => Http::response([
+                'candidates' => [
+                    [
+                        'content' => [
+                            'parts' => [
+                                ['text' => 'Dạ, em tìm thấy sofa phù hợp:'],
+                                [
+                                    'functionCall' => [
+                                        'name' => 'search_products',
+                                        'args' => ['query' => 'sofa', 'max_price' => 15000000],
+                                    ],
+                                ],
+                            ],
+                        ],
+                        'finishReason' => 'STOP',
+                    ],
+                ],
+                'usageMetadata' => [
+                    'promptTokenCount' => 120,
+                    'candidatesTokenCount' => 45,
+                    'totalTokenCount' => 165,
+                ],
+            ], 200),
+        ]);
+
+        $result = $provider->chat([
+            ['role' => 'user', 'content' => 'Tìm sofa dưới 15 triệu'],
+        ]);
+
+        $this->assertEquals('Dạ, em tìm thấy sofa phù hợp:', $result['content']);
+        $this->assertCount(1, $result['tool_calls']);
+        $this->assertEquals('search_products', $result['tool_calls'][0]['name']);
+        $this->assertEquals('sofa', $result['tool_calls'][0]['arguments']['query']);
+        $this->assertEquals(15000000, $result['tool_calls'][0]['arguments']['max_price']);
+        $this->assertEquals(165, $result['usage']['total_tokens']);
+    }
 }

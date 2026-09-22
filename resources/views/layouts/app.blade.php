@@ -385,9 +385,6 @@
         </div>
     </footer>
 
-    {{-- Live Support Floating Widget --}}
-    <x-live-support-widget />
-
     <!-- Live Search Overlay / Modal -->
     <div
         x-data="headerSearch"
