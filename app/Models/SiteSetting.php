@@ -16,6 +16,17 @@ class SiteSetting extends Model
 
     public const CACHE_KEY = 'site_settings_all';
 
+    protected static function booted(): void
+    {
+        static::saved(function () {
+            Cache::forget(self::CACHE_KEY);
+        });
+
+        static::deleted(function () {
+            Cache::forget(self::CACHE_KEY);
+        });
+    }
+
     public static function getAllSettings(): array
     {
         return Cache::rememberForever(self::CACHE_KEY, function () {

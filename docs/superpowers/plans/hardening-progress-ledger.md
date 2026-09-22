@@ -14,7 +14,7 @@
 - [x] Task 6: Sitemap, Robots & Noindex Protection
 - [x] Phase 2 Checkpoint
 - [x] Task 7: Database Composite Indexes & Query Hotspot Optimization
-- [ ] Task 8: Cache Tiering, Invalidation Hooks & Asset Optimization
+- [x] Task 8: Cache Tiering, Invalidation Hooks & Asset Optimization
 - [ ] Phase 3 Checkpoint
 - [ ] Task 9: HTTP Security Headers, CSRF, XSS & Upload Validation
 - [ ] Task 10: Role Guards, Rate Limiting & Admin Audit Logging
