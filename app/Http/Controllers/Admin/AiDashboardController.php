@@ -72,7 +72,7 @@ class AiDashboardController extends Controller
         $temperature = (float) SiteSetting::get('ai_temperature', config('ai.temperature', 0.7));
         $maxTokens = (int) SiteSetting::get('ai_max_tokens', config('ai.max_tokens', 1500));
         $provider = config('ai.provider', 'gemini');
-        $model = config('ai.model', 'gemini-1.5-flash');
+        $model = config('ai.model', 'gemini-3.8-flash');
         $apiKeyMasked = config('ai.api_key') ? StrMask(config('ai.api_key')) : 'Chưa cấu hình (đang dùng Mock)';
 
         return view('admin.ai.index', [

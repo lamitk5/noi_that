@@ -16,8 +16,13 @@ class GeminiProvider implements AiProviderInterface
     public function __construct(?string $apiKey = null, ?string $model = null, int $timeout = 30)
     {
         $this->apiKey = $apiKey ?? (string) config('ai.api_key', '');
-        $this->model = $model ?? (string) config('ai.model', 'gemini-1.5-flash');
+        $this->model = $model ?? (string) config('ai.model', 'gemini-3.8-flash');
         $this->timeout = $timeout > 0 ? $timeout : (int) config('ai.timeout', 30);
+    }
+
+    public function getModel(): string
+    {
+        return $this->model;
     }
 
     public function chat(array $messages, array $tools = [], array $options = []): array

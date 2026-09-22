@@ -3,7 +3,7 @@
 return [
     'enabled' => env('AI_ENABLED', true),
     'provider' => env('AI_PROVIDER', 'gemini'),
-    'model' => env('AI_MODEL', 'gemini-1.5-flash'),
+    'model' => env('AI_MODEL', 'gemini-3.8-flash'),
     'api_key' => env('GEMINI_API_KEY', ''),
     'timeout' => (int) env('AI_TIMEOUT', 30),
     'max_tokens' => (int) env('AI_MAX_TOKENS', 1500),

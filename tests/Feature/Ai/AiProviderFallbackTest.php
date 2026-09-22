@@ -94,10 +94,26 @@ class AiProviderFallbackTest extends TestCase
         $this->assertContains($contactUrl, $actionUrls);
     }
 
+    public function test_gemini_provider_defaults_to_gemini_3_8_flash(): void
+    {
+        config(['ai.model' => 'gemini-3.8-flash']);
+        $provider = new GeminiProvider('test-key');
+
+        $this->assertEquals('gemini-3.8-flash', $provider->getModel());
+    }
+
+    public function test_gemini_provider_respects_custom_model_from_config_or_env(): void
+    {
+        config(['ai.model' => 'gemini-ultra-custom']);
+        $provider = new GeminiProvider('test-key');
+
+        $this->assertEquals('gemini-ultra-custom', $provider->getModel());
+    }
+
     public function test_gemini_provider_uses_header_auth_and_does_not_leak_api_key(): void
     {
         $secretKey = 'MOCAN_SUPER_SECRET_KEY_12345';
-        $provider = new GeminiProvider($secretKey, 'gemini-1.5-flash', 10);
+        $provider = new GeminiProvider($secretKey, 'gemini-3.8-flash', 10);
 
         Http::fake([
             'https://generativelanguage.googleapis.com/*' => Http::response([
@@ -120,11 +136,12 @@ class AiProviderFallbackTest extends TestCase
             $this->assertStringContainsString('[REDACTED_API_KEY]', $e->getMessage());
         }
 
-        // Verify the HTTP request sent header x-goog-api-key and NOT query param ?key=
+        // Verify the HTTP request sent header x-goog-api-key, target URL uses gemini-3.8-flash, and NOT query param ?key=
         Http::assertSent(function ($request) use ($secretKey) {
             $hasHeader = $request->hasHeader('x-goog-api-key') && $request->header('x-goog-api-key')[0] === $secretKey;
             $hasCleanUrl = !str_contains($request->url(), 'key=');
-            return $hasHeader && $hasCleanUrl;
+            $hasCorrectModelEndpoint = str_contains($request->url(), 'gemini-3.8-flash:generateContent');
+            return $hasHeader && $hasCleanUrl && $hasCorrectModelEndpoint;
         });
     }
 }
