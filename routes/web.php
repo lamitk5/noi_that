@@ -94,6 +94,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/tai-khoan/chinh-sua', [AccountController::class, 'edit'])->name('account.edit');
     Route::patch('/tai-khoan', [AccountController::class, 'update'])->name('account.update');
 
+    // Customer Personal Appearance Settings
+    Route::get('/tai-khoan/giao-dien', [AccountController::class, 'appearance'])->name('account.appearance');
+    Route::post('/tai-khoan/giao-dien', [AccountController::class, 'updateAppearance'])->name('account.appearance.update');
+    Route::post('/tai-khoan/giao-dien/khoi-phuc', [AccountController::class, 'resetAppearance'])->name('account.appearance.reset');
+
     // Customer Address Book
     Route::get('/tai-khoan/dia-chi', [UserAddressController::class, 'index'])->name('account.addresses.index');
     Route::post('/tai-khoan/dia-chi', [UserAddressController::class, 'store'])->name('account.addresses.store');

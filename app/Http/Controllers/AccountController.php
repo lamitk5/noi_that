@@ -47,4 +47,47 @@ class AccountController extends Controller
 
         return view('account.loyalty', compact('user', 'transactions'));
     }
+
+    public function appearance(Request $request): View
+    {
+        $user = $request->user();
+        $settings = $user->appearance_settings ?? [];
+
+        return view('account.appearance', [
+            'user' => $user,
+            'settings' => array_merge([
+                'theme' => 'wood',
+                'font_scale' => 'base',
+                'density' => 'comfortable',
+                'reduced_motion' => '0',
+            ], $settings),
+        ]);
+    }
+
+    public function updateAppearance(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $validated = $request->validate([
+            'theme' => ['required', 'string', 'in:moss,wood,cream,blue,black'],
+            'font_scale' => ['required', 'string', 'in:sm,base,lg'],
+            'density' => ['required', 'string', 'in:compact,comfortable'],
+            'reduced_motion' => ['required', 'in:0,1'],
+        ]);
+
+        $user = $request->user();
+        $user->update([
+            'appearance_settings' => $validated,
+        ]);
+
+        return back()->with('status', 'Tùy chọn giao diện cá nhân đã được lưu thành công!');
+    }
+
+    public function resetAppearance(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $user = $request->user();
+        $user->update([
+            'appearance_settings' => null,
+        ]);
+
+        return back()->with('status', 'Đã khôi phục cài đặt giao diện về mặc định!');
+    }
 }

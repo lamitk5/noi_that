@@ -136,4 +136,18 @@ class User extends Authenticatable
     {
         return $this->role === 'admin';
     }
+
+    public function getAppearanceSetting(string $key, mixed $default = null): mixed
+    {
+        $settings = $this->appearance_settings ?? [];
+        return $settings[$key] ?? $default;
+    }
+
+    public function setAppearanceSetting(string $key, mixed $value): void
+    {
+        $settings = $this->appearance_settings ?? [];
+        $settings[$key] = $value;
+        $this->appearance_settings = $settings;
+        $this->save();
+    }
 }

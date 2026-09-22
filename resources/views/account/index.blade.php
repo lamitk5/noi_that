@@ -55,6 +55,26 @@
                             </a>
                         @endif
 
+                        <a href="{{ route('account.appearance') }}" class="group flex items-center gap-4 rounded-2xl border border-ui-border p-4 transition-all hover:border-primary hover:bg-surface-alt">
+                            <span class="grid size-11 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary transition group-hover:bg-primary group-hover:text-primary-foreground">
+                                <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.245c0-.399-.078-.78-.22-1.128Zm0 0a15.998 15.998 0 0 0 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 4.764-4.648l3.876-5.814a1.151 1.151 0 0 0-1.597-1.597L14.146 6.32a15.996 15.996 0 0 0-4.649 4.763m3.42 3.42a6.776 6.776 0 0 0-3.42-3.42"/></svg>
+                            </span>
+                            <div>
+                                <h4 class="text-sm font-bold text-heading group-hover:text-primary transition">Cài đặt giao diện</h4>
+                                <p class="text-xs text-muted">Màu sắc, cỡ chữ, bố cục</p>
+                            </div>
+                        </a>
+
+                        <a href="{{ route('account.addresses.index') }}" class="group flex items-center gap-4 rounded-2xl border border-ui-border p-4 transition-all hover:border-primary hover:bg-surface-alt">
+                            <span class="grid size-11 shrink-0 place-items-center rounded-xl bg-accent/10 text-accent transition group-hover:bg-accent group-hover:text-accent-foreground">
+                                <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg>
+                            </span>
+                            <div>
+                                <h4 class="text-sm font-bold text-heading group-hover:text-primary transition">Sổ địa chỉ</h4>
+                                <p class="text-xs text-muted">Địa chỉ nhận hàng</p>
+                            </div>
+                        </a>
+
                         <a href="{{ route('home') }}" class="group flex items-center gap-4 rounded-2xl border border-ui-border p-4 transition-all hover:border-primary hover:bg-surface-alt">
                             <span class="grid size-11 shrink-0 place-items-center rounded-xl bg-accent/10 text-accent transition group-hover:bg-accent group-hover:text-accent-foreground">
                                 <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 21v-7.5a.75.75 0 0 1 .75-.75h3a.75.75 0 0 1 .75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349m-16.5 0V21m0 0H2.36m0 0L12 3l9.64 8.349"/></svg>
