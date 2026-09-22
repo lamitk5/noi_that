@@ -99,4 +99,107 @@ class SecurityHeadersHardeningTest extends TestCase
         // Must contain escaped HTML entities
         $this->assertStringContainsString('&lt;script&gt;alert(&quot;xss-attack&quot;)&lt;/script&gt;', $ticketContent);
     }
+
+    public function test_csp_without_hot_file_contains_no_vite_dev_origins(): void
+    {
+        $hotFile = public_path('hot');
+        if (file_exists($hotFile)) {
+            unlink($hotFile);
+        }
+
+        $response = $this->get(route('home'));
+        $response->assertStatus(200);
+
+        $csp = (string) $response->headers->get('Content-Security-Policy');
+        $this->assertStringNotContainsString('[::1]', $csp);
+        $this->assertStringNotContainsString('localhost', $csp);
+        $this->assertStringNotContainsString('5173', $csp);
+        $this->assertStringNotContainsString('5174', $csp);
+        $this->assertStringNotContainsString('ws:', $csp);
+    }
+
+    public function test_csp_with_dynamic_vite_hot_url_allows_exact_http_and_ws_origins(): void
+    {
+        $hotFile = public_path('hot');
+        try {
+            file_put_contents($hotFile, "http://[::1]:5174\n");
+
+            $response = $this->get(route('home'));
+            $response->assertStatus(200);
+
+            $csp = (string) $response->headers->get('Content-Security-Policy');
+
+            // script-src contains hot origin
+            $this->assertMatchesRegularExpression("/script-src[^;]*http:\/\/\[::1\]:5174/", $csp);
+
+            // style-src contains hot origin
+            $this->assertMatchesRegularExpression("/style-src[^;]*http:\/\/\[::1\]:5174/", $csp);
+
+            // connect-src contains both HTTP and WS origins
+            $this->assertMatchesRegularExpression("/connect-src[^;]*http:\/\/\[::1\]:5174/", $csp);
+            $this->assertMatchesRegularExpression("/connect-src[^;]*ws:\/\/\[::1\]:5174/", $csp);
+
+            // font-src & img-src contain hot origin
+            $this->assertMatchesRegularExpression("/font-src[^;]*http:\/\/\[::1\]:5174/", $csp);
+            $this->assertMatchesRegularExpression("/img-src[^;]*http:\/\/\[::1\]:5174/", $csp);
+
+            // existing security headers remain intact
+            $response->assertHeader('X-Frame-Options', 'SAMEORIGIN');
+            $response->assertHeader('X-Content-Type-Options', 'nosniff');
+            $response->assertHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+        } finally {
+            if (file_exists($hotFile)) {
+                unlink($hotFile);
+            }
+        }
+    }
+
+    public function test_csp_supports_arbitrary_dynamic_vite_ports(): void
+    {
+        $hotFile = public_path('hot');
+        try {
+            file_put_contents($hotFile, "http://localhost:5199");
+
+            $response = $this->get(route('home'));
+            $response->assertStatus(200);
+
+            $csp = (string) $response->headers->get('Content-Security-Policy');
+
+            $this->assertStringContainsString('http://localhost:5199', $csp);
+            $this->assertStringContainsString('ws://localhost:5199', $csp);
+            $this->assertStringNotContainsString('5173', $csp);
+            $this->assertStringNotContainsString('5174', $csp);
+        } finally {
+            if (file_exists($hotFile)) {
+                unlink($hotFile);
+            }
+        }
+    }
+
+    public function test_production_environment_ignores_hot_file_and_maintains_strict_csp(): void
+    {
+        $hotFile = public_path('hot');
+        $originalEnv = $this->app['env'];
+        try {
+            file_put_contents($hotFile, "http://[::1]:5174\n");
+            $this->app['env'] = 'production';
+
+            $response = $this->get(route('home'));
+            $response->assertStatus(200);
+
+            $csp = (string) $response->headers->get('Content-Security-Policy');
+            $this->assertStringNotContainsString('[::1]', $csp);
+            $this->assertStringNotContainsString('localhost', $csp);
+            $this->assertStringNotContainsString('5174', $csp);
+            $this->assertStringNotContainsString('ws:', $csp);
+
+            // In production, HSTS is also added
+            $response->assertHeader('Strict-Transport-Security');
+        } finally {
+            $this->app['env'] = $originalEnv;
+            if (file_exists($hotFile)) {
+                unlink($hotFile);
+            }
+        }
+    }
 }
