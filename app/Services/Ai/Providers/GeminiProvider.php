@@ -27,7 +27,8 @@ class GeminiProvider implements AiProviderInterface
         }
 
         $model = $options['model'] ?? $this->model;
-        $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key=" . urlencode($this->apiKey);
+        // Pass API key via x-goog-api-key header to prevent exposing key in URL query params or access logs
+        $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent";
 
         $systemPrompt = '';
         $contents = [];
@@ -122,15 +123,20 @@ class GeminiProvider implements AiProviderInterface
         }
 
         $response = Http::timeout($this->timeout)
-            ->withHeaders(['Content-Type' => 'application/json'])
+            ->retry(2, 200, throw: false)
+            ->withHeaders([
+                'Content-Type' => 'application/json',
+                'x-goog-api-key' => $this->apiKey,
+            ])
             ->post($url, $payload);
 
         if (!$response->successful()) {
             $status = $response->status();
             $body = $response->json();
             $msg = $body['error']['message'] ?? $response->body();
-            Log::error("Gemini API Error ({$status}): {$msg}");
-            throw new RuntimeException("Lỗi giao tiếp với AI Provider ({$status}): {$msg}");
+            $safeMsg = str_replace($this->apiKey, '[REDACTED_API_KEY]', (string) $msg);
+            Log::error("Gemini API Error ({$status}): {$safeMsg}");
+            throw new RuntimeException("Lỗi giao tiếp với AI Provider ({$status}): {$safeMsg}");
         }
 
         $data = $response->json();

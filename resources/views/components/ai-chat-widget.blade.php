@@ -494,6 +494,30 @@
                                                 </p>
                                             </div>
                                         </template>
+
+                                        <!-- SUPPORT / FALLBACK ACTIONS CARD -->
+                                        <template x-if="card.type === 'support_actions'">
+                                            <div class="p-3.5 rounded-2xl bg-surface border border-ui-border shadow-sm space-y-2.5">
+                                                <p class="text-xs font-semibold text-heading flex items-center gap-1.5" x-text="card.message || (card.data && card.data.message) || 'Kênh hỗ trợ Mộc An:'"></p>
+                                                <div class="flex flex-wrap gap-2">
+                                                    <template x-for="(act, aIdx) in (card.actions || (card.data && card.data.actions) || [])" :key="aIdx">
+                                                        <a
+                                                            :href="act.url"
+                                                            class="text-xs font-medium px-3 py-1.5 rounded-xl border border-ui-border bg-surface-alt hover:bg-surface text-heading hover:border-primary/50 transition inline-flex items-center gap-1 shadow-sm"
+                                                            x-text="act.label"
+                                                        ></a>
+                                                    </template>
+                                                    <template x-if="card.hotline || (card.data && card.data.hotline)">
+                                                        <a
+                                                            :href="'tel:' + (card.hotline || card.data.hotline).replace(/\s+/g, '')"
+                                                            class="text-xs font-semibold px-3 py-1.5 rounded-xl bg-primary text-primary-foreground hover:opacity-90 shadow-sm transition inline-flex items-center gap-1"
+                                                        >
+                                                            Hotline: <span x-text="card.hotline || card.data.hotline"></span>
+                                                        </a>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                        </template>
                                     </div>
                                 </template>
                             </div>

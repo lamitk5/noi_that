@@ -36,12 +36,21 @@ class AiAssistantService
             $this->provider = $provider;
         } else {
             $providerType = config('ai.provider', 'gemini');
-            if ($providerType === 'mock' || App::environment('testing') && !config('ai.api_key')) {
+            $isExplicitMock = ($providerType === 'mock');
+            $isTestOrLocal = App::environment('testing', 'local');
+
+            // In production, never fallback to MockAiProvider unless explicitly configured
+            if ($isExplicitMock || ($isTestOrLocal && empty(config('ai.api_key')))) {
                 $this->provider = new MockAiProvider();
             } else {
                 $this->provider = new GeminiProvider();
             }
         }
+    }
+
+    public function getProvider(): AiProviderInterface
+    {
+        return $this->provider;
     }
 
     public function setProvider(AiProviderInterface $provider): void
@@ -261,10 +270,10 @@ class AiAssistantService
                     ]);
 
                     if (!empty($toolResult['card_type'])) {
-                        $cardsCollected[] = [
-                            'type' => $toolResult['card_type'],
-                            'data' => $toolResult['card_data'],
-                        ];
+                        $cardItem = is_array($toolResult['card_data'])
+                            ? array_merge(['type' => $toolResult['card_type'], 'data' => $toolResult['card_data']], $toolResult['card_data'])
+                            : ['type' => $toolResult['card_type'], 'data' => $toolResult['card_data']];
+                        $cardsCollected[] = $cardItem;
                     }
 
                     // Feed tool result back to LLM context
@@ -276,9 +285,39 @@ class AiAssistantService
                 }
             }
         } catch (\Throwable $e) {
-            Log::error('AI Assistant Error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            $errMsg = $e->getMessage();
+            $apiKey = config('ai.api_key');
+            if (!empty($apiKey)) {
+                $errMsg = str_replace($apiKey, '[REDACTED_API_KEY]', $errMsg);
+            }
+            Log::error('AI Assistant Error: ' . $errMsg);
 
-            $finalAssistantText = "Dạ, hiện tại kết nối đến hệ thống tư vấn thông minh đang gián đoạn một chút. Quý khách có thể xem nhanh các [Câu hỏi thường gặp](" . route('faq.index') . ") hoặc liên hệ trực tiếp hotline **1900 6868** để được tư vấn viên hỗ trợ ngay ạ.";
+            $hotline = SiteSetting::get('site_hotline', '1900 6868');
+            $faqUrl = route('faq.index');
+            $contactUrl = route('pages.contact');
+            $ticketUrl = route('account.tickets.create');
+
+            $finalAssistantText = "Dạ, hiện tại kết nối đến hệ thống trợ lý Mộc An đang tạm thời gián đoạn. Quý khách có thể xem nhanh [Câu hỏi thường gặp]({$faqUrl}), [Gửi phiếu hỗ trợ]({$ticketUrl}) hoặc [Liên hệ Mộc An]({$contactUrl}). Ngoài ra, quý khách vui lòng liên hệ trực tiếp hotline **{$hotline}** để được tư vấn viên hỗ trợ ngay ạ.";
+
+            $cardsCollected[] = [
+                'type' => 'support_actions',
+                'data' => [
+                    'message' => 'Trung tâm hỗ trợ khách hàng Mộc An:',
+                    'actions' => [
+                        ['label' => 'Câu hỏi thường gặp (FAQ)', 'url' => $faqUrl],
+                        ['label' => 'Gửi phiếu hỗ trợ (Ticket)', 'url' => $ticketUrl],
+                        ['label' => 'Liên hệ Mộc An', 'url' => $contactUrl],
+                    ],
+                    'hotline' => $hotline,
+                ],
+                'message' => 'Trung tâm hỗ trợ khách hàng Mộc An:',
+                'actions' => [
+                    ['label' => 'Câu hỏi thường gặp (FAQ)', 'url' => $faqUrl],
+                    ['label' => 'Gửi phiếu hỗ trợ (Ticket)', 'url' => $ticketUrl],
+                    ['label' => 'Liên hệ Mộc An', 'url' => $contactUrl],
+                ],
+                'hotline' => $hotline,
+            ];
         }
 
         if (empty($finalAssistantText) && !empty($cardsCollected)) {
