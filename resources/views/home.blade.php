@@ -35,25 +35,28 @@
     </section>
 
     <section class="border-b border-ui-border bg-surface">
-        <div class="page-shell grid divide-y divide-ui-border py-4 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+        <div class="page-shell grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-ui-border py-4">
             @foreach ([
-                ['truck', 'Giao hàng tận nơi', 'Nhanh chóng, an toàn'],
-                ['shield', 'Bảo hành chính hãng', 'Cam kết đến 5 năm'],
-                ['chat', 'Tư vấn không gian', 'Hỗ trợ hoàn toàn miễn phí'],
+                ['truck', 'Giao hàng & Lắp đặt', 'Miễn phí đơn từ 5.000.000₫'],
+                ['shield', 'Bảo hành 24 tháng', 'Bảo hành chính hãng tận nơi'],
+                ['wood', '100% Gỗ tự nhiên', 'Vật liệu tuyển chọn bền vững'],
+                ['refresh', 'Đổi trả trong 30 ngày', 'An tâm tuyệt đối khi mua sắm'],
             ] as [$icon, $title, $description])
-                <div class="reveal-on-scroll flex items-center gap-5 px-4 py-7 sm:px-6 lg:px-10">
-                    <span class="grid size-11 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+                <div class="reveal-on-scroll flex items-center gap-4 px-4 py-6 sm:px-6">
+                    <span class="grid size-11 shrink-0 place-items-center rounded-2xl bg-primary/10 text-primary">
                         @if ($icon === 'truck')
-                            <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 6h11v11H3zM14 10h4l3 3v4h-7z"/><circle cx="7" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></svg>
+                            <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h11v11H3zM14 10h4l3 3v4h-7z"/><circle cx="7" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></svg>
                         @elseif ($icon === 'shield')
-                            <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3 5 6v5c0 4.7 2.8 8.1 7 10 4.2-1.9 7-5.3 7-10V6z"/><path d="m9 12 2 2 4-4"/></svg>
+                            <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 5 6v5c0 4.7 2.8 8.1 7 10 4.2-1.9 7-5.3 7-10V6z"/><path d="m9 12 2 2 4-4"/></svg>
+                        @elseif ($icon === 'wood')
+                            <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21V8m0 0c-1.4-3.1-4-4.4-7-4 .1 3.3 2 5.6 7 6m0-2c1.4-3.1 4-4.4 7-4-.1 3.3-2 5.6-7 6"/></svg>
                         @else
-                            <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg>
+                            <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m3 12 4-4 4 4"/><path d="M7 8v8a4 4 0 0 0 4 4h6"/><path d="m21 12-4 4-4-4"/><path d="M17 16V8a4 4 0 0 0-4-4H7"/></svg>
                         @endif
                     </span>
                     <div>
-                        <h3 class="text-sm font-bold text-heading">{{ $title }}</h3>
-                        <p class="mt-1 text-xs text-muted">{{ $description }}</p>
+                        <h3 class="text-xs sm:text-sm font-bold text-heading">{{ $title }}</h3>
+                        <p class="mt-0.5 text-[11px] sm:text-xs text-muted">{{ $description }}</p>
                     </div>
                 </div>
             @endforeach
@@ -259,6 +262,43 @@
                     </div>
                 </div>
                 <a href="{{ route('pages.about') }}" class="text-link mt-9 inline-flex">Tìm hiểu về chúng tôi <span aria-hidden="true">→</span></a>
+            </div>
+        </div>
+    </section>
+
+    <section id="danh-gia-khach-hang" class="section-space bg-surface">
+        <div class="page-shell">
+            <div class="section-heading reveal-on-scroll text-center mx-auto max-w-xl flex flex-col items-center">
+                <p class="eyebrow">Trải nghiệm khách hàng</p>
+                <h2 class="section-title mx-auto mt-3">Hơn 5.000 tổ ấm tin tưởng</h2>
+            </div>
+
+            <div class="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                @foreach ([
+                    ['name' => 'Chị Bích Thủy', 'role' => 'Căn hộ Vinhomes Grand Park', 'text' => 'Bộ bàn ăn sồi Nga hoàn thiện rất tỉ mỉ, bề mặt gỗ mịn, vân gỗ tự nhiên rất đẹp. Nhân viên Mộc An giao hàng và lắp đặt nhanh gọn, cẩn thận.', 'rating' => 5],
+                    ['name' => 'Anh Minh Tuấn', 'role' => 'Nhà phố Thảo Điền, TP. Thủ Đức', 'text' => 'Đặt sofa nỉ góc L của Mộc An hơn 6 tháng nay, đệm mút đàn hồi rất êm không bị xẹp lún. Dịch vụ bảo hành và chăm sóc khách hàng cực kỳ chu đáo.', 'rating' => 5],
+                    ['name' => 'Chị Phương Uyên', 'role' => 'Chung cư Masteri Centre Point', 'text' => 'Rất ưng ý với bàn làm việc thông minh. Kích thước vừa vặn cho góc làm việc tại nhà, màu gỗ trầm ấm tạo cảm hứng làm việc mỗi ngày.', 'rating' => 5],
+                ] as $testimonial)
+                    <div class="reveal-on-scroll rounded-3xl border border-ui-border bg-surface-alt/40 p-8 shadow-xs flex flex-col justify-between" data-delay="{{ $loop->index * 100 }}">
+                        <div>
+                            <div class="flex items-center gap-1 text-amber-500 mb-4">
+                                @for($i = 0; $i < $testimonial['rating']; $i++)
+                                    <svg class="size-4 fill-amber-400" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                                @endfor
+                            </div>
+                            <p class="text-sm leading-7 text-body italic">“{{ $testimonial['text'] }}”</p>
+                        </div>
+                        <div class="mt-6 pt-5 border-t border-ui-border flex items-center gap-3">
+                            <div class="size-10 rounded-full bg-primary/10 text-primary font-bold text-xs flex items-center justify-center">
+                                {{ mb_substr($testimonial['name'], 0, 1) }}
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-bold text-heading">{{ $testimonial['name'] }}</h4>
+                                <p class="text-xs text-muted">{{ $testimonial['role'] }}</p>
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
             </div>
         </div>
     </section>

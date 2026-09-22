@@ -24,8 +24,11 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="bg-page text-body antialiased transition-colors duration-300">
-    <div class="bg-primary px-4 py-2.5 text-center text-xs font-semibold tracking-[0.12em] text-primary-foreground sm:text-sm">
-        MIỄN PHÍ GIAO HÀNG TOÀN QUỐC CHO ĐƠN TỪ 5.000.000₫
+    <div class="bg-primary px-4 py-2 text-center text-xs font-medium tracking-wide text-primary-foreground sm:text-xs flex items-center justify-center gap-3">
+        <span class="inline-flex items-center gap-1.5 font-bold uppercase tracking-wider text-[10px] bg-white/20 px-2 py-0.5 rounded-full">Ưu đãi</span>
+        <span>Miễn phí giao hàng & lắp đặt tận phòng cho đơn từ 5.000.000₫</span>
+        <span class="hidden md:inline text-white/60">|</span>
+        <span class="hidden md:inline text-white/80">Hotline tư vấn: <strong class="text-white">1900 6868</strong></span>
     </div>
 
     <header class="site-header sticky top-0 z-50 border-b border-ui-border bg-header/95 backdrop-blur-xl">
@@ -609,6 +612,31 @@
                 <button @click="removeToast(toast.id)" class="opacity-70 hover:opacity-100 text-xs ml-auto">✕</button>
             </div>
         </template>
+    </div>
+
+    <!-- Back to Top Floating Button -->
+    <div
+        x-data="{ show: false }"
+        @scroll.window="show = (window.pageYOffset > 400)"
+        class="fixed bottom-6 left-6 z-40"
+    >
+        <button
+            x-show="show"
+            x-cloak
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0 translate-y-4"
+            x-transition:enter-end="opacity-100 translate-y-0"
+            x-transition:leave="transition ease-in duration-150"
+            x-transition:leave-start="opacity-100 translate-y-0"
+            x-transition:leave-end="opacity-0 translate-y-4"
+            @click="window.scrollTo({ top: 0, behavior: 'smooth' })"
+            type="button"
+            aria-label="Về đầu trang"
+            title="Về đầu trang"
+            class="grid size-11 place-items-center rounded-full border border-ui-border bg-surface/90 text-heading shadow-lg backdrop-blur-sm transition hover:bg-primary hover:text-primary-foreground hover:scale-110 active:scale-95"
+        >
+            <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5"/></svg>
+        </button>
     </div>
 </body>
 </html>

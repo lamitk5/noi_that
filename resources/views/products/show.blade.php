@@ -39,7 +39,7 @@
             })"
         >
             <!-- Left Column: Gallery -->
-            <div class="lg:col-span-7">
+            <div class="lg:col-span-7 lg:sticky lg:top-24">
                 @php
                     $allImages = $product->images->isNotEmpty()
                         ? $product->images
@@ -57,18 +57,29 @@
                     class="space-y-4"
                     x-data="{
                         activeImage: '{{ $primaryImg }}',
+                        zoomModal: false,
                         setActive(img) { this.activeImage = img; }
                     }"
                 >
                     <!-- Main Large Image Wrapper -->
-                    <div class="relative aspect-4/3 sm:aspect-16/10 w-full overflow-hidden rounded-2xl sm:rounded-3xl border border-ui-border bg-surface shadow-sm">
+                    <div
+                        class="group relative aspect-4/3 sm:aspect-16/10 w-full overflow-hidden rounded-2xl sm:rounded-3xl border border-ui-border bg-surface shadow-sm cursor-zoom-in"
+                        @click="zoomModal = true"
+                    >
                         <img
                             :src="activeImage"
                             src="{{ $primaryImg }}"
                             alt="{{ $product->name }}"
-                            class="size-full object-cover transition-opacity duration-300"
+                            class="size-full object-cover transition duration-500 group-hover:scale-105"
                             loading="eager"
                         >
+
+                        <!-- Zoom Hint Badge -->
+                        <div class="absolute bottom-4 right-4 rounded-full bg-black/60 backdrop-blur-md px-3 py-1.5 text-[11px] font-medium text-white opacity-0 group-hover:opacity-100 transition flex items-center gap-1.5 pointer-events-none">
+                            <svg viewBox="0 0 24 24" class="size-3.5" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                            <span>Phóng to</span>
+                        </div>
+
                         <!-- Stock Status Floating Badge -->
                         <div class="absolute top-4 left-4">
                             @if ($product->isOutOfStock())
@@ -90,13 +101,35 @@
                         </div>
                     </div>
 
+                    <!-- Lightbox Modal -->
+                    <div
+                        x-show="zoomModal"
+                        x-cloak
+                        @keydown.escape.window="zoomModal = false"
+                        class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 sm:p-8 backdrop-blur-md"
+                    >
+                        <button
+                            type="button"
+                            @click="zoomModal = false"
+                            class="absolute top-6 right-6 size-11 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition cursor-pointer"
+                            aria-label="Đóng phóng to ảnh"
+                        >
+                            <svg viewBox="0 0 24 24" class="size-6" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                        </button>
+                        <img
+                            :src="activeImage"
+                            alt="{{ $product->name }}"
+                            class="max-h-[85vh] max-w-[90vw] object-contain rounded-2xl shadow-2xl"
+                        >
+                    </div>
+
                     <!-- Thumbnails Carousel / Grid -->
                     @if ($allImages->count() > 1)
                         <div class="flex items-center gap-3 overflow-x-auto pb-2 pt-1" role="tablist" aria-label="Hình ảnh sản phẩm">
                             @foreach ($allImages as $img)
                                 <button
                                     type="button"
-                                    class="relative shrink-0 size-20 sm:size-24 rounded-xl sm:rounded-2xl overflow-hidden border-2 transition focus:outline-none"
+                                    class="relative shrink-0 size-20 sm:size-24 rounded-xl sm:rounded-2xl overflow-hidden border-2 transition focus:outline-none cursor-pointer"
                                     :class="activeImage === '{{ $img->image_path }}' ? 'border-primary ring-2 ring-primary/20 scale-102' : 'border-ui-border hover:border-heading/40 opacity-70 hover:opacity-100'"
                                     @click="setActive('{{ $img->image_path }}')"
                                     aria-label="Xem ảnh {{ $loop->iteration }}"
@@ -247,12 +280,13 @@
 
                     <!-- Actions (Cart + Wishlist) -->
                     <div class="pt-2 flex flex-col sm:flex-row items-center gap-3">
-                        <form method="POST" action="{{ route('cart.store') }}" class="w-full sm:flex-1">
+                        <form id="add-to-cart-form" method="POST" action="{{ route('cart.store') }}" class="w-full sm:flex-1">
                             @csrf
                             <input type="hidden" name="variant_id" :value="selectedVariantId">
                             <input type="hidden" name="quantity" :value="quantity">
 
                             <button
+                                id="add-to-cart-btn"
                                 type="submit"
                                 class="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 text-sm font-bold text-primary-foreground shadow-sm transition hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                                 :disabled="isOutOfStock || !selectedVariantId"
@@ -338,6 +372,19 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Delivery Estimate Box -->
+                    <div class="mt-6 rounded-2xl border border-ui-border bg-surface-alt/40 p-4 text-xs space-y-2">
+                        <div class="flex items-center gap-2 font-semibold text-heading">
+                            <svg class="size-4 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <span>Dự kiến giao hàng: <strong class="text-primary font-bold">2 – 4 ngày làm việc</strong></span>
+                        </div>
+                        <p class="text-muted text-[11px] leading-relaxed">
+                            Miễn phí vận chuyển cho đơn hàng từ 5.000.000₫. Hỗ trợ vận chuyển tận nhà và lắp đặt hoàn thiện bởi đội ngũ kỹ thuật Mộc An.
+                        </p>
+                    </div>
                 </div>
 
                 <!-- Commitment & Value Props -->
@@ -359,18 +406,160 @@
                         <span>Đổi trả trong 7 ngày</span>
                     </div>
                 </div>
+
+                <!-- Mobile Sticky Buy Bar -->
+                <div class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-surface/95 backdrop-blur-md border-t border-ui-border p-3 shadow-2xl flex items-center justify-between gap-3">
+                    <div class="min-w-0 flex-1">
+                        <div class="truncate text-xs font-semibold text-heading">{{ $product->name }}</div>
+                        <div class="text-sm font-bold text-primary" x-text="formatCurrency(activePrice)">
+                            {{ number_format((float) $product->base_price, 0, ',', '.') }}₫
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        @click="document.getElementById('add-to-cart-form')?.scrollIntoView({ behavior: 'smooth' }); document.getElementById('add-to-cart-btn')?.click()"
+                        class="shrink-0 inline-flex items-center justify-center gap-1.5 rounded-xl bg-primary px-5 py-2.5 text-xs font-bold text-primary-foreground shadow-sm transition hover:opacity-95 disabled:opacity-50 cursor-pointer"
+                        :disabled="isOutOfStock || !selectedVariantId"
+                    >
+                        <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 4h2l2 11h10l2-8H6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9" cy="19" r="1"/><circle cx="17" cy="19" r="1"/></svg>
+                        <span x-text="isOutOfStock ? 'Hết hàng' : 'Thêm giỏ'"></span>
+                    </button>
+                </div>
             </div>
         </div>
 
-        <!-- Full Product Description Section -->
-        @if ($product->description)
-            <div class="mt-16 sm:mt-24 rounded-3xl border border-ui-border bg-surface p-6 sm:p-10 shadow-xs">
-                <h2 class="font-display text-2xl font-semibold text-heading mb-6">Chi tiết sản phẩm</h2>
-                <div class="prose prose-stone dark:prose-invert max-w-none text-body leading-relaxed space-y-4 text-sm sm:text-base">
-                    {!! nl2br(e($product->description)) !!}
+        <!-- Product Details & Specs Tabs Section -->
+        <div class="mt-16 sm:mt-24 rounded-3xl border border-ui-border bg-surface p-6 sm:p-10 shadow-xs" x-data="{ activeTab: 'description' }">
+            <!-- Tab Headers -->
+            <div class="flex items-center gap-2 sm:gap-4 border-b border-ui-border pb-4 overflow-x-auto" role="tablist" aria-label="Thông tin chi tiết sản phẩm">
+                <button
+                    type="button"
+                    class="rounded-xl px-5 py-2.5 text-sm font-semibold transition cursor-pointer shrink-0"
+                    :class="activeTab === 'description' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted hover:text-heading hover:bg-surface-alt'"
+                    @click="activeTab = 'description'"
+                    role="tab"
+                    :aria-selected="activeTab === 'description'"
+                >
+                    Mô tả sản phẩm
+                </button>
+                <button
+                    type="button"
+                    class="rounded-xl px-5 py-2.5 text-sm font-semibold transition cursor-pointer shrink-0"
+                    :class="activeTab === 'specs' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted hover:text-heading hover:bg-surface-alt'"
+                    @click="activeTab = 'specs'"
+                    role="tab"
+                    :aria-selected="activeTab === 'specs'"
+                >
+                    Thông số kỹ thuật
+                </button>
+                <button
+                    type="button"
+                    class="rounded-xl px-5 py-2.5 text-sm font-semibold transition cursor-pointer shrink-0"
+                    :class="activeTab === 'policies' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted hover:text-heading hover:bg-surface-alt'"
+                    @click="activeTab = 'policies'"
+                    role="tab"
+                    :aria-selected="activeTab === 'policies'"
+                >
+                    Chính sách & Bảo hành
+                </button>
+            </div>
+
+            <!-- Tab 1: Description -->
+            <div x-show="activeTab === 'description'" class="pt-6">
+                @if ($product->description)
+                    <div class="prose prose-stone dark:prose-invert max-w-none text-body leading-relaxed space-y-4 text-sm sm:text-base">
+                        {!! nl2br(e($product->description)) !!}
+                    </div>
+                @else
+                    <p class="text-sm text-muted">Đang cập nhật mô tả chi tiết cho sản phẩm này.</p>
+                @endif
+            </div>
+
+            <!-- Tab 2: Specifications -->
+            <div x-show="activeTab === 'specs'" x-cloak class="pt-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div class="flex items-center justify-between p-3.5 rounded-xl bg-surface-alt/60 border border-ui-border">
+                        <span class="text-muted">Mã sản phẩm (SKU)</span>
+                        <span class="font-mono font-bold text-heading">{{ $product->sku }}</span>
+                    </div>
+                    <div class="flex items-center justify-between p-3.5 rounded-xl bg-surface-alt/60 border border-ui-border">
+                        <span class="text-muted">Danh mục</span>
+                        <span class="font-semibold text-heading">{{ $product->category?->name ?? 'Nội thất Mộc An' }}</span>
+                    </div>
+                    @php
+                        $materials = $product->variants->pluck('material')->filter()->unique()->values();
+                        $sizes = $product->variants->pluck('size')->filter()->unique()->values();
+                        $colors = $product->variants->pluck('color')->filter()->unique()->values();
+                    @endphp
+                    <div class="flex items-center justify-between p-3.5 rounded-xl bg-surface-alt/60 border border-ui-border">
+                        <span class="text-muted">Chất liệu</span>
+                        <span class="font-semibold text-heading">{{ $materials->isNotEmpty() ? $materials->join(', ') : 'Gỗ tự nhiên cao cấp' }}</span>
+                    </div>
+                    <div class="flex items-center justify-between p-3.5 rounded-xl bg-surface-alt/60 border border-ui-border">
+                        <span class="text-muted">Kích thước</span>
+                        <span class="font-semibold text-heading">{{ $sizes->isNotEmpty() ? $sizes->join(', ') : 'Tiêu chuẩn Mộc An' }}</span>
+                    </div>
+                    <div class="flex items-center justify-between p-3.5 rounded-xl bg-surface-alt/60 border border-ui-border">
+                        <span class="text-muted">Màu sắc</span>
+                        <span class="font-semibold text-heading">{{ $colors->isNotEmpty() ? $colors->join(', ') : 'Màu vân gỗ tự nhiên' }}</span>
+                    </div>
+                    <div class="flex items-center justify-between p-3.5 rounded-xl bg-surface-alt/60 border border-ui-border">
+                        <span class="text-muted">Bảo hành</span>
+                        <span class="font-semibold text-emerald-600 dark:text-emerald-400">24 tháng chính hãng</span>
+                    </div>
+                    <div class="flex items-center justify-between p-3.5 rounded-xl bg-surface-alt/60 border border-ui-border">
+                        <span class="text-muted">Xuất xứ</span>
+                        <span class="font-semibold text-heading">Mộc An Craft (Việt Nam)</span>
+                    </div>
+                    <div class="flex items-center justify-between p-3.5 rounded-xl bg-surface-alt/60 border border-ui-border">
+                        <span class="text-muted">Tình trạng</span>
+                        <span class="font-semibold {{ $product->isOutOfStock() ? 'text-red-500' : 'text-emerald-600' }}">{{ $product->isOutOfStock() ? 'Hết hàng' : 'Có sẵn hàng' }}</span>
+                    </div>
                 </div>
             </div>
-        @endif
+
+            <!-- Tab 3: Policies -->
+            <div x-show="activeTab === 'policies'" x-cloak class="pt-6 space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                    <div class="p-4 rounded-2xl border border-ui-border bg-surface-alt/40 space-y-1.5">
+                        <div class="flex items-center gap-2 font-bold text-heading">
+                            <span class="text-base">🚚</span>
+                            <span>Giao hàng & Lắp đặt</span>
+                        </div>
+                        <p class="text-muted leading-relaxed">
+                            Miễn phí vận chuyển cho đơn hàng từ 5.000.000₫. Đội ngũ thợ Mộc An hỗ trợ mang lên phòng, lắp ráp và dọn dẹp mặt bằng hoàn thiện.
+                        </p>
+                    </div>
+                    <div class="p-4 rounded-2xl border border-ui-border bg-surface-alt/40 space-y-1.5">
+                        <div class="flex items-center gap-2 font-bold text-heading">
+                            <span class="text-base">🛡️</span>
+                            <span>Bảo hành kết cấu 24 tháng</span>
+                        </div>
+                        <p class="text-muted leading-relaxed">
+                            Bảo hành miễn phí các lỗi kỹ thuật về khung gỗ, mộng ghép và phụ kiện kim khí. Hỗ trợ bảo trì định kỳ trọn đời sản phẩm.
+                        </p>
+                    </div>
+                    <div class="p-4 rounded-2xl border border-ui-border bg-surface-alt/40 space-y-1.5">
+                        <div class="flex items-center gap-2 font-bold text-heading">
+                            <span class="text-base">🔄</span>
+                            <span>Đổi trả linh hoạt trong 7 ngày</span>
+                        </div>
+                        <p class="text-muted leading-relaxed">
+                            Hỗ trợ đổi mẫu hoặc đổi kích thước trong vòng 7 ngày kể từ khi nhận hàng nếu sản phẩm chưa qua sử dụng và còn nguyên tem phiếu.
+                        </p>
+                    </div>
+                    <div class="p-4 rounded-2xl border border-ui-border bg-surface-alt/40 space-y-1.5">
+                        <div class="flex items-center gap-2 font-bold text-heading">
+                            <span class="text-base">🌿</span>
+                            <span>Bảo quản đồ gỗ tự nhiên</span>
+                        </div>
+                        <p class="text-muted leading-relaxed">
+                            Tránh ánh nắng gắt trực tiếp và nơi ẩm ướt kéo dài. Lau nhẹ bằng khăn mềm ẩm, không dùng chất tẩy rửa ăn mòn mạnh.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- Customer Reviews Section -->
         <div id="reviews" class="mt-16 sm:mt-24 rounded-3xl border border-ui-border bg-surface p-6 sm:p-10 shadow-xs scroll-mt-20">

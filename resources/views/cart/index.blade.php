@@ -70,6 +70,37 @@
                 </div>
             </div>
         @else
+            @php
+                $freeShippingThreshold = 5000000;
+                $remainingForFreeShipping = max(0, $freeShippingThreshold - (float) $subtotal);
+                $freeShippingProgress = min(100, round(((float) $subtotal / $freeShippingThreshold) * 100));
+            @endphp
+
+            <!-- Free Shipping Progress Meter -->
+            <div class="mb-8 rounded-2xl border border-ui-border bg-surface p-4 sm:p-5 shadow-xs">
+                <div class="flex items-center justify-between gap-4 text-xs font-medium">
+                    <div class="flex items-center gap-2">
+                        <span class="text-base">🚚</span>
+                        @if ($remainingForFreeShipping == 0)
+                            <span class="text-emerald-600 dark:text-emerald-400 font-semibold">
+                                Chúc mừng! Đơn hàng của bạn đủ điều kiện nhận <strong>MIỄN PHÍ GIAO HÀNG</strong>.
+                            </span>
+                        @else
+                            <span class="text-heading">
+                                Mua thêm <strong class="text-primary font-bold">{{ number_format($remainingForFreeShipping, 0, ',', '.') }}₫</strong> để được <strong class="text-accent font-bold">FREESHIP TOÀN QUỐC</strong>
+                            </span>
+                        @endif
+                    </div>
+                    <span class="text-muted font-bold font-mono">{{ $freeShippingProgress }}%</span>
+                </div>
+                <div class="mt-3 w-full h-2.5 rounded-full bg-surface-alt overflow-hidden">
+                    <div
+                        class="h-full bg-gradient-to-r from-accent to-primary transition-all duration-500 rounded-full"
+                        style="width: {{ $freeShippingProgress }}%"
+                    ></div>
+                </div>
+            </div>
+
             <!-- Main Cart Layout: 2 Columns -->
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start">
                 <!-- Cart Items List (8 cols) -->
