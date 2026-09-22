@@ -92,7 +92,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/dang-xuat', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 
     Route::get('/thanh-toan', [CheckoutController::class, 'index'])->name('checkout.index');
-    Route::post('/thanh-toan', [CheckoutController::class, 'store'])->name('checkout.store');
+    Route::post('/thanh-toan', [CheckoutController::class, 'store'])->middleware('throttle:checkout')->name('checkout.store');
     Route::get('/dat-hang-thanh-cong/{order:order_code}', [CheckoutController::class, 'success'])->name('checkout.success');
 
     // Payment Initiation / Retry
@@ -156,7 +156,7 @@ Route::middleware('auth')->group(function () {
 });
 
 // Admin Dashboard & Backoffice
-Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+Route::middleware(['auth', 'admin', 'admin.audit'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [\App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('dashboard');
     Route::get('/don-hang', [\App\Http\Controllers\Admin\OrderController::class, 'index'])->name('orders.index');
     Route::get('/don-hang/{order:order_code}', [\App\Http\Controllers\Admin\OrderController::class, 'show'])->name('orders.show');

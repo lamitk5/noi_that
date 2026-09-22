@@ -17,7 +17,7 @@
 - [x] Task 8: Cache Tiering, Invalidation Hooks & Asset Optimization
 - [x] Phase 3 Checkpoint
 - [x] Task 9: HTTP Security Headers, CSRF, XSS & Upload Validation
-- [ ] Task 10: Role Guards, Rate Limiting & Admin Audit Logging
+- [x] Task 10: Role Guards, Rate Limiting & Admin Audit Logging
 - [ ] Task 11: Operational Readiness, Health Checks & Error Views
 - [ ] Phase 4 Checkpoint
 - [ ] Task 12: Cross-Device UI/UX Polish, Accessibility & Motion

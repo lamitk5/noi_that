@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
+            'admin.audit' => \App\Http\Middleware\AdminAuditMiddleware::class,
         ]);
 
         $middleware->validateCsrfTokens(except: [
