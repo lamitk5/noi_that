@@ -109,9 +109,22 @@ class CheckoutController extends Controller
                 ->with('error', 'Giỏ hàng của bạn đang trống.');
         }
 
+        $checkoutToken = (string) $request->input('checkout_token');
+
+        // Check if an order was already completed for this idempotency token
+        if ($checkoutToken !== '') {
+            $completedOrderCode = cache()->get("checkout_idempotency:{$checkoutToken}")
+                ?? session()->get("checkout_completed:{$checkoutToken}");
+            if ($completedOrderCode) {
+                return redirect()
+                    ->route('checkout.success', $completedOrderCode)
+                    ->with('info', 'Đơn hàng của bạn đã được tiếp nhận thành công.');
+            }
+        }
+
         // Validate double submission token
         $sessionToken = session()->get('checkout_token');
-        if (! $sessionToken || $sessionToken !== $request->input('checkout_token')) {
+        if (! $sessionToken || $sessionToken !== $checkoutToken) {
             return redirect()
                 ->route('cart.index')
                 ->with('error', 'Yêu cầu thanh toán không hợp lệ hoặc đã được xử lý.');
@@ -140,8 +153,12 @@ class CheckoutController extends Controller
                 $request->validated()
             );
 
-            // Invalidate token after order created
+            // Invalidate session token and cache idempotency result
             session()->forget('checkout_token');
+            if ($checkoutToken !== '') {
+                cache()->put("checkout_idempotency:{$checkoutToken}", $order->order_code, now()->addMinutes(60));
+                session()->put("checkout_completed:{$checkoutToken}", $order->order_code);
+            }
 
             if ($order->payment_method === 'vnpay') {
                 return redirect()->route('payments.vnpay.create', $order->order_code);

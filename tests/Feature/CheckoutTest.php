@@ -316,7 +316,8 @@ class CheckoutTest extends TestCase
             ]);
 
         $this->assertEquals(1, Order::count());
-        $secondResponse->assertRedirect(route('cart.index'));
+        $order = Order::first();
+        $secondResponse->assertRedirect(route('checkout.success', $order->order_code));
     }
 
     public function test_order_detail_page_accessible_by_owner_and_forbidden_to_stranger(): void

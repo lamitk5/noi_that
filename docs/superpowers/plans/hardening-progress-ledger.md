@@ -6,7 +6,7 @@
 
 ## Task Status
 - [x] Task 1: Storefront Product, Catalog & Cart Consistency
-- [ ] Task 2: Checkout Concurrency, Idempotency & Stock Restoration
+- [x] Task 2: Checkout Concurrency, Idempotency & Stock Restoration
 - [ ] Task 3: Order Lifecycle Operations & Payment State Consistency
 - [ ] Task 4: Account Saved Addresses, Loyalty & Support Ticket Hardening
 - [ ] Phase 1 Checkpoint
