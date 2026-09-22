@@ -65,6 +65,15 @@ Route::get('/chinh-sach-bao-hanh', [CmsPageController::class, 'show'])->defaults
 Route::get('/chinh-sach-doi-tra', [CmsPageController::class, 'show'])->defaults('slug', 'chinh-sach-doi-tra')->name('pages.return-policy');
 Route::get('/trang/{slug}', [CmsPageController::class, 'show'])->name('pages.show');
 
+// Storefront AI Assistant Endpoints
+Route::get('/api/ai/conversations', [\App\Http\Controllers\AiAssistantController::class, 'index'])->name('ai.conversations.index');
+Route::get('/api/ai/conversations/{uuid}', [\App\Http\Controllers\AiAssistantController::class, 'show'])->name('ai.conversations.show');
+Route::post('/api/ai/conversations', [\App\Http\Controllers\AiAssistantController::class, 'store'])->name('ai.conversations.store');
+Route::delete('/api/ai/conversations/{uuid}', [\App\Http\Controllers\AiAssistantController::class, 'destroy'])->name('ai.conversations.destroy');
+Route::post('/api/ai/conversations/{uuid}/clear', [\App\Http\Controllers\AiAssistantController::class, 'clear'])->name('ai.conversations.clear');
+Route::post('/api/ai/chat', [\App\Http\Controllers\AiAssistantController::class, 'chat'])->name('ai.chat');
+
+
 // Guest Authentication & Social Login
 Route::middleware('guest')->group(function () {
     Route::get('/dang-nhap', [AuthenticatedSessionController::class, 'create'])->name('login');
@@ -213,4 +222,11 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('cai-dat/giao-dien', [\App\Http\Controllers\Admin\AppearanceController::class, 'index'])->name('appearance.index');
     Route::post('cai-dat/giao-dien', [\App\Http\Controllers\Admin\AppearanceController::class, 'update'])->name('appearance.update');
     Route::post('cai-dat/giao-dien/khoi-phuc', [\App\Http\Controllers\Admin\AppearanceController::class, 'resetDefaults'])->name('appearance.reset');
+
+    // AI Assistant Admin Dashboard
+    Route::get('tro-ly-ai', [\App\Http\Controllers\Admin\AiDashboardController::class, 'index'])->name('ai.index');
+    Route::get('tro-ly-ai/hoi-thoai/{uuid}', [\App\Http\Controllers\Admin\AiDashboardController::class, 'showConversation'])->name('ai.conversation');
+    Route::delete('tro-ly-ai/hoi-thoai/{uuid}', [\App\Http\Controllers\Admin\AiDashboardController::class, 'destroyConversation'])->name('ai.destroy-conversation');
+    Route::post('tro-ly-ai/test-rag', [\App\Http\Controllers\Admin\AiDashboardController::class, 'testRag'])->name('ai.test-rag');
+    Route::post('tro-ly-ai/cai-dat', [\App\Http\Controllers\Admin\AiDashboardController::class, 'updateSettings'])->name('ai.update-settings');
 });
