@@ -22,12 +22,12 @@ class DashboardController extends Controller
                 $q->where('payment_status', Order::PAYMENT_PAID)
                     ->orWhere('order_status', Order::STATUS_COMPLETED);
             })
-            ->sum('total_amount');
+            ->sum('total_price');
 
         $totalOrders = Order::count();
         $pendingOrders = Order::where('order_status', Order::STATUS_PENDING)->count();
         $totalProducts = Product::count();
-        $lowStockCount = Product::where('stock_quantity', '<=', 5)->count();
+        $lowStockCount = \App\Models\ProductVariant::where('stock', '<=', 5)->count();
         $totalCustomers = User::where('role', 'customer')->count();
 
         $recentOrders = Order::with('items')
@@ -35,9 +35,10 @@ class DashboardController extends Controller
             ->take(10)
             ->get();
 
-        $lowStockProducts = Product::with('category')
-            ->where('stock_quantity', '<=', 5)
-            ->orderBy('stock_quantity', 'asc')
+        $lowStockProducts = Product::with(['category', 'variants'])
+            ->whereHas('variants', function ($q) {
+                $q->where('stock', '<=', 5);
+            })
             ->take(5)
             ->get();
 

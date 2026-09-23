@@ -4,88 +4,75 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use App\Models\Product;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\View\View;
 
 class ProductController extends Controller
 {
-    /**
-     * Display product catalog with filtering, searching, and sorting.
-     */
-    public function index(Request $request): View|JsonResponse
+    public function index(Request $request)
     {
-        $filters = $request->only([
-            'category_id',
-            'category_slug',
-            'min_price',
-            'max_price',
-            'material',
-            'search',
-            'in_stock',
-            'sort',
-        ]);
+        $searchQuery = trim((string) $request->input('q', ''));
+        $categorySlug = $request->input('category');
+        $sort = $request->input('sort', 'latest');
 
-        $query = Product::active()
-            ->with(['category', 'images'])
-            ->filter($filters);
+        $query = Product::query()
+            ->with(['category', 'primaryImage'])
+            ->where('is_active', true);
+
+        if ($searchQuery !== '') {
+            $query->where('name', 'like', '%' . $searchQuery . '%');
+        }
+
+        if ($categorySlug) {
+            $query->whereHas('category', function ($q) use ($categorySlug) {
+                $q->where('slug', $categorySlug)->where('is_active', true);
+            });
+        }
+
+        match ($sort) {
+            'price_asc' => $query->orderBy('base_price', 'asc')->orderBy('id', 'asc'),
+            'price_desc' => $query->orderBy('base_price', 'desc')->orderBy('id', 'desc'),
+            default => $query->orderBy('created_at', 'desc')->orderBy('id', 'desc'),
+        };
 
         $products = $query->paginate(12)->withQueryString();
 
-        $categories = Category::active()->withCount('products')->get();
-
-        $materials = Product::active()
-            ->whereNotNull('material')
-            ->distinct()
-            ->pluck('material');
-
-        $priceStats = [
-            'min' => Product::active()->min('price') ?? 0,
-            'max' => Product::active()->max('price') ?? 0,
-        ];
-
-        $data = compact('products', 'categories', 'materials', 'priceStats', 'filters');
-
-        if ($request->wantsJson()) {
-            return response()->json([
-                'success' => true,
-                'data' => $data,
-            ]);
-        }
-
-        return view('products.index', $data);
-    }
-
-    /**
-     * Display product details.
-     */
-    public function show(Request $request, string $slug): View|JsonResponse
-    {
-        $product = Product::active()
-            ->where('slug', $slug)
-            ->with(['category', 'images'])
-            ->firstOrFail();
-
-        // Increment view counter
-        $product->increment('views_count');
-
-        // Related products in the same category
-        $relatedProducts = Product::active()
-            ->where('category_id', $product->category_id)
-            ->where('id', '!=', $product->id)
-            ->with(['category', 'images'])
-            ->take(4)
+        $categories = Category::query()
+            ->where('is_active', true)
+            ->orderBy('name')
             ->get();
 
-        $data = compact('product', 'relatedProducts');
+        $currentCategory = $categorySlug
+            ? $categories->firstWhere('slug', $categorySlug)
+            : null;
 
-        if ($request->wantsJson()) {
-            return response()->json([
-                'success' => true,
-                'data' => $data,
-            ]);
-        }
+        return view('products.index', compact(
+            'products',
+            'categories',
+            'currentCategory',
+            'searchQuery',
+            'sort',
+        ));
+    }
 
-        return view('products.show', $data);
+    public function show(string $slug)
+    {
+        $product = Product::query()
+            ->where('slug', $slug)
+            ->where('is_active', true)
+            ->with(['category', 'images', 'primaryImage', 'variants'])
+            ->firstOrFail();
+
+        $product->increment('views_count');
+
+        $relatedProducts = Product::query()
+            ->with(['category', 'primaryImage'])
+            ->where('category_id', $product->category_id)
+            ->where('is_active', true)
+            ->where('id', '!=', $product->id)
+            ->latest()
+            ->limit(4)
+            ->get();
+
+        return view('products.show', compact('product', 'relatedProducts'));
     }
 }

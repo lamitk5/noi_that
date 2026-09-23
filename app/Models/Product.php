@@ -14,6 +14,8 @@ class Product extends Model
 {
     use HasFactory;
 
+    public const LOW_STOCK_THRESHOLD = 5;
+
     protected $fillable = [
         'category_id',
         'name',
@@ -21,9 +23,8 @@ class Product extends Model
         'sku',
         'short_description',
         'description',
-        'price',
+        'base_price',
         'sale_price',
-        'stock_quantity',
         'material',
         'dimensions',
         'color',
@@ -34,9 +35,8 @@ class Product extends Model
     ];
 
     protected $casts = [
-        'price' => 'decimal:2',
+        'base_price' => 'decimal:2',
         'sale_price' => 'decimal:2',
-        'stock_quantity' => 'integer',
         'is_featured' => 'boolean',
         'is_active' => 'boolean',
         'views_count' => 'integer',
@@ -71,7 +71,7 @@ class Product extends Model
 
     public function images(): HasMany
     {
-        return $this->hasMany(ProductImage::class)->orderBy('sort_order', 'asc');
+        return $this->hasMany(ProductImage::class)->orderBy('sort_order');
     }
 
     public function primaryImage(): HasOne
@@ -79,46 +79,92 @@ class Product extends Model
         return $this->hasOne(ProductImage::class)->where('is_primary', true);
     }
 
+    public function variants(): HasMany
+    {
+        return $this->hasMany(ProductVariant::class);
+    }
+
+    public function wishlists(): HasMany
+    {
+        return $this->hasMany(Wishlist::class);
+    }
+
     public function orderItems(): HasMany
     {
-        return $this->hasMany(OrderItem::class);
+        return $this->hasMany(OrderItem::class, 'product_variant_id');
     }
 
-    /**
-     * Get effective product price.
-     */
+    public function isWishlistedBy(?User $user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        return $this->wishlists()->where('user_id', $user->id)->exists();
+    }
+
+    public function totalStock(): int
+    {
+        if ($this->relationLoaded('variants')) {
+            return (int) $this->variants->sum('stock');
+        }
+
+        return (int) $this->variants()->sum('stock');
+    }
+
+    public function isOutOfStock(): bool
+    {
+        return $this->totalStock() <= 0;
+    }
+
+    public function isLowStock(): bool
+    {
+        $stock = $this->totalStock();
+
+        return $stock > 0 && $stock <= self::LOW_STOCK_THRESHOLD;
+    }
+
+    public function stockStatusText(): string
+    {
+        if ($this->isOutOfStock()) {
+            return 'Hết hàng';
+        }
+
+        if ($this->isLowStock()) {
+            return 'Sắp hết hàng (còn ' . $this->totalStock() . ')';
+        }
+
+        return 'Còn hàng';
+    }
+
     public function getFinalPriceAttribute(): float
     {
-        return (float) ($this->sale_price ?? $this->price);
+        return (float) ($this->sale_price ?? $this->base_price);
     }
 
-    /**
-     * Check if product is on sale.
-     */
     public function getIsOnSaleAttribute(): bool
     {
-        return !is_null($this->sale_price) && $this->sale_price < $this->price;
+        return ! is_null($this->sale_price) && $this->sale_price < $this->base_price;
     }
 
-    /**
-     * Check if product is currently in stock.
-     */
     public function getIsInStockAttribute(): bool
     {
-        return $this->stock_quantity > 0;
+        return $this->totalStock() > 0;
     }
 
-    /**
-     * Get primary image URL or fallback placeholder.
-     */
     public function getPrimaryImageUrlAttribute(): string
     {
-        $primary = $this->images->firstWhere('is_primary', true) ?? $this->images->first();
+        $primary = $this->relationLoaded('primaryImage')
+            ? $this->primaryImage
+            : $this->primaryImage()->first();
+
+        $primary = $primary ?? ($this->relationLoaded('images') ? $this->images->first() : $this->images()->first());
 
         if ($primary && $primary->image_path) {
             if (Str::startsWith($primary->image_path, ['http://', 'https://'])) {
                 return $primary->image_path;
             }
+
             return asset('storage/' . $primary->image_path);
         }
 
@@ -130,64 +176,14 @@ class Product extends Model
         return $query->where('is_active', true);
     }
 
-    public function scopeFeatured(Builder $query): Builder
+    public function scopeBestSelling($query, int $limit = 4)
     {
-        return $query->where('is_featured', true)->where('is_active', true);
-    }
-
-    /**
-     * Comprehensive filter scope for furniture catalog.
-     */
-    public function scopeFilter(Builder $query, array $filters): Builder
-    {
-        return $query
-            ->when($filters['category_id'] ?? null, function ($q, $categoryId) {
-                $q->where('category_id', $categoryId);
+        return $query->where('is_active', true)
+            ->whereHas('variants.orderItems.order', function ($q) {
+                $q->whereIn('order_status', ['completed', 'confirmed', 'shipping'])
+                    ->where('payment_status', '!=', 'failed');
             })
-            ->when($filters['category_slug'] ?? null, function ($q, $slug) {
-                $q->whereHas('category', function ($sub) use ($slug) {
-                    $sub->where('slug', $slug);
-                });
-            })
-            ->when($filters['min_price'] ?? null, function ($q, $min) {
-                $q->where(function ($sub) use ($min) {
-                    $sub->where(function ($p) use ($min) {
-                        $p->whereNull('sale_price')->where('price', '>=', $min);
-                    })->orWhere(function ($sp) use ($min) {
-                        $sp->whereNotNull('sale_price')->where('sale_price', '>=', $min);
-                    });
-                });
-            })
-            ->when($filters['max_price'] ?? null, function ($q, $max) {
-                $q->where(function ($sub) use ($max) {
-                    $sub->where(function ($p) use ($max) {
-                        $p->whereNull('sale_price')->where('price', '<=', $max);
-                    })->orWhere(function ($sp) use ($max) {
-                        $sp->whereNotNull('sale_price')->where('sale_price', '<=', $max);
-                    });
-                });
-            })
-            ->when($filters['material'] ?? null, function ($q, $material) {
-                $q->where('material', 'like', '%' . $material . '%');
-            })
-            ->when($filters['search'] ?? null, function ($q, $search) {
-                $q->where(function ($sub) use ($search) {
-                    $sub->where('name', 'like', '%' . $search . '%')
-                        ->orWhere('sku', 'like', '%' . $search . '%')
-                        ->orWhere('description', 'like', '%' . $search . '%')
-                        ->orWhere('material', 'like', '%' . $search . '%');
-                });
-            })
-            ->when($filters['in_stock'] ?? null, function ($q) {
-                $q->where('stock_quantity', '>', 0);
-            })
-            ->when($filters['sort'] ?? 'latest', function ($q, $sort) {
-                match ($sort) {
-                    'price_asc' => $q->orderByRaw('COALESCE(sale_price, price) ASC'),
-                    'price_desc' => $q->orderByRaw('COALESCE(sale_price, price) DESC'),
-                    'popular' => $q->orderBy('views_count', 'desc'),
-                    default => $q->latest(),
-                };
-            });
+            ->orderByDesc('id')
+            ->limit($limit);
     }
 }

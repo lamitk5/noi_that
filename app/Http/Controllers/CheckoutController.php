@@ -80,53 +80,61 @@ class CheckoutController extends Controller
                 $orderItemsData = [];
                 $calculatedSubtotal = 0.0;
 
-                foreach ($cart as $productId => $item) {
-                    $product = Product::lockForUpdate()->find($productId);
+                foreach ($cart as $cartKey => $item) {
+                    $variant = \App\Models\ProductVariant::lockForUpdate()->find($item['variant_id'] ?? 0);
 
+                    if (!$variant) {
+                        throw new \Exception("Biến thể của \"{$item['name']}\" không còn khả dụng.");
+                    }
+
+                    $product = Product::find($variant->product_id);
                     if (!$product || !$product->is_active) {
                         throw new \Exception("Sản phẩm \"{$item['name']}\" hiện không khả dụng.");
                     }
 
-                    if ($product->stock_quantity < $item['quantity']) {
-                        throw new \Exception("Sản phẩm \"{$product->name}\" chỉ còn lại {$product->stock_quantity} món trong kho.");
+                    if ($variant->stock < $item['quantity']) {
+                        throw new \Exception("Biến thể \"{$variant->display_label}\" chỉ còn lại {$variant->stock} món trong kho.");
                     }
 
-                    $unitPrice = $product->final_price;
+                    $unitPrice = $variant->final_price;
+                    $variant->decrement('stock', $item['quantity']);
+
                     $itemTotal = $unitPrice * $item['quantity'];
                     $calculatedSubtotal += $itemTotal;
 
-                    // Decrement stock quantity
-                    $product->decrement('stock_quantity', $item['quantity']);
-
                     $orderItemsData[] = [
-                        'product_id' => $product->id,
+                        'product_variant_id' => $variant->id,
                         'product_name' => $product->name,
-                        'product_sku' => $product->sku,
-                        'price' => $unitPrice,
+                        'variant_info' => $variant->display_label,
                         'quantity' => $item['quantity'],
-                        'total' => $itemTotal,
+                        'price' => $unitPrice,
                     ];
                 }
 
-                $shippingFee = $calculatedSubtotal >= 5000000 ? 0.0 : 50000.0;
+                $shippingFee = (float) session('shipping_fee', $calculatedSubtotal >= 5000000 ? 0.0 : 50000.0);
                 $totalAmount = $calculatedSubtotal + $shippingFee;
 
                 // Create Order record
                 $order = Order::create([
-                    'order_number' => Order::generateOrderNumber(),
+                    'order_code' => Order::generateOrderNumber(),
                     'user_id' => Auth::id(),
                     'customer_name' => $request->input('customer_name'),
                     'customer_email' => $request->input('customer_email'),
                     'customer_phone' => $request->input('customer_phone'),
                     'shipping_address' => $request->input('shipping_address'),
-                    'subtotal' => $calculatedSubtotal,
                     'shipping_fee' => $shippingFee,
                     'discount_amount' => 0.0,
-                    'total_amount' => $totalAmount,
+                    'total_price' => $totalAmount,
                     'payment_method' => $request->input('payment_method'),
                     'payment_status' => Order::PAYMENT_PENDING,
                     'order_status' => Order::STATUS_PENDING,
-                    'notes' => $request->input('notes'),
+                    'note' => $request->input('notes'),
+                    'province_id' => $request->input('province_id'),
+                    'province_name' => $request->input('province_name'),
+                    'district_id' => $request->input('district_id'),
+                    'district_name' => $request->input('district_name'),
+                    'ward_code' => $request->input('ward_code'),
+                    'ward_name' => $request->input('ward_name'),
                 ]);
 
                 // Create OrderItem records
@@ -136,6 +144,16 @@ class CheckoutController extends Controller
 
                 // Clear cart
                 $this->cartService->clear();
+                session()->forget(['shipping_fee', 'shipping_destination']);
+
+                // Auto-create GHN shipping order when enabled
+                if (config('services.ghn.auto_create_order', true)) {
+                    try {
+                        app(\App\Services\Shipping\GhnService::class)->createShippingOrder($order);
+                    } catch (\Throwable $ghnEx) {
+                        \Illuminate\Support\Facades\Log::warning('Automatic GHN shipping order creation failed: ' . $ghnEx->getMessage());
+                    }
+                }
 
                 return $order;
             });
@@ -145,10 +163,23 @@ class CheckoutController extends Controller
                     'success' => true,
                     'message' => 'Đặt hàng thành công!',
                     'order' => $order->load('items'),
+                    'payment_url' => match ($order->payment_method) {
+                        'vnpay' => route('payments.vnpay.create', $order->order_code),
+                        'momo' => route('payments.momo.create', $order->order_code),
+                        default => route('checkout.success', $order->order_code),
+                    },
                 ], 201);
             }
 
-            return redirect()->route('checkout.success', ['order_number' => $order->order_number])
+            if ($order->payment_method === 'vnpay') {
+                return redirect()->route('payments.vnpay.create', $order->order_code);
+            }
+
+            if ($order->payment_method === 'momo') {
+                return redirect()->route('payments.momo.create', $order->order_code);
+            }
+
+            return redirect()->route('checkout.success', ['order_number' => $order->order_code])
                 ->with('success', 'Đặt hàng thành công!');
         } catch (\Exception $e) {
             if ($request->wantsJson()) {
@@ -167,8 +198,8 @@ class CheckoutController extends Controller
      */
     public function success(Request $request, string $orderNumber): View|JsonResponse
     {
-        $order = Order::where('order_number', $orderNumber)
-            ->with(['items.product'])
+        $order = Order::where('order_code', $orderNumber)
+            ->with(['items.variant'])
             ->firstOrFail();
 
         if ($request->wantsJson()) {

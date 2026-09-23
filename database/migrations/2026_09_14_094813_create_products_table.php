@@ -6,9 +6,6 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('products', function (Blueprint $table) {
@@ -19,26 +16,19 @@ return new class extends Migration
             $table->string('sku')->unique();
             $table->text('short_description')->nullable();
             $table->longText('description')->nullable();
-            $table->decimal('price', 12, 2);
-            $table->decimal('sale_price', 12, 2)->nullable();
-            $table->integer('stock_quantity')->default(0);
-            $table->string('material')->nullable(); // gỗ sồi, gỗ óc chó, da bò Ý, vải nỉ...
-            $table->string('dimensions')->nullable(); // Dài x Rộng x Cao (cm)
+            $table->decimal('base_price', 15, 2)->default(0);
+            $table->decimal('sale_price', 15, 2)->nullable();
+            $table->string('material')->nullable();
+            $table->string('dimensions')->nullable();
             $table->string('color')->nullable();
-            $table->decimal('weight', 8, 2)->nullable(); // kg
+            $table->decimal('weight', 8, 2)->nullable();
             $table->boolean('is_featured')->default(false);
             $table->boolean('is_active')->default(true);
             $table->unsignedInteger('views_count')->default(0);
             $table->timestamps();
-
-            $table->index(['is_active', 'is_featured']);
-            $table->index('price');
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('products');

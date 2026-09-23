@@ -4,52 +4,28 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use App\Models\Product;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\View\View;
 
 class HomeController extends Controller
 {
-    /**
-     * Homepage display.
-     */
-    public function index(Request $request): View|JsonResponse
+    public function index()
     {
-        $featuredCategories = Category::active()
-            ->withCount(['products' => function ($q) {
-                $q->where('is_active', true);
-            }])
-            ->take(6)
+        $categories = Category::query()
+            ->where('is_active', true)
+            ->withCount(['products' => fn ($query) => $query->where('is_active', true)])
+            ->orderBy('id')
             ->get();
 
-        $featuredProducts = Product::active()
-            ->featured()
-            ->with(['category', 'images'])
-            ->take(8)
-            ->get();
-
-        $newArrivals = Product::active()
-            ->with(['category', 'images'])
+        $featuredProducts = Product::query()
+            ->with(['category', 'primaryImage'])
+            ->where('is_active', true)
             ->latest()
-            ->take(8)
+            ->limit(8)
             ->get();
 
-        $saleProducts = Product::active()
-            ->whereNotNull('sale_price')
-            ->whereColumn('sale_price', '<', 'price')
-            ->with(['category', 'images'])
-            ->take(6)
+        $bestSellers = Product::bestSelling(4)
+            ->with(['category', 'primaryImage'])
             ->get();
 
-        $data = compact('featuredCategories', 'featuredProducts', 'newArrivals', 'saleProducts');
-
-        if ($request->wantsJson()) {
-            return response()->json([
-                'success' => true,
-                'data' => $data,
-            ]);
-        }
-
-        return view('home', $data);
+        return view('home', compact('categories', 'featuredProducts', 'bestSellers'));
     }
 }

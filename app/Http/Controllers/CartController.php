@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Services\CartService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -11,85 +12,81 @@ use Illuminate\View\View;
 
 class CartController extends Controller
 {
-    protected CartService $cartService;
+    public function __construct(protected CartService $cartService) {}
 
-    public function __construct(CartService $cartService)
-    {
-        $this->cartService = $cartService;
-    }
-
-    /**
-     * Display shopping cart.
-     */
     public function index(Request $request): View|JsonResponse
     {
+        $items = $this->cartService->getItems();
         $cart = $this->cartService->getCart();
         $subtotal = $this->cartService->getSubtotal();
         $shippingFee = $this->cartService->getShippingFee();
         $total = $this->cartService->getTotal();
         $count = $this->cartService->count();
 
-        $data = compact('cart', 'subtotal', 'shippingFee', 'total', 'count');
+        $data = compact('cart', 'items', 'subtotal', 'shippingFee', 'total', 'count');
 
         if ($request->wantsJson()) {
-            return response()->json([
-                'success' => true,
-                'data' => $data,
-            ]);
+            return response()->json(['success' => true, 'data' => $data]);
         }
 
         return view('cart.index', $data);
     }
 
-    /**
-     * Add product to cart.
-     */
+    public function store(Request $request): RedirectResponse|JsonResponse
+    {
+        $request->validate([
+            'variant_id' => ['required', 'integer', 'exists:product_variants,id'],
+            'quantity' => ['nullable', 'integer', 'min:1'],
+        ]);
+
+        $variant = ProductVariant::with('product')->findOrFail($request->input('variant_id'));
+
+        return $this->add($request, $variant->product);
+    }
+
     public function add(Request $request, Product $product): RedirectResponse|JsonResponse
     {
         $request->validate([
             'quantity' => ['nullable', 'integer', 'min:1'],
+            'product_variant_id' => ['nullable', 'integer', 'exists:product_variants,id'],
+            'variant_id' => ['nullable', 'integer', 'exists:product_variants,id'],
         ]);
 
         $quantity = (int) $request->input('quantity', 1);
+        $variantId = $request->input('product_variant_id') ?? $request->input('variant_id');
+        $variant = $variantId
+            ? ProductVariant::where('product_id', $product->id)->find($variantId)
+            : null;
 
         try {
-            $cart = $this->cartService->add($product, $quantity);
+            $this->cartService->add($product, $quantity, $variant);
+            $label = $product->name;
 
             if ($request->wantsJson()) {
                 return response()->json([
                     'success' => true,
-                    'message' => "Đã thêm \"{$product->name}\" vào giỏ hàng!",
+                    'message' => "Đã thêm \"{$label}\" vào giỏ hàng!",
                     'cart_count' => $this->cartService->count(),
                     'cart_total' => $this->cartService->getTotal(),
                 ]);
             }
 
-            return redirect()->back()->with('success', "Đã thêm \"{$product->name}\" vào giỏ hàng thành công!");
+            return redirect()->back()->with('success', "Đã thêm \"{$label}\" vào giỏ hàng!");
         } catch (\InvalidArgumentException $e) {
             if ($request->wantsJson()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => $e->getMessage(),
-                ], 422);
+                return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
             }
 
             return redirect()->back()->with('error', $e->getMessage());
         }
     }
 
-    /**
-     * Update product quantity in cart.
-     */
-    public function update(Request $request, Product $product): RedirectResponse|JsonResponse
+    public function update(Request $request, string $cartKey): RedirectResponse|JsonResponse
     {
-        $request->validate([
-            'quantity' => ['required', 'integer', 'min:0'],
-        ]);
-
-        $quantity = (int) $request->input('quantity');
+        $request->validate(['quantity' => ['required', 'integer', 'min:0']]);
 
         try {
-            $this->cartService->update($product->id, $quantity);
+            $this->cartService->update($cartKey, (int) $request->input('quantity'));
 
             if ($request->wantsJson()) {
                 return response()->json([
@@ -97,7 +94,6 @@ class CartController extends Controller
                     'message' => 'Cập nhật số lượng thành công!',
                     'cart_count' => $this->cartService->count(),
                     'subtotal' => $this->cartService->getSubtotal(),
-                    'shipping_fee' => $this->cartService->getShippingFee(),
                     'total' => $this->cartService->getTotal(),
                 ]);
             }
@@ -105,22 +101,16 @@ class CartController extends Controller
             return redirect()->route('cart.index')->with('success', 'Cập nhật giỏ hàng thành công!');
         } catch (\InvalidArgumentException $e) {
             if ($request->wantsJson()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => $e->getMessage(),
-                ], 422);
+                return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
             }
 
             return redirect()->back()->with('error', $e->getMessage());
         }
     }
 
-    /**
-     * Remove item from cart.
-     */
-    public function remove(Request $request, Product $product): RedirectResponse|JsonResponse
+    public function remove(Request $request, string $cartKey): RedirectResponse|JsonResponse
     {
-        $this->cartService->remove($product->id);
+        $this->cartService->remove($cartKey);
 
         if ($request->wantsJson()) {
             return response()->json([
@@ -134,18 +124,12 @@ class CartController extends Controller
         return redirect()->route('cart.index')->with('success', 'Đã xóa sản phẩm khỏi giỏ hàng.');
     }
 
-    /**
-     * Clear all items in cart.
-     */
     public function clear(Request $request): RedirectResponse|JsonResponse
     {
         $this->cartService->clear();
 
         if ($request->wantsJson()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Đã làm trống giỏ hàng.',
-            ]);
+            return response()->json(['success' => true, 'message' => 'Đã làm trống giỏ hàng.']);
         }
 
         return redirect()->route('cart.index')->with('success', 'Giỏ hàng đã được làm trống.');

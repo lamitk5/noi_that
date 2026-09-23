@@ -11,8 +11,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->alias([
-            'admin' => \App\Http\Middleware\AdminMiddleware::class,
+        $middleware->validateCsrfTokens(except: [
+            'api/payment/momo/ipn',
+            'api/payment/vnpay/ipn',
+            'api/shipping/ghn/webhook',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

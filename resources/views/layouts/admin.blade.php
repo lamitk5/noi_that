@@ -6,6 +6,9 @@
     <title>@yield('title', 'Quản Trị Nội Thất - Admin Panel')</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .text-2xs { font-size: 0.625rem; line-height: 0.875rem; }
+    </style>
 </head>
 <body class="bg-gray-100 text-gray-800 font-sans flex min-h-screen">
     <!-- Sidebar -->
@@ -78,5 +81,6 @@
             @yield('content')
         </main>
     </div>
+    @stack('scripts')
 </body>
 </html>

@@ -8,21 +8,16 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 
 class AuthController extends Controller
 {
-    /**
-     * Show login form.
-     */
     public function showLogin(): View
     {
         return view('auth.login');
     }
 
-    /**
-     * Handle authentication attempt.
-     */
     public function login(Request $request): RedirectResponse|JsonResponse
     {
         $credentials = $request->validate([
@@ -63,17 +58,11 @@ class AuthController extends Controller
         ])->onlyInput('email');
     }
 
-    /**
-     * Show register form.
-     */
     public function showRegister(): View
     {
         return view('auth.register');
     }
 
-    /**
-     * Handle customer registration.
-     */
     public function register(Request $request): RedirectResponse|JsonResponse
     {
         $validated = $request->validate([
@@ -88,14 +77,19 @@ class AuthController extends Controller
             'password.min' => 'Mật khẩu phải chứa ít nhất 6 ký tự.',
         ]);
 
-        $user = User::create([
+        $payload = [
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
             'role' => 'customer',
             'phone' => $validated['phone'] ?? null,
-            'address' => $validated['address'] ?? null,
-        ]);
+        ];
+
+        if (Schema::hasColumn('users', 'address')) {
+            $payload['address'] = $validated['address'] ?? null;
+        }
+
+        $user = User::create($payload);
 
         Auth::login($user);
         $request->session()->regenerate();
@@ -111,9 +105,6 @@ class AuthController extends Controller
         return redirect()->route('home')->with('success', 'Đăng ký tài khoản thành công!');
     }
 
-    /**
-     * Log user out.
-     */
     public function logout(Request $request): RedirectResponse|JsonResponse
     {
         Auth::logout();

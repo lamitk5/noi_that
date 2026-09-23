@@ -15,6 +15,11 @@
                     <div class="py-3 flex justify-between items-center">
                         <div>
                             <h4 class="font-bold text-gray-800 text-sm">{{ $item->product_name }}</h4>
+                            @if($item->variant_size || $item->variant_color)
+                                <p class="text-xs text-gray-500 mt-0.5">
+                                    {{ trim(($item->variant_size ? $item->variant_size . ' · ' : '') . ($item->variant_color ?? '')) }}
+                                </p>
+                            @endif
                             <span class="text-gray-400 font-mono">SKU: {{ $item->product_sku ?? '---' }}</span>
                             <div class="text-gray-500 mt-0.5">Số lượng: <span class="font-semibold text-gray-800">{{ $item->quantity }}</span> x {{ number_format($item->price, 0, ',', '.') }} đ</div>
                         </div>
@@ -37,6 +42,45 @@
                     <span>{{ number_format($order->total_amount, 0, ',', '.') }} đ</span>
                 </div>
             </div>
+        </div>
+
+        <!-- GHN Shipping Fulfillment -->
+        <div class="bg-white rounded-xl border shadow-sm p-6">
+            <div class="flex items-center justify-between mb-4 border-b pb-3">
+                <h3 class="font-bold text-gray-900 text-sm uppercase tracking-wider">Vận Chuyển</h3>
+                <span class="rounded bg-orange-100 text-orange-800 font-bold px-2 py-0.5 text-[10px] uppercase">Giao Hàng Nhanh (GHN)</span>
+            </div>
+            @if ($order->ghn_order_code)
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Trạng thái GHN:</span>
+                        <span class="font-semibold text-gray-900">{{ $order->ghn_status_label }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Mã vận đơn:</span>
+                        <span class="font-mono font-bold">{{ $order->ghn_order_code }}</span>
+                    </div>
+                    @if ($order->ghn_expected_delivery_at)
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Dự kiến giao:</span>
+                            <span class="font-semibold">{{ $order->ghn_expected_delivery_at->format('d/m/Y') }}</span>
+                        </div>
+                    @endif
+                    @if ($order->ghn_tracking_url)
+                        <a href="{{ $order->ghn_tracking_url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 mt-2 px-3 py-2 rounded-lg bg-orange-600 text-white font-bold hover:bg-orange-700 transition">
+                            <i class="fa-solid fa-truck-fast"></i> Tra cứu trên GHN
+                        </a>
+                    @endif
+                </div>
+            @else
+                <p class="text-gray-500 text-sm mb-3">Đơn hàng này chưa có mã vận đơn GHN.</p>
+                <form action="{{ route('admin.orders.createGhn', $order) }}" method="POST">
+                    @csrf
+                    <button type="submit" class="px-4 py-2 rounded-lg bg-orange-600 text-white font-bold hover:bg-orange-700 transition">
+                        Tạo vận đơn GHN ngay
+                    </button>
+                </form>
+            @endif
         </div>
 
         <!-- Customer & Delivery Address -->

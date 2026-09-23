@@ -18,8 +18,14 @@ class CheckoutRequest extends FormRequest
             'customer_email' => ['required', 'email', 'max:255'],
             'customer_phone' => ['required', 'string', 'max:20'],
             'shipping_address' => ['required', 'string', 'max:500'],
-            'payment_method' => ['required', 'in:cod,banking'],
+            'payment_method' => ['required', 'in:cod,banking,vnpay,momo'],
             'notes' => ['nullable', 'string', 'max:1000'],
+            'province_id' => ['nullable', 'integer'],
+            'province_name' => ['nullable', 'string', 'max:100'],
+            'district_id' => ['nullable', 'integer'],
+            'district_name' => ['nullable', 'string', 'max:100'],
+            'ward_code' => ['nullable', 'string', 'max:20'],
+            'ward_name' => ['nullable', 'string', 'max:100'],
         ];
     }
 

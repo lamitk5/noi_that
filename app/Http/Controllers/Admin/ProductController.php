@@ -33,7 +33,7 @@ class ProductController extends Controller
             $query->where('category_id', $request->input('category_id'));
         }
 
-        $products = $query->latest()->paginate(15)->withQueryString();
+        $products = $query->with(['category', 'images', 'variants'])->latest()->paginate(15)->withQueryString();
         $categories = Category::active()->get();
 
         if ($request->wantsJson()) {
@@ -55,12 +55,21 @@ class ProductController extends Controller
     public function store(ProductRequest $request): RedirectResponse|JsonResponse
     {
         $data = $request->validated();
+        $variants = $data['variants'] ?? [];
+        unset($data['variants']);
+
+        $data['base_price'] = $data['base_price'] ?? $data['price'] ?? 0;
+        unset($data['price'], $data['stock_quantity']);
+        $data['sale_price'] = $data['sale_price'] !== null && $data['sale_price'] !== ''
+            ? $data['sale_price']
+            : null;
         $data['slug'] = Str::slug($data['name']) . '-' . Str::random(5);
         $data['sku'] = $data['sku'] ?? 'FURN-' . strtoupper(Str::random(8));
         $data['is_featured'] = $request->boolean('is_featured', false);
         $data['is_active'] = $request->boolean('is_active', true);
 
         $product = Product::create($data);
+        $this->syncVariants($product, $variants);
 
         // Handle multiple image uploads
         if ($request->hasFile('images')) {
@@ -89,7 +98,7 @@ class ProductController extends Controller
     public function edit(Product $product): View
     {
         $categories = Category::active()->get();
-        $product->load(['images', 'category']);
+        $product->load(['images', 'category', 'variants']);
 
         return view('admin.products.edit', compact('product', 'categories'));
     }
@@ -97,10 +106,22 @@ class ProductController extends Controller
     public function update(ProductRequest $request, Product $product): RedirectResponse|JsonResponse
     {
         $data = $request->validated();
+        $variants = $data['variants'] ?? null;
+        unset($data['variants']);
+
+        $data['base_price'] = $data['base_price'] ?? $data['price'] ?? $product->base_price;
+        unset($data['price'], $data['stock_quantity']);
+        $data['sale_price'] = $data['sale_price'] !== null && $data['sale_price'] !== ''
+            ? $data['sale_price']
+            : null;
         $data['is_featured'] = $request->boolean('is_featured', false);
         $data['is_active'] = $request->boolean('is_active', true);
 
         $product->update($data);
+
+        if (is_array($variants)) {
+            $this->syncVariants($product, $variants);
+        }
 
         // Handle uploaded new images
         if ($request->hasFile('images')) {
@@ -178,5 +199,45 @@ class ProductController extends Controller
         }
 
         return back()->with('success', 'Đã xóa ảnh sản phẩm.');
+    }
+
+    /**
+     * Replace product size / wood-color variants with the submitted set.
+     * Matching is by color + size (both nullable size allowed as single size).
+     */
+    protected function syncVariants(Product $product, array $variants): void
+    {
+        $keepIds = [];
+
+        foreach ($variants as $variant) {
+            $color = trim((string) ($variant['color'] ?? ''));
+            $size = trim((string) ($variant['size'] ?? ''));
+            if ($color === '') {
+                continue;
+            }
+
+            $record = $product->variants()->updateOrCreate(
+                [
+                    'color' => $color,
+                    'size' => $size ?: null,
+                ],
+                [
+                    'material' => $variant['material'] ?? null,
+                    'sku' => $variant['sku'] ?: null,
+                    'price' => $variant['price'],
+                    'stock' => (int) $variant['stock'],
+                ]
+            );
+
+            $keepIds[] = $record->id;
+        }
+
+        $product->variants()->whereNotIn('id', $keepIds)->delete();
+
+        // Keep product base_price aligned with cheapest variant for catalog display
+        $minVariantPrice = $product->variants()->min('price');
+        if ($minVariantPrice !== null) {
+            $product->updateQuietly(['base_price' => $minVariantPrice]);
+        }
     }
 }

@@ -28,7 +28,7 @@ class OrderController extends Controller
         if ($request->filled('search')) {
             $search = $request->input('search');
             $query->where(function ($q) use ($search) {
-                $q->where('order_number', 'like', "%{$search}%")
+                $q->where('order_code', 'like', "%{$search}%")
                     ->orWhere('customer_name', 'like', "%{$search}%")
                     ->orWhere('customer_phone', 'like', "%{$search}%")
                     ->orWhere('customer_email', 'like', "%{$search}%");
@@ -49,7 +49,7 @@ class OrderController extends Controller
 
     public function show(Order $order): View|JsonResponse
     {
-        $order->load(['items.product', 'user']);
+        $order->load(['items.variant', 'user']);
 
         return view('admin.orders.show', compact('order'));
     }
@@ -68,8 +68,8 @@ class OrderController extends Controller
             // If cancelling an order that was not cancelled, restore inventory
             if ($oldStatus !== Order::STATUS_CANCELLED && $newStatus === Order::STATUS_CANCELLED) {
                 foreach ($order->items as $item) {
-                    if ($item->product_id) {
-                        Product::where('id', $item->product_id)->increment('stock_quantity', $item->quantity);
+                    if ($item->product_variant_id) {
+                        \App\Models\ProductVariant::where('id', $item->product_variant_id)->increment('stock', $item->quantity);
                     }
                 }
             }
@@ -77,8 +77,8 @@ class OrderController extends Controller
             // If reactivating a cancelled order, re-decrement inventory
             if ($oldStatus === Order::STATUS_CANCELLED && $newStatus !== Order::STATUS_CANCELLED) {
                 foreach ($order->items as $item) {
-                    if ($item->product_id) {
-                        Product::where('id', $item->product_id)->decrement('stock_quantity', $item->quantity);
+                    if ($item->product_variant_id) {
+                        \App\Models\ProductVariant::where('id', $item->product_variant_id)->decrement('stock', $item->quantity);
                     }
                 }
             }

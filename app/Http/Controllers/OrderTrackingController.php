@@ -19,9 +19,9 @@ class OrderTrackingController extends Controller
 
         if ($request->filled(['order_number', 'customer_phone'])) {
             $searched = true;
-            $order = Order::where('order_number', trim($request->input('order_number')))
+            $order = Order::where('order_code', trim($request->input('order_number')))
                 ->where('customer_phone', trim($request->input('customer_phone')))
-                ->with(['items.product'])
+                ->with(['items.variant'])
                 ->first();
         }
 

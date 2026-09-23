@@ -50,12 +50,38 @@
                         <div class="py-3 flex justify-between items-center text-sm">
                             <div>
                                 <h4 class="font-semibold text-gray-800">{{ $item->product_name }}</h4>
+                                @if($item->variant_size || $item->variant_color)
+                                    <p class="text-xs text-gray-500">
+                                        {{ trim(($item->variant_size ? $item->variant_size . ' · ' : '') . ($item->variant_color ?? '')) }}
+                                    </p>
+                                @endif
                                 <span class="text-xs text-gray-400">Số lượng: {{ $item->quantity }} x {{ number_format($item->price, 0, ',', '.') }} đ</span>
                             </div>
                             <span class="font-bold text-gray-900">{{ number_format($item->total, 0, ',', '.') }} đ</span>
                         </div>
                     @endforeach
                 </div>
+
+                <!-- GHN tracking -->
+                @if ($order->ghn_order_code)
+                    <div class="mb-4 rounded-xl border border-orange-100 bg-orange-50/50 p-4 text-sm">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold uppercase tracking-wider text-orange-800">Vận đơn GHN Express</span>
+                            <span class="font-mono font-bold text-orange-950">{{ $order->ghn_order_code }}</span>
+                        </div>
+                        <p class="text-gray-700">
+                            Trạng thái: <strong>{{ $order->ghn_status_label }}</strong>
+                            @if ($order->ghn_expected_delivery_at)
+                                · Dự kiến giao: {{ $order->ghn_expected_delivery_at->format('d/m/Y') }}
+                            @endif
+                        </p>
+                        @if ($order->ghn_tracking_url)
+                            <a href="{{ $order->ghn_tracking_url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 mt-2 px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 transition">
+                                <i class="fa-solid fa-truck-fast"></i> Tra cứu GHN
+                            </a>
+                        @endif
+                    </div>
+                @endif
 
                 <!-- Total -->
                 <div class="flex justify-between items-baseline pt-2">

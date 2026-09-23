@@ -12,18 +12,20 @@ class OrderItem extends Model
 
     protected $fillable = [
         'order_id',
-        'product_id',
+        'product_variant_id',
         'product_name',
-        'product_sku',
-        'price',
+        'variant_info',
         'quantity',
-        'total',
+        'price',
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
         'quantity' => 'integer',
-        'total' => 'decimal:2',
+    ];
+
+    protected $appends = [
+        'total',
     ];
 
     public function order(): BelongsTo
@@ -31,8 +33,13 @@ class OrderItem extends Model
         return $this->belongsTo(Order::class);
     }
 
-    public function product(): BelongsTo
+    public function variant(): BelongsTo
     {
-        return $this->belongsTo(Product::class);
+        return $this->belongsTo(ProductVariant::class, 'product_variant_id');
+    }
+
+    public function getTotalAttribute(): float
+    {
+        return (float) $this->price * (int) $this->quantity;
     }
 }
