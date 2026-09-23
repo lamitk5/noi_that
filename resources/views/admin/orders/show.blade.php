@@ -71,6 +71,52 @@
                 </div>
             @endif
         </div>
+
+        <!-- GHN Shipping Fulfillment -->
+        <div class="bg-white rounded-xl border shadow-sm p-6 text-xs space-y-4">
+            <div class="flex items-center justify-between border-b pb-3">
+                <div class="flex items-center gap-2">
+                    <span class="rounded bg-orange-100 text-orange-800 font-bold px-2 py-0.5 text-[10px] uppercase">Giao Hàng Nhanh (GHN)</span>
+                    <h3 class="font-bold text-gray-900 text-sm">Vận Chuyển & Giao Hàng</h3>
+                </div>
+                @if ($order->ghn_order_code)
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                        {{ $order->ghn_status_label }}
+                    </span>
+                @endif
+            </div>
+
+            @if ($order->ghn_order_code)
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-orange-50/50 p-3.5 rounded-lg border border-orange-100">
+                    <div>
+                        <span class="text-gray-500 block">Mã vận đơn GHN:</span>
+                        <span class="font-mono font-bold text-sm text-gray-900">#{{ $order->ghn_order_code }}</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-500 block">Dự kiến giao:</span>
+                        <span class="font-semibold text-gray-800">
+                            {{ $order->ghn_expected_delivery_at ? $order->ghn_expected_delivery_at->format('d/m/Y') : 'Chưa có thông tin' }}
+                        </span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3 pt-1">
+                    <a href="{{ $order->ghn_tracking_url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-orange-600 text-white font-bold hover:bg-orange-700 transition shadow-sm">
+                        <span>Tra cứu trên GHN Portal</span>
+                        <span>↗</span>
+                    </a>
+                </div>
+            @else
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 bg-gray-50 rounded-lg border">
+                    <div class="text-gray-500">Đơn hàng này chưa có mã vận đơn GHN.</div>
+                    <form action="{{ route('admin.orders.createGhn', $order) }}" method="POST">
+                        @csrf
+                        <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-orange-600 text-white font-bold hover:bg-orange-700 transition shadow-sm">
+                            <span>Tạo vận đơn GHN ngay</span>
+                        </button>
+                    </form>
+                </div>
+            @endif
+        </div>
     </div>
 
     <!-- Status Update Form Card -->
@@ -105,8 +151,12 @@
             </button>
         </form>
 
-        <div class="pt-4 border-t">
-            <a href="{{ route('admin.orders.index') }}" class="text-xs text-amber-800 hover:underline font-semibold block text-center">
+        <div class="pt-4 border-t space-y-2">
+            <a href="{{ route('orders.invoice', $order->order_code ?? $order->order_number) }}" target="_blank" class="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-lg transition shadow text-xs">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                <span>Xuất Hóa Đơn PDF (A4)</span>
+            </a>
+            <a href="{{ route('admin.orders.index') }}" class="text-xs text-amber-800 hover:underline font-semibold block text-center pt-1">
                 ← Quay lại danh sách đơn hàng
             </a>
         </div>

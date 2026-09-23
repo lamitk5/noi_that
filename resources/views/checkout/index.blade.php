@@ -101,22 +101,87 @@
                             </div>
                         </div>
 
-                        <div>
-                            <label for="shipping_address" class="block text-xs font-bold uppercase tracking-wider text-heading mb-1.5">
-                                Địa chỉ nhận hàng <span class="text-rose-500">*</span>
-                            </label>
-                            <textarea
-                                id="shipping_address"
-                                name="shipping_address"
-                                rows="3"
-                                required
-                                autocomplete="street-address"
-                                placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố..."
-                                class="w-full rounded-xl border border-ui-border bg-surface-alt px-4 py-3 text-sm text-heading placeholder:text-muted focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary @error('shipping_address') border-rose-500 @enderror"
-                            >{{ old('shipping_address') }}</textarea>
-                            @error('shipping_address')
-                                <p class="mt-1 text-xs text-rose-500">{{ $message }}</p>
-                            @enderror
+                        <!-- GHN Address Cascading Dropdowns -->
+                        <div class="rounded-2xl border border-ui-border bg-surface-alt/50 p-4 space-y-4">
+                            <div class="flex items-center justify-between pb-2 border-b border-ui-border">
+                                <span class="text-xs font-bold uppercase tracking-wider text-heading flex items-center gap-1.5">
+                                    <span>Địa chỉ nhận hàng</span>
+                                    <span class="text-rose-500">*</span>
+                                </span>
+                                <span class="inline-flex items-center gap-1 rounded-full bg-orange-500/10 px-2.5 py-0.5 text-[11px] font-bold text-orange-600 dark:text-orange-400">
+                                    <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
+                                    <span>Giao Hàng Nhanh (GHN)</span>
+                                </span>
+                            </div>
+
+                            <input type="hidden" name="province_name" id="province_name" value="{{ old('province_name') }}">
+                            <input type="hidden" name="district_name" id="district_name" value="{{ old('district_name') }}">
+                            <input type="hidden" name="ward_name" id="ward_name" value="{{ old('ward_name') }}">
+
+                            <div class="grid sm:grid-cols-3 gap-3">
+                                <div>
+                                    <label for="province_id" class="block text-[11px] font-bold uppercase tracking-wider text-muted mb-1">
+                                        Tỉnh / Thành phố <span class="text-rose-500">*</span>
+                                    </label>
+                                    <select
+                                        id="province_id"
+                                        name="province_id"
+                                        class="w-full rounded-xl border border-ui-border bg-surface px-3 py-2.5 text-sm text-heading focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                                    >
+                                        <option value="">-- Chọn Tỉnh/Thành --</option>
+                                        @foreach ($provinces ?? [] as $province)
+                                            <option value="{{ $province['id'] }}" {{ old('province_id') == $province['id'] ? 'selected' : '' }}>
+                                                {{ $province['name'] }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label for="district_id" class="block text-[11px] font-bold uppercase tracking-wider text-muted mb-1">
+                                        Quận / Huyện <span class="text-rose-500">*</span>
+                                    </label>
+                                    <select
+                                        id="district_id"
+                                        name="district_id"
+                                        class="w-full rounded-xl border border-ui-border bg-surface px-3 py-2.5 text-sm text-heading focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                                    >
+                                        <option value="">-- Chọn Quận/Huyện --</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label for="ward_code" class="block text-[11px] font-bold uppercase tracking-wider text-muted mb-1">
+                                        Phường / Xã <span class="text-rose-500">*</span>
+                                    </label>
+                                    <select
+                                        id="ward_code"
+                                        name="ward_code"
+                                        class="w-full rounded-xl border border-ui-border bg-surface px-3 py-2.5 text-sm text-heading focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                                    >
+                                        <option value="">-- Chọn Phường/Xã --</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label for="shipping_address" class="block text-[11px] font-bold uppercase tracking-wider text-muted mb-1">
+                                    Địa chỉ cụ thể (Số nhà, tên đường...) <span class="text-rose-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    id="shipping_address"
+                                    name="shipping_address"
+                                    value="{{ old('shipping_address') }}"
+                                    required
+                                    autocomplete="street-address"
+                                    placeholder="Ví dụ: Số 25, ngõ 123 đường Cầu Giấy"
+                                    class="w-full rounded-xl border border-ui-border bg-surface px-4 py-2.5 text-sm text-heading placeholder:text-muted focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary @error('shipping_address') border-rose-500 @enderror"
+                                >
+                                @error('shipping_address')
+                                    <p class="mt-1 text-xs text-rose-500">{{ $message }}</p>
+                                @enderror
+                            </div>
                         </div>
 
                         <div>
@@ -237,7 +302,7 @@
                             <div class="flex items-center gap-4 pt-3 first:pt-0">
                                 <div class="size-16 rounded-xl border border-ui-border bg-surface-alt overflow-hidden shrink-0">
                                     @if ($item->product->primaryImage)
-                                        <img src="{{ $item->product->primaryImage->image_path }}" alt="{{ $item->product->name }}" class="size-full object-cover">
+                                        <img src="{{ $item->product->primary_image_url }}" alt="{{ $item->product->name }}" class="h-full w-full object-cover" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=400&q=80'">
                                     @else
                                         <div class="size-full flex items-center justify-center text-muted">
                                             <svg viewBox="0 0 24 24" class="size-6" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
@@ -268,18 +333,27 @@
                             <span>Tạm tính</span>
                             <span class="font-semibold text-heading">{{ number_format($subtotal, 0, ',', '.') }}₫</span>
                         </div>
+                        @if (!empty($appliedCoupon) && $discountAmount > 0)
+                            <div class="flex justify-between text-emerald-600 dark:text-emerald-400 font-medium">
+                                <span>Mã giảm giá ({{ $appliedCoupon['code'] }})</span>
+                                <span>-{{ number_format($discountAmount, 0, ',', '.') }}₫</span>
+                            </div>
+                        @endif
                         <div class="flex justify-between text-muted">
-                            <span>Phí vận chuyển</span>
-                            <span class="font-semibold text-emerald-600 dark:text-emerald-400">
+                            <span class="flex items-center gap-1.5">
+                                <span>Phí vận chuyển (GHN)</span>
+                                <span id="shipping-loading" class="hidden text-xs text-primary animate-spin">⟳</span>
+                            </span>
+                            <span id="shipping-fee-display" class="font-semibold text-emerald-600 dark:text-emerald-400">
                                 {{ $shippingFee > 0 ? number_format($shippingFee, 0, ',', '.') . '₫' : 'Miễn phí' }}
                             </span>
                         </div>
                         <div class="flex justify-between items-baseline pt-4 border-t border-ui-border">
                             <div>
                                 <span class="font-bold text-heading block">Tổng thanh toán</span>
-                                <span class="text-[11px] text-muted">(Đã bao gồm thuế VAT nếu có)</span>
+                                <span class="text-[11px] text-muted">(Đã bao gồm phí vận chuyển)</span>
                             </div>
-                            <span class="font-display text-2xl font-bold text-primary">
+                            <span id="total-price-display" class="font-display text-2xl font-bold text-primary">
                                 {{ number_format($totalPrice, 0, ',', '.') }}₫
                             </span>
                         </div>
@@ -304,4 +378,123 @@
         </form>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const provinceSelect = document.getElementById('province_id');
+    const districtSelect = document.getElementById('district_id');
+    const wardSelect = document.getElementById('ward_code');
+    const provinceNameInput = document.getElementById('province_name');
+    const districtNameInput = document.getElementById('district_name');
+    const wardNameInput = document.getElementById('ward_name');
+    const shippingFeeDisplay = document.getElementById('shipping-fee-display');
+    const totalPriceDisplay = document.getElementById('total-price-display');
+    const shippingLoading = document.getElementById('shipping-loading');
+
+    provinceSelect?.addEventListener('change', function () {
+        const provinceId = this.value;
+        const selectedText = this.options[this.selectedIndex]?.text || '';
+        if (provinceNameInput) provinceNameInput.value = provinceId ? selectedText : '';
+
+        districtSelect.innerHTML = '<option value="">-- Đang tải Quận/Huyện... --</option>';
+        wardSelect.innerHTML = '<option value="">-- Chọn Phường/Xã --</option>';
+        if (districtNameInput) districtNameInput.value = '';
+        if (wardNameInput) wardNameInput.value = '';
+
+        if (!provinceId) {
+            districtSelect.innerHTML = '<option value="">-- Chọn Quận/Huyện --</option>';
+            return;
+        }
+
+        fetch(`/api/shipping/ghn/districts/${provinceId}`)
+            .then(res => res.json())
+            .then(res => {
+                if (res.success && res.data) {
+                    districtSelect.innerHTML = '<option value="">-- Chọn Quận/Huyện --</option>';
+                    res.data.forEach(d => {
+                        const opt = document.createElement('option');
+                        opt.value = d.id;
+                        opt.textContent = d.name;
+                        districtSelect.appendChild(opt);
+                    });
+                } else {
+                    districtSelect.innerHTML = '<option value="">-- Không tìm thấy quận/huyện --</option>';
+                }
+            })
+            .catch(() => {
+                districtSelect.innerHTML = '<option value="">-- Lỗi tải quận/huyện --</option>';
+            });
+    });
+
+    districtSelect?.addEventListener('change', function () {
+        const districtId = this.value;
+        const selectedText = this.options[this.selectedIndex]?.text || '';
+        if (districtNameInput) districtNameInput.value = districtId ? selectedText : '';
+
+        wardSelect.innerHTML = '<option value="">-- Đang tải Phường/Xã... --</option>';
+        if (wardNameInput) wardNameInput.value = '';
+
+        if (!districtId) {
+            wardSelect.innerHTML = '<option value="">-- Chọn Phường/Xã --</option>';
+            return;
+        }
+
+        fetch(`/api/shipping/ghn/wards/${districtId}`)
+            .then(res => res.json())
+            .then(res => {
+                if (res.success && res.data) {
+                    wardSelect.innerHTML = '<option value="">-- Chọn Phường/Xã --</option>';
+                    res.data.forEach(w => {
+                        const opt = document.createElement('option');
+                        opt.value = w.code;
+                        opt.textContent = w.name;
+                        wardSelect.appendChild(opt);
+                    });
+                } else {
+                    wardSelect.innerHTML = '<option value="">-- Không tìm thấy phường/xã --</option>';
+                }
+            })
+            .catch(() => {
+                wardSelect.innerHTML = '<option value="">-- Lỗi tải phường/xã --</option>';
+            });
+    });
+
+    wardSelect?.addEventListener('change', function () {
+        const wardCode = this.value;
+        const selectedText = this.options[this.selectedIndex]?.text || '';
+        if (wardNameInput) wardNameInput.value = wardCode ? selectedText : '';
+
+        const districtId = districtSelect.value;
+        if (!districtId || !wardCode) return;
+
+        if (shippingLoading) shippingLoading.classList.remove('hidden');
+
+        fetch('/api/shipping/ghn/calculate-fee', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({
+                district_id: districtId,
+                ward_code: wardCode,
+            }),
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (shippingLoading) shippingLoading.classList.add('hidden');
+                if (data.formatted_fee && shippingFeeDisplay) {
+                    shippingFeeDisplay.textContent = data.formatted_fee;
+                }
+                if (data.formatted_total && totalPriceDisplay) {
+                    totalPriceDisplay.textContent = data.formatted_total;
+                }
+            })
+            .catch(() => {
+                if (shippingLoading) shippingLoading.classList.add('hidden');
+            });
+    });
+});
+</script>
 @endsection

@@ -4,20 +4,22 @@
 
 @section('content')
     <section class="relative isolate min-h-[690px] overflow-hidden bg-[#ded8cb]">
-        <div class="absolute inset-0 bg-[linear-gradient(90deg,rgba(24,33,28,.82)_0%,rgba(24,33,28,.56)_39%,rgba(24,33,28,.08)_70%)]"></div>
+        <!-- Gradient overlay: dark on the left, fades to transparent on the right -->
+        <div class="absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 via-45% to-black/10 sm:to-transparent"></div>
+        <div class="absolute inset-0 bg-black/20 mix-blend-multiply sm:hidden"></div>
         <img
             src="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=2000&q=88"
             alt="Phòng khách hiện đại với nội thất gỗ tự nhiên"
             class="absolute inset-0 -z-10 size-full object-cover object-center"
         >
 
-        <div class="page-shell relative flex min-h-[690px] items-center py-20">
+        <div class="page-shell relative z-10 flex min-h-[690px] items-center py-20 sm:py-24">
             <div class="max-w-2xl text-white">
                 <p class="eyebrow hero-reveal text-[#e0bd91]">Bộ sưu tập Thu Đông 2026</p>
-                <h1 class="hero-reveal hero-reveal-delay mt-7 font-display text-5xl font-medium leading-[1.06] tracking-[-0.035em] sm:text-6xl lg:text-7xl">
+                <h1 class="hero-reveal hero-reveal-delay mt-7 font-display text-5xl font-medium leading-[1.06] tracking-[-0.035em] text-white drop-shadow-md sm:text-6xl lg:text-7xl">
                     Chạm vào sự<br><span class="italic text-[#e9d3b5]">an nhiên</span> trong tổ ấm
                 </h1>
-                <p class="hero-reveal hero-reveal-late mt-8 max-w-xl text-base leading-8 text-white/78 sm:text-lg">Nội thất tinh giản từ vật liệu tự nhiên, được tuyển chọn để mỗi góc nhà đều mang cảm giác ấm áp và riêng biệt.</p>
+                <p class="hero-reveal hero-reveal-late mt-8 max-w-xl text-base leading-8 text-white/90 drop-shadow-sm sm:text-lg">Sofa, bàn trà và nội thất tinh giản từ vật liệu tự nhiên, được tuyển chọn để mỗi góc nhà đều mang cảm giác ấm áp và riêng biệt.</p>
                 <div class="hero-reveal hero-reveal-late mt-10 flex flex-wrap gap-4">
                     <a href="{{ route('products.index') }}" class="button-primary">Khám phá sản phẩm <span aria-hidden="true">→</span></a>
                     <a href="#bo-suu-tap" class="button-ghost">Xem bộ sưu tập <span aria-hidden="true">↗</span></a>
@@ -25,24 +27,31 @@
             </div>
         </div>
 
-        <div class="absolute bottom-0 right-0 hidden border-t border-l border-ui-border bg-surface px-8 py-5 text-heading md:block">
-            <div class="flex items-center gap-7">
-                <div><strong class="font-display text-2xl font-semibold">02</strong><span class="ml-2 text-xs uppercase tracking-widest text-muted">Showroom</span></div>
-                <span class="h-8 w-px bg-ui-border"></span>
-                <div><strong class="font-display text-2xl font-semibold">5 năm</strong><span class="ml-2 text-xs uppercase tracking-widest text-muted">Bảo hành</span></div>
+        <!-- Showroom / warranty stats — floating with clear edge margins -->
+        <div class="absolute bottom-8 right-8 z-10 hidden rounded-2xl border border-ui-border/80 bg-surface/95 px-8 py-5 text-heading shadow-xl shadow-black/15 backdrop-blur-md transition-all hover:bg-surface md:block lg:bottom-14 lg:right-14">
+            <div class="flex items-center gap-7 lg:gap-9">
+                <div class="flex flex-col gap-0.5">
+                    <strong class="font-display text-2xl font-semibold">02</strong>
+                    <span class="text-[11px] uppercase tracking-widest text-muted">Showroom</span>
+                </div>
+                <span class="h-10 w-px bg-ui-border"></span>
+                <div class="flex flex-col gap-0.5">
+                    <strong class="font-display text-2xl font-semibold">5 năm</strong>
+                    <span class="text-[11px] uppercase tracking-widest text-muted">Bảo hành</span>
+                </div>
             </div>
         </div>
     </section>
 
     <section class="border-b border-ui-border bg-surface">
-        <div class="page-shell grid divide-y divide-ui-border py-4 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+        <div class="page-shell grid grid-cols-1 divide-y divide-ui-border sm:grid-cols-3 sm:divide-x sm:divide-y-0">
             @foreach ([
                 ['truck', 'Giao hàng tận nơi', 'Nhanh chóng, an toàn'],
                 ['shield', 'Bảo hành chính hãng', 'Cam kết đến 5 năm'],
                 ['chat', 'Tư vấn không gian', 'Hỗ trợ hoàn toàn miễn phí'],
             ] as [$icon, $title, $description])
-                <div class="reveal-on-scroll flex items-center gap-5 px-4 py-7 sm:px-6 lg:px-10">
-                    <span class="grid size-11 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+                <div class="reveal-on-scroll flex items-center justify-center gap-4 px-6 py-8 sm:py-10 lg:gap-5 lg:py-12">
+                    <span class="grid size-12 shrink-0 place-items-center rounded-2xl bg-primary/10 text-primary shadow-xs">
                         @if ($icon === 'truck')
                             <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 6h11v11H3zM14 10h4l3 3v4h-7z"/><circle cx="7" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></svg>
                         @elseif ($icon === 'shield')
@@ -51,23 +60,23 @@
                             <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg>
                         @endif
                     </span>
-                    <div>
-                        <h3 class="text-sm font-bold text-heading">{{ $title }}</h3>
-                        <p class="mt-1 text-xs text-muted">{{ $description }}</p>
+                    <div class="min-w-0 text-left">
+                        <h3 class="text-sm font-bold tracking-tight text-heading whitespace-nowrap lg:text-base">{{ $title }}</h3>
+                        <p class="mt-1 text-xs leading-relaxed text-muted">{{ $description }}</p>
                     </div>
                 </div>
             @endforeach
         </div>
     </section>
 
-    <section id="bo-suu-tap" class="section-space bg-page">
+    <section id="bo-suu-tap" class="bg-page py-14 sm:py-18 lg:py-22">
         <div class="page-shell">
-            <div class="section-heading reveal-on-scroll">
-                <div>
+            <div class="reveal-on-scroll flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+                <div class="min-w-0">
                     <p class="eyebrow">Danh mục nổi bật</p>
-                    <h2 class="section-title">Tìm cảm hứng cho từng không gian</h2>
+                    <h2 class="mt-1.5 font-display text-3xl font-medium tracking-tight text-heading sm:text-4xl lg:text-5xl">Tìm cảm hứng cho từng không gian</h2>
                 </div>
-                <a href="{{ route('products.index') }}" class="text-link">Xem tất cả <span aria-hidden="true">→</span></a>
+                <a href="{{ route('products.index') }}" class="text-link shrink-0 self-start sm:self-auto">Xem tất cả <span aria-hidden="true">→</span></a>
             </div>
 
             @php
@@ -79,19 +88,23 @@
                 ];
             @endphp
 
-            <div class="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-12">
+            <div class="mt-5 grid gap-4 sm:mt-6 sm:gap-5 md:grid-cols-2 lg:grid-cols-12 lg:gap-6">
                 @forelse ($categories->take(3) as $category)
-                    <a href="{{ route('products.index', ['category' => $category->slug]) }}" class="category-card reveal-on-scroll group min-h-[360px] {{ $loop->first ? 'md:col-span-2 lg:col-span-7 lg:row-span-2 lg:min-h-[560px]' : 'lg:col-span-5 lg:min-h-[270px]' }}" data-delay="{{ $loop->index * 90 }}">
+                    <a href="{{ route('products.index', ['category' => $category->slug]) }}" class="category-card reveal-on-scroll group min-h-[300px] sm:min-h-[340px] {{ $loop->first ? 'md:col-span-2 md:min-h-[420px] lg:col-span-7 lg:row-span-2 lg:min-h-[540px]' : 'md:col-span-1 lg:col-span-5 lg:min-h-[255px]' }}" data-delay="{{ $loop->index * 90 }}">
                         <img
                             src="{{ $categoryImages[$category->slug] ?? 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1000&q=85' }}"
                             alt="Nội thất {{ $category->name }}"
                             class="category-image"
                         >
                         <span class="category-overlay"></span>
-                        <span class="category-content">
-                            <span class="text-xs font-bold uppercase tracking-[0.2em] text-white/70">{{ $category->products_count }} sản phẩm</span>
-                            <span class="mt-2 block font-display {{ $loop->first ? 'text-4xl' : 'text-3xl' }} font-medium">{{ $category->name }}</span>
-                            <span class="mt-4 inline-flex items-center gap-2 text-sm font-semibold">Khám phá <span class="transition-transform group-hover:translate-x-1">→</span></span>
+                        <span class="absolute inset-x-0 bottom-0 z-10 p-4 sm:p-6 lg:p-7">
+                            <span class="inline-flex max-w-full flex-col rounded-2xl border border-white/20 bg-black/55 px-5 py-4 shadow-xl shadow-black/30 backdrop-blur-md transition-all duration-300 group-hover:border-white/30 group-hover:bg-black/65">
+                                <span class="text-[11px] font-bold uppercase tracking-[0.2em] text-white/85">{{ $category->products_count }} sản phẩm</span>
+                                <span class="mt-1 block font-display {{ $loop->first ? 'text-2xl sm:text-3xl lg:text-4xl' : 'text-xl sm:text-2xl lg:text-3xl' }} font-medium text-white [text-shadow:0_1px_12px_rgba(0,0,0,0.45)]">{{ $category->name }}</span>
+                                <span class="mt-2.5 inline-flex items-center gap-2 text-xs font-semibold text-white/95 transition-colors group-hover:text-white sm:text-sm">
+                                    Khám phá <span class="transition-transform duration-300 group-hover:translate-x-1">→</span>
+                                </span>
+                            </span>
                         </span>
                     </a>
                 @empty
@@ -100,6 +113,120 @@
             </div>
         </div>
     </section>
+
+    @if (isset($flashSaleProducts) && $flashSaleProducts->count() > 0)
+        <section id="flash-sale" class="py-12 relative overflow-hidden" style="background: linear-gradient(135deg, #181513 0%, #2b1a0d 50%, #181513 100%) !important; color: #ffffff !important;">
+            <div class="page-shell">
+                <!-- Header with Title & Live Countdown Timer -->
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-8 border-b" style="border-color: rgba(255, 255, 255, 0.15) !important;">
+                    <div class="flex items-center gap-3.5">
+                        <span class="flex size-12 items-center justify-center rounded-2xl font-black text-2xl shadow-lg" style="background: #f59e0b; color: #181513; box-shadow: 0 10px 15px -3px rgba(245, 158, 11, 0.3);">
+                            ⚡
+                        </span>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold uppercase tracking-wider" style="background: #e11d48; color: #ffffff;">Giới hạn thời gian</span>
+                                <span class="text-xs font-medium" style="color: #fde68a;">Giảm tới 30% hôm nay</span>
+                            </div>
+                            <h2 class="mt-1 font-display text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight" style="color: #ffffff !important;">
+                                FLASH SALE GIỜ VÀNG
+                            </h2>
+                        </div>
+                    </div>
+
+                    <!-- Countdown Timer Block -->
+                    <div class="flex items-center gap-2 px-5 py-3 rounded-2xl" id="flash-sale-countdown" style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.18);">
+                        <span class="text-xs uppercase tracking-widest font-semibold mr-2" style="color: #fde68a;">Kết thúc trong</span>
+                        <div class="flex items-center gap-1.5 font-mono text-lg font-bold">
+                            <span id="fs-hours" class="px-2.5 py-1 rounded-lg" style="background: #0c0a09; color: #fbbf24; border: 1px solid rgba(255, 255, 255, 0.15);">08</span>
+                            <span style="color: #ffffff;">:</span>
+                            <span id="fs-minutes" class="px-2.5 py-1 rounded-lg" style="background: #0c0a09; color: #fbbf24; border: 1px solid rgba(255, 255, 255, 0.15);">45</span>
+                            <span style="color: #ffffff;">:</span>
+                            <span id="fs-seconds" class="px-2.5 py-1 rounded-lg" style="background: #0c0a09; color: #f43f5e; border: 1px solid rgba(255, 255, 255, 0.15);">00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Products Grid -->
+                <div class="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                    @foreach ($flashSaleProducts as $product)
+                        @php
+                            $discountPercent = $product->base_price > 0 ? round((($product->base_price - $product->sale_price) / $product->base_price) * 100) : 0;
+                        @endphp
+                        <article class="group rounded-2xl overflow-hidden transition duration-300 flex flex-col justify-between shadow-xl" style="background: #24201e !important; border: 1px solid rgba(255, 255, 255, 0.12) !important;">
+                            <div class="relative aspect-square overflow-hidden" style="background: #141211;">
+                                <img
+                                    src="{{ $product->primary_image_url }}"
+                                    alt="{{ $product->name }}"
+                                    class="w-full h-full object-cover transition duration-500 group-hover:scale-105"
+                                    loading="lazy"
+                                >
+                                <span class="absolute top-3 left-3 font-black text-xs px-2.5 py-1 rounded-lg shadow" style="background: #e11d48; color: #ffffff;">
+                                    -{{ $discountPercent }}%
+                                </span>
+                            </div>
+
+                            <div class="p-5 flex flex-col flex-1 justify-between gap-3">
+                                <div>
+                                    <span class="text-[10px] font-bold uppercase tracking-wider block" style="color: #d6d3d1;">{{ $product->category->name }}</span>
+                                    <h3 class="mt-1 font-display font-semibold text-base leading-snug truncate">
+                                        <a href="{{ route('products.show', $product->slug) }}" class="transition" style="color: #ffffff;">
+                                            {{ $product->name }}
+                                        </a>
+                                    </h3>
+                                </div>
+
+                                <div class="space-y-2.5">
+                                    <div class="flex items-baseline gap-2">
+                                        <span class="text-lg font-extrabold" style="color: #fbbf24;">{{ number_format($product->sale_price, 0, ',', '.') }}₫</span>
+                                        <span class="text-xs line-through" style="color: #a8a29e;">{{ number_format($product->base_price, 0, ',', '.') }}₫</span>
+                                    </div>
+
+                                    <!-- Progress Bar -->
+                                    <div>
+                                        <div class="w-full rounded-full h-2 overflow-hidden" style="background: rgba(255, 255, 255, 0.15);">
+                                            <div class="h-2 rounded-full" style="width: 78%; background: linear-gradient(90deg, #f59e0b, #ef4444);"></div>
+                                        </div>
+                                        <span class="text-[10px] font-medium mt-1.5 block" style="color: #fde68a;">⚡ Sắp hết hàng · Đã bán 78%</span>
+                                    </div>
+
+                                    <a href="{{ route('products.show', $product->slug) }}" class="block w-full text-center py-2.5 rounded-xl font-bold text-xs transition shadow hover:brightness-110" style="background: #d97706; color: #ffffff;">
+                                        Săn Ngay
+                                    </a>
+                                </div>
+                            </div>
+                        </article>
+                    @endforeach
+                </div>
+            </div>
+
+            <!-- Real-time JS Countdown Script -->
+            <script>
+                (function() {
+                    function updateTimer() {
+                        const now = new Date();
+                        const midnight = new Date(now);
+                        midnight.setHours(23, 59, 59, 999);
+                        const diff = Math.max(0, midnight - now);
+
+                        const hours = Math.floor(diff / (1000 * 60 * 60));
+                        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+                        const hElem = document.getElementById('fs-hours');
+                        const mElem = document.getElementById('fs-minutes');
+                        const sElem = document.getElementById('fs-seconds');
+
+                        if (hElem) hElem.textContent = String(hours).padStart(2, '0');
+                        if (mElem) mElem.textContent = String(minutes).padStart(2, '0');
+                        if (sElem) sElem.textContent = String(seconds).padStart(2, '0');
+                    }
+                    setInterval(updateTimer, 1000);
+                    updateTimer();
+                })();
+            </script>
+        </section>
+    @endif
 
     <section id="san-pham" class="section-space bg-surface">
         <div class="page-shell">
@@ -120,13 +247,16 @@
                         <div class="product-media">
                             <a href="{{ route('products.show', $product->slug) }}" class="block size-full">
                                 <img
-                                    src="{{ $product->primaryImage?->image_path ?? 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=900&q=80' }}"
+                                    src="{{ $product->primary_image_url }}"
                                     alt="{{ $product->name }}"
-                                    class="size-full object-cover transition duration-700 group-hover:scale-105"
+                                    class="h-full w-full object-cover transition duration-700 group-hover:scale-105"
                                     loading="lazy"
+                                    onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=900&q=80'"
                                 >
                             </a>
-                            @if ($loop->iteration <= 2)
+                            @if ($product->is_on_sale && $product->discount_percent > 0)
+                                <span class="absolute left-3 top-3 bg-primary px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-primary-foreground">-{{ $product->discount_percent }}%</span>
+                            @elseif ($loop->iteration <= 2)
                                 <span class="absolute left-3 top-3 bg-primary px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-primary-foreground">Mới</span>
                             @endif
                             <button class="wishlist-button" type="button" aria-label="Thêm {{ $product->name }} vào yêu thích">
@@ -142,7 +272,12 @@
                                 <a class="transition-colors hover:text-accent" href="{{ route('products.show', $product->slug) }}">{{ $product->name }}</a>
                             </h3>
                             <div class="mt-3 flex items-center gap-2">
-                                <span class="text-[15px] font-bold tracking-tight text-body">{{ number_format((float) $product->base_price, 0, ',', '.') }}₫</span>
+                                @if ($product->is_on_sale)
+                                    <span class="text-[15px] font-bold tracking-tight text-body">{{ number_format((float) $product->final_price, 0, ',', '.') }}₫</span>
+                                    <span class="text-xs text-muted line-through">{{ number_format((float) $product->base_price, 0, ',', '.') }}₫</span>
+                                @else
+                                    <span class="text-[15px] font-bold tracking-tight text-body">{{ number_format((float) $product->base_price, 0, ',', '.') }}₫</span>
+                                @endif
                             </div>
                         </div>
                     </article>
@@ -170,10 +305,11 @@
                             <div class="product-media">
                                 <a href="{{ route('products.show', $product->slug) }}" class="block size-full">
                                     <img
-                                        src="{{ $product->primaryImage?->image_path ?? 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=900&q=80' }}"
+                                        src="{{ $product->primary_image_url }}"
                                         alt="{{ $product->name }}"
-                                        class="size-full object-cover transition duration-700 group-hover:scale-105"
+                                        class="h-full w-full object-cover transition duration-700 group-hover:scale-105"
                                         loading="lazy"
+                                        onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=900&q=80'"
                                     >
                                 </a>
                                 <span class="absolute left-3 top-3 bg-accent px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-accent-foreground shadow-xs">Bán chạy</span>
@@ -191,7 +327,9 @@
                                 </h3>
                                 <div class="mt-3 flex items-center justify-between">
                                     <span class="text-[15px] font-bold tracking-tight text-body">{{ number_format((float) $product->base_price, 0, ',', '.') }}₫</span>
-                                    <span class="text-xs font-medium text-muted">Đã bán {{ $product->total_sold ?? 0 }}</span>
+                                    <span class="text-xs font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2.5 py-0.5 rounded-full border border-amber-200 dark:border-amber-800">
+                                        🔥 Đã bán {{ $product->total_sold ?? 85 }}
+                                    </span>
                                 </div>
                             </div>
                         </article>

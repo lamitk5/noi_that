@@ -114,6 +114,21 @@
                                 @endguest
 
                                 @auth
+                                    <div class="px-2.5 py-1.5 mb-1 flex items-center gap-2 border-b border-ui-border pb-2">
+                                        @if(auth()->user()->avatar)
+                                            <img src="{{ auth()->user()->avatar }}" alt="{{ auth()->user()->name }}" class="size-6 rounded-full object-cover">
+                                        @else
+                                            <div class="size-6 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center">
+                                                {{ mb_strtoupper(mb_substr(auth()->user()->name ?? 'U', 0, 1)) }}
+                                            </div>
+                                        @endif
+                                        <div class="min-w-0">
+                                            <span class="block text-xs font-bold text-heading truncate">{{ auth()->user()->name }}</span>
+                                            @if(auth()->user()->provider)
+                                                <span class="block text-[10px] text-muted capitalize">{{ auth()->user()->provider }}</span>
+                                            @endif
+                                        </div>
+                                    </div>
                                     @if (Route::has('profile.edit'))
                                         <a href="{{ route('profile.edit') }}" class="flex items-center gap-2.5 rounded-lg px-2.5 py-2 hover:bg-surface-alt hover:text-heading transition-colors">
                                             <svg viewBox="0 0 24 24" class="size-4 text-muted" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0" stroke-linecap="round"/></svg>
@@ -142,6 +157,11 @@
                                             <span>Lịch sử đơn hàng</span>
                                         </span>
                                     @endif
+
+                                    <a href="{{ route('wishlist.index') }}" class="flex items-center gap-2.5 rounded-lg px-2.5 py-2 hover:bg-surface-alt hover:text-heading transition-colors">
+                                        <svg viewBox="0 0 24 24" class="size-4 text-muted" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.8 5.7a5.5 5.5 0 0 0-7.8 0L12 6.8l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 22l8.8-8.5a5.5 5.5 0 0 0 0-7.8Z"/></svg>
+                                        <span>Sản phẩm yêu thích</span>
+                                    </a>
 
                                     @if (auth()->user()->isAdmin() && Route::has('admin.dashboard'))
                                         <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-accent font-semibold hover:bg-surface-alt transition-colors">
@@ -237,6 +257,11 @@
                         </div>
                     </div>
                 </div>
+                @auth
+                    <a href="{{ route('wishlist.index') }}" class="icon-button relative" aria-label="Sản phẩm yêu thích" title="Yêu thích">
+                        <svg viewBox="0 0 24 24" class="size-5 text-muted hover:text-rose-500 transition-colors" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.8 5.7a5.5 5.5 0 0 0-7.8 0L12 6.8l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 22l8.8-8.5a5.5 5.5 0 0 0 0-7.8Z"/></svg>
+                    </a>
+                @endauth
                 <a href="{{ route('cart.index') }}" class="icon-button relative" aria-label="Giỏ hàng">
                     <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 4h2l2 11h10l2-8H6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9" cy="19" r="1"/><circle cx="17" cy="19" r="1"/></svg>
                     <span class="absolute right-0.5 top-0.5 grid size-4 place-items-center rounded-full bg-accent text-[9px] font-bold text-accent-foreground">{{ $cartCount ?? 0 }}</span>
@@ -284,9 +309,10 @@
             <div>
                 <h3 class="footer-title">Hỗ trợ</h3>
                 <div class="mt-5 flex flex-col gap-3 text-sm text-white/65">
-                    <a href="#" class="hover:text-white">Chính sách giao hàng</a>
-                    <a href="#" class="hover:text-white">Bảo hành & đổi trả</a>
-                    <a href="#" class="hover:text-white">Câu hỏi thường gặp</a>
+                    <a href="{{ route('pages.warranty') }}" class="hover:text-white transition-colors">Chính sách bảo hành</a>
+                    <a href="{{ route('pages.return') }}" class="hover:text-white transition-colors">Đổi trả & hoàn tiền</a>
+                    <a href="{{ route('pages.faq') }}" class="hover:text-white transition-colors">Câu hỏi thường gặp</a>
+                    <a href="{{ route('orders.track') }}" class="hover:text-white transition-colors">Tra cứu đơn hàng</a>
                 </div>
             </div>
             <div>
@@ -305,5 +331,46 @@
             </div>
         </div>
     </footer>
+
+    <!-- Quick Support Floating Widget -->
+    <div class="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3" x-data="{ open: false }">
+        <div
+            x-show="open"
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0 translate-y-3 scale-95"
+            x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+            x-transition:leave="transition ease-in duration-150"
+            x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+            x-transition:leave-end="opacity-0 translate-y-3 scale-95"
+            class="min-w-[230px] space-y-2 rounded-3xl border border-ui-border bg-surface/95 p-4 shadow-2xl backdrop-blur-md"
+            @click.outside="open = false"
+            x-cloak
+        >
+            <div class="px-2 pt-1 text-[11px] font-bold uppercase tracking-wider text-muted">Hỗ trợ khách hàng</div>
+            <a href="tel:0901234567" class="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-xs font-semibold text-body transition hover:bg-surface-alt hover:text-heading">
+                <span class="grid size-7 place-items-center rounded-full bg-emerald-500/10 text-sm text-emerald-600">📞</span>
+                <span>Hotline: 0901 234 567</span>
+            </a>
+            <a href="{{ route('pages.faq') }}" class="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-xs font-semibold text-body transition hover:bg-surface-alt hover:text-heading">
+                <span class="grid size-7 place-items-center rounded-full bg-primary/10 text-sm text-primary">❓</span>
+                <span>Câu hỏi thường gặp</span>
+            </a>
+            <a href="{{ route('pages.contact') }}" class="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-xs font-semibold text-body transition hover:bg-surface-alt hover:text-heading">
+                <span class="grid size-7 place-items-center rounded-full bg-amber-500/10 text-sm text-accent">💬</span>
+                <span>Gửi yêu cầu tư vấn</span>
+            </a>
+        </div>
+        <button
+            type="button"
+            @click="open = !open"
+            class="grid h-14 w-14 cursor-pointer place-items-center rounded-full bg-primary text-primary-foreground shadow-xl shadow-primary/35 ring-4 ring-white/20 transition-all duration-300 hover:scale-105 hover:shadow-2xl active:scale-95 sm:h-16 sm:w-16"
+            aria-label="Mở bảng hỗ trợ nhanh"
+            title="Hỗ trợ Mộc An"
+        >
+            <svg viewBox="0 0 24 24" class="size-7 transition-transform duration-300 sm:size-8" :class="open ? 'rotate-90 scale-90' : ''" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a.75.75 0 0 1-.774-.75 4.966 4.966 0 0 1 1.01-2.738C4.162 16.035 3 14.137 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z"/>
+            </svg>
+        </button>
+    </div>
 </body>
 </html>

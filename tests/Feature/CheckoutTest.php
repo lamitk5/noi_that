@@ -417,4 +417,70 @@ class CheckoutTest extends TestCase
         $successResponse->assertSee('border-ui-border', false);
         $successResponse->assertSee('text-heading', false);
     }
+
+    public function test_checkout_with_vnpay_redirects_to_payment_gateway(): void
+    {
+        $user = User::factory()->create();
+        [$product, $variant] = $this->createProductWithVariant(1500000, 5);
+
+        $response = $this->actingAs($user)
+            ->withSession([
+                'cart' => [$variant->id => 1],
+                'checkout_token' => 'token-vnpay',
+            ])
+            ->post(route('checkout.store'), [
+                'customer_name' => 'Nguyễn VNPAY',
+                'customer_phone' => '0988111222',
+                'shipping_address' => 'Hà Nội',
+                'payment_method' => 'vnpay',
+                'checkout_token' => 'token-vnpay',
+            ]);
+
+        $order = Order::latest()->first();
+        $this->assertEquals('vnpay', $order->payment_method);
+        $response->assertRedirect(route('payments.vnpay.create', $order->order_code));
+
+        // Follow the redirect (GET) to payment creation endpoint
+        $vnpayResponse = $this->actingAs($user)->get(route('payments.vnpay.create', $order->order_code));
+        $vnpayResponse->assertRedirect();
+        $this->assertStringStartsWith('https://sandbox.vnpayment.vn/paymentv2/vpcpay.html', $vnpayResponse->headers->get('Location'));
+    }
+
+    public function test_checkout_with_momo_redirects_to_payment_gateway(): void
+    {
+        $user = User::factory()->create();
+        [$product, $variant] = $this->createProductWithVariant(2000000, 5);
+
+        \Illuminate\Support\Facades\Http::fake([
+            'https://test-payment.momo.vn/v2/gateway/api/create' => \Illuminate\Support\Facades\Http::response([
+                'partnerCode' => 'MOMO',
+                'orderId' => 'MOMO_CHK_123',
+                'requestId' => 'REQ_CHK_123',
+                'amount' => 2000000,
+                'resultCode' => 0,
+                'payUrl' => 'https://test-payment.momo.vn/v2/gateway/pay?token=MOMO_CHK_TOKEN',
+            ], 200),
+        ]);
+
+        $response = $this->actingAs($user)
+            ->withSession([
+                'cart' => [$variant->id => 1],
+                'checkout_token' => 'token-momo',
+            ])
+            ->post(route('checkout.store'), [
+                'customer_name' => 'Nguyễn MoMo',
+                'customer_phone' => '0988333444',
+                'shipping_address' => 'TP.HCM',
+                'payment_method' => 'momo',
+                'checkout_token' => 'token-momo',
+            ]);
+
+        $order = Order::latest()->first();
+        $this->assertEquals('momo', $order->payment_method);
+        $response->assertRedirect(route('payments.momo.create', $order->order_code));
+
+        // Follow the redirect (GET) to payment creation endpoint
+        $momoResponse = $this->actingAs($user)->get(route('payments.momo.create', $order->order_code));
+        $momoResponse->assertRedirect('https://test-payment.momo.vn/v2/gateway/pay?token=MOMO_CHK_TOKEN');
+    }
 }

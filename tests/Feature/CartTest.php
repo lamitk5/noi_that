@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\ProductVariant;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -13,6 +14,15 @@ use Tests\TestCase;
 class CartTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected User $user;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->user = User::factory()->create();
+        $this->actingAs($this->user);
+    }
 
     private function createProductWithVariant(int $price = 1000000, int $stock = 10, bool $isActive = true, array $variantAttributes = []): array
     {
@@ -51,8 +61,55 @@ class CartTest extends TestCase
         return [$product, $variant];
     }
 
+    public function test_guest_is_blocked_from_adding_product_to_cart_and_redirected_to_login(): void
+    {
+        auth()->logout();
+        [$product, $variant] = $this->createProductWithVariant(2500000, 8);
+
+        $response = $this->post(route('cart.store'), [
+            'variant_id' => $variant->id,
+            'quantity' => 1,
+        ]);
+
+        $response->assertRedirect(route('login'));
+        $response->assertSessionHas('error', 'Vui lòng đăng nhập tài khoản để mua hàng hoặc thêm vào giỏ.');
+        $this->assertEmpty(session('cart'));
+    }
+
+    public function test_guest_is_blocked_from_buy_now_and_redirected_to_login(): void
+    {
+        auth()->logout();
+        [$product, $variant] = $this->createProductWithVariant(2500000, 8);
+
+        $response = $this->post(route('cart.store'), [
+            'variant_id' => $variant->id,
+            'quantity' => 1,
+            'buy_now' => 1,
+        ]);
+
+        $response->assertRedirect(route('login'));
+        $response->assertSessionHas('error', 'Vui lòng đăng nhập tài khoản để mua hàng hoặc thêm vào giỏ.');
+        $this->assertEmpty(session('cart'));
+    }
+
+    public function test_authenticated_user_can_buy_now_and_is_redirected_to_checkout(): void
+    {
+        [$product, $variant] = $this->createProductWithVariant(2500000, 8);
+
+        $response = $this->post(route('cart.store'), [
+            'variant_id' => $variant->id,
+            'quantity' => 2,
+            'buy_now' => 1,
+        ]);
+
+        $response->assertRedirect(route('checkout.index'));
+        $response->assertSessionHas('status', 'Tiến hành thanh toán cho sản phẩm vừa chọn.');
+        $this->assertEquals([$variant->id => 2], session('cart'));
+    }
+
     public function test_cart_page_is_accessible_by_guest(): void
     {
+        auth()->logout();
         $response = $this->get(route('cart.index'));
 
         $response->assertStatus(200);
@@ -61,6 +118,7 @@ class CartTest extends TestCase
 
     public function test_cart_initially_shows_empty_state(): void
     {
+        auth()->logout();
         $response = $this->get(route('cart.index'));
 
         $response->assertStatus(200);

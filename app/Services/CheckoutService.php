@@ -5,14 +5,17 @@ namespace App\Services;
 use App\Models\Order;
 use App\Models\ProductVariant;
 use App\Models\User;
+use App\Services\Shipping\GhnService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class CheckoutService
 {
     public function __construct(
-        protected CartService $cartService
+        protected CartService $cartService,
+        protected GhnService $ghnService
     ) {}
 
     /**
@@ -78,8 +81,31 @@ class CheckoutService
                 ];
             }
 
-            $shippingFee = (float) config('shop.shipping_fee', 0);
-            $totalPrice = $subtotal + $shippingFee;
+            // Calculate shipping fee from GHN or session
+            $shippingFee = (float) session()->get('shipping_fee', config('shop.shipping_fee', 0));
+            if (! empty($data['district_id']) && ! empty($data['ward_code'])) {
+                $totalWeight = max(500, count($itemsData) * 500);
+                $shippingFee = $this->ghnService->calculateFee((int) $data['district_id'], (string) $data['ward_code'], $totalWeight, $subtotal);
+            }
+
+            // Handle coupon discount if applied
+            $appliedCouponData = session()->get('applied_coupon');
+            $couponCode = null;
+            $discountAmount = 0.0;
+
+            if (! empty($appliedCouponData['code'])) {
+                $coupon = \App\Models\Coupon::where('code', $appliedCouponData['code'])
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($coupon && $coupon->isValidFor($subtotal)) {
+                    $discountAmount = $coupon->calculateDiscount($subtotal);
+                    $couponCode = $coupon->code;
+                    $coupon->increment('used_count');
+                }
+            }
+
+            $totalPrice = max(0, ($subtotal - $discountAmount) + $shippingFee);
 
             $orderCode = $this->generateOrderCode();
 
@@ -90,9 +116,17 @@ class CheckoutService
                 'customer_phone' => $data['customer_phone'],
                 'customer_email' => $data['customer_email'] ?? $user->email,
                 'shipping_address' => $data['shipping_address'],
+                'province_id' => $data['province_id'] ?? null,
+                'province_name' => $data['province_name'] ?? null,
+                'district_id' => $data['district_id'] ?? null,
+                'district_name' => $data['district_name'] ?? null,
+                'ward_code' => $data['ward_code'] ?? null,
+                'ward_name' => $data['ward_name'] ?? null,
                 'note' => $data['note'] ?? null,
                 'total_price' => $totalPrice,
                 'shipping_fee' => $shippingFee,
+                'coupon_code' => $couponCode,
+                'discount_amount' => $discountAmount,
                 'payment_method' => $data['payment_method'],
                 'payment_status' => 'pending',
                 'order_status' => 'pending',
@@ -113,7 +147,17 @@ class CheckoutService
             return $order;
         });
 
-        // ONLY clear cart after transaction has successfully committed
+        // Automatically create GHN shipping order if enabled
+        if (config('services.ghn.auto_create_order', true)) {
+            try {
+                $this->ghnService->createShippingOrder($order);
+            } catch (\Throwable $ghnEx) {
+                Log::warning('Automatic GHN shipping order creation failed: ' . $ghnEx->getMessage());
+            }
+        }
+
+        // ONLY clear cart, coupon, and shipping session after transaction has successfully committed
+        session()->forget(['applied_coupon', 'shipping_fee', 'shipping_destination']);
         $this->cartService->clear();
 
         return $order;

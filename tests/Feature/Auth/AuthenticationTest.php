@@ -34,6 +34,72 @@ class AuthenticationTest extends TestCase
         $response->assertRedirect(route('home'));
     }
 
+    public function test_users_can_authenticate_using_username(): void
+    {
+        $user = User::factory()->create([
+            'name' => 'mocan_user',
+            'email' => 'mocan@example.com',
+            'password' => 'matkhau123',
+        ]);
+
+        $response = $this->post(route('login.store'), [
+            'login' => 'mocan_user',
+            'password' => 'matkhau123',
+        ]);
+
+        $this->assertAuthenticatedAs($user);
+        $response->assertRedirect(route('home'));
+    }
+
+    public function test_users_can_authenticate_using_login_field_with_email(): void
+    {
+        $user = User::factory()->create([
+            'name' => 'Nguyen Van A',
+            'email' => 'nguyen@example.com',
+            'password' => 'matkhau123',
+        ]);
+
+        $response = $this->post(route('login.store'), [
+            'login' => 'nguyen@example.com',
+            'password' => 'matkhau123',
+        ]);
+
+        $this->assertAuthenticatedAs($user);
+        $response->assertRedirect(route('home'));
+    }
+
+    public function test_users_can_authenticate_using_phone_number(): void
+    {
+        $user = User::factory()->create([
+            'phone' => '0901234567',
+            'password' => 'matkhau123',
+        ]);
+
+        $response = $this->post(route('login.store'), [
+            'login' => '0901234567',
+            'password' => 'matkhau123',
+        ]);
+
+        $this->assertAuthenticatedAs($user);
+        $response->assertRedirect(route('home'));
+    }
+
+    public function test_users_can_authenticate_using_formatted_phone_number(): void
+    {
+        $user = User::factory()->create([
+            'phone' => '0901234567',
+            'password' => 'matkhau123',
+        ]);
+
+        $response = $this->post(route('login.store'), [
+            'login' => '090 123 4567',
+            'password' => 'matkhau123',
+        ]);
+
+        $this->assertAuthenticatedAs($user);
+        $response->assertRedirect(route('home'));
+    }
+
     public function test_users_can_not_authenticate_with_invalid_password(): void
     {
         $user = User::factory()->create([

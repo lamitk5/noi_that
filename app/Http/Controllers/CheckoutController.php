@@ -16,7 +16,8 @@ class CheckoutController extends Controller
 {
     public function __construct(
         protected CartService $cartService,
-        protected CheckoutService $checkoutService
+        protected CheckoutService $checkoutService,
+        protected \App\Services\Shipping\GhnService $ghnService
     ) {}
 
     /**
@@ -37,16 +38,33 @@ class CheckoutController extends Controller
         session()->put('checkout_token', $token);
 
         $subtotal = $this->cartService->subtotal();
-        $shippingFee = (float) config('shop.shipping_fee', 0);
-        $totalPrice = $subtotal + $shippingFee;
+        $shippingFee = (float) session()->get('shipping_fee', config('services.ghn.default_fee', 30000));
+
+        $appliedCoupon = session()->get('applied_coupon');
+        $discountAmount = 0.0;
+        if ($appliedCoupon && ! empty($appliedCoupon['code'])) {
+            $coupon = \App\Models\Coupon::where('code', $appliedCoupon['code'])->first();
+            if ($coupon && $coupon->isValidFor($subtotal)) {
+                $discountAmount = $coupon->calculateDiscount($subtotal);
+            } else {
+                session()->forget('applied_coupon');
+                $appliedCoupon = null;
+            }
+        }
+
+        $totalPrice = max(0, ($subtotal - $discountAmount) + $shippingFee);
+        $provinces = $this->ghnService->getProvinces();
 
         return view('checkout.index', [
             'items' => $items,
             'subtotal' => $subtotal,
             'shippingFee' => $shippingFee,
+            'appliedCoupon' => $appliedCoupon,
+            'discountAmount' => $discountAmount,
             'totalPrice' => $totalPrice,
             'user' => $request->user(),
             'checkoutToken' => $token,
+            'provinces' => $provinces,
         ]);
     }
 
@@ -78,6 +96,17 @@ class CheckoutController extends Controller
 
             // Invalidate token after order created
             session()->forget('checkout_token');
+
+            // Send Order Confirmation Email
+            try {
+                if (! empty($order->customer_email)) {
+                    $order->loadMissing('items');
+                    \Illuminate\Support\Facades\Mail::to($order->customer_email)
+                        ->send(new \App\Mail\OrderConfirmationMail($order));
+                }
+            } catch (\Throwable $mailEx) {
+                \Illuminate\Support\Facades\Log::warning('Could not send order confirmation email: ' . $mailEx->getMessage());
+            }
 
             if ($order->payment_method === 'vnpay') {
                 return redirect()->route('payments.vnpay.create', $order->order_code);

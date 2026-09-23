@@ -77,7 +77,8 @@
                             <div class="size-24 sm:size-28 rounded-xl overflow-hidden bg-surface-alt border border-ui-border shrink-0">
                                 <a href="{{ route('products.show', $item->product->slug) }}">
                                     <img
-                                        src="{{ $item->product->primaryImage?->image_path ?? 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=400&q=80' }}"
+                                        src="{{ $item->product->primary_image_url }}"
+                                        onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=400&q=80'"
                                         alt="{{ $item->product->name }}"
                                         class="size-full object-cover transition hover:scale-105"
                                     >
@@ -187,11 +188,60 @@
                     <div class="rounded-3xl border border-ui-border bg-surface p-6 sm:p-8 shadow-sm space-y-6">
                         <h2 class="font-display text-lg font-semibold text-heading">Tóm tắt đơn hàng</h2>
 
+                        <!-- Coupon Form / Applied Coupon Badge -->
+                        <div class="rounded-2xl border border-ui-border bg-surface-alt p-4 space-y-2.5">
+                            <span class="text-xs font-bold text-heading block">Mã giảm giá / Voucher</span>
+
+                            @if (session('coupon_success'))
+                                <p class="text-xs font-semibold text-emerald-600 dark:text-emerald-400">{{ session('coupon_success') }}</p>
+                            @endif
+
+                            @if (session('coupon_error'))
+                                <p class="text-xs font-semibold text-red-500">{{ session('coupon_error') }}</p>
+                            @endif
+
+                            @if (!empty($appliedCoupon))
+                                <div class="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                                    <div class="flex items-center gap-2 min-w-0">
+                                        <span class="font-mono font-bold text-xs text-emerald-700 dark:text-emerald-300 uppercase">{{ $appliedCoupon['code'] }}</span>
+                                        <span class="text-[11px] text-muted truncate">(-{{ number_format($discountAmount, 0, ',', '.') }}₫)</span>
+                                    </div>
+                                    <form method="POST" action="{{ route('coupon.remove') }}" class="shrink-0">
+                                        @csrf
+                                        <button type="submit" class="text-[11px] font-semibold text-red-500 hover:underline">Hủy</button>
+                                    </form>
+                                </div>
+                            @else
+                                <form method="POST" action="{{ route('coupon.apply') }}" class="flex items-center gap-2">
+                                    @csrf
+                                    <input
+                                        type="text"
+                                        name="code"
+                                        required
+                                        placeholder="Nhập mã (VD: MOCAN10)"
+                                        class="uppercase font-mono flex-1 rounded-xl border border-ui-border bg-surface px-3 py-2 text-xs text-heading placeholder:text-muted focus:border-primary focus:outline-none"
+                                    >
+                                    <button
+                                        type="submit"
+                                        class="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground hover:opacity-90 transition shrink-0"
+                                    >
+                                        Áp dụng
+                                    </button>
+                                </form>
+                            @endif
+                        </div>
+
                         <div class="space-y-3 text-sm divide-y divide-ui-border">
                             <div class="flex items-center justify-between pb-3">
                                 <span class="text-muted">Tạm tính</span>
                                 <span class="font-bold text-heading">{{ number_format($subtotal, 0, ',', '.') }}₫</span>
                             </div>
+                            @if (!empty($appliedCoupon) && $discountAmount > 0)
+                                <div class="flex items-center justify-between py-3 text-emerald-600 dark:text-emerald-400 font-medium">
+                                    <span>Giảm giá ({{ $appliedCoupon['code'] }})</span>
+                                    <span>-{{ number_format($discountAmount, 0, ',', '.') }}₫</span>
+                                </div>
+                            @endif
                             <div class="flex items-center justify-between py-3">
                                 <span class="text-muted">Phí vận chuyển</span>
                                 <span class="text-xs font-semibold text-accent">Tính ở bước thanh toán</span>
@@ -199,7 +249,7 @@
                             <div class="flex items-baseline justify-between pt-3 text-base">
                                 <span class="font-bold text-heading">Tổng tiền tạm tính</span>
                                 <span class="font-display text-2xl font-bold text-heading">
-                                    {{ number_format($subtotal, 0, ',', '.') }}₫
+                                    {{ number_format($totalPrice, 0, ',', '.') }}₫
                                 </span>
                             </div>
                         </div>

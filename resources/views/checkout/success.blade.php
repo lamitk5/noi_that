@@ -41,14 +41,49 @@
                     </div>
                     <div>
                         <span class="font-semibold text-heading">Hình thức:</span>
-                        {{ $order->payment_method === 'cod' ? 'Thanh toán khi nhận hàng (COD)' : 'Chuyển khoản ngân hàng' }}
+                        @if ($order->payment_method === 'vnpay')
+                            <span class="inline-flex items-center gap-1 font-medium text-sky-600 dark:text-sky-400">VNPAY Sandbox</span>
+                        @elseif ($order->payment_method === 'momo')
+                            <span class="inline-flex items-center gap-1 font-medium text-pink-600 dark:text-pink-400">MoMo Sandbox</span>
+                        @elseif ($order->payment_method === 'bank_transfer')
+                            <span>Chuyển khoản ngân hàng</span>
+                        @else
+                            <span>Thanh toán khi nhận hàng (COD)</span>
+                        @endif
                     </div>
                     <div>
                         <span class="font-semibold text-heading">Trạng thái:</span>
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                            Chờ xác nhận
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold {{ $order->payment_status === 'paid' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-amber-500/10 text-amber-600 dark:text-amber-400' }}">
+                            {{ $order->payment_status === 'paid' ? 'Đã thanh toán' : 'Chờ xử lý' }}
                         </span>
                     </div>
+
+                    @if ($order->ghn_order_code)
+                        <div class="sm:col-span-2 rounded-xl border border-orange-200 bg-orange-50/60 dark:border-orange-900/40 dark:bg-orange-950/30 p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                            <div class="flex items-center gap-2">
+                                <span class="rounded bg-orange-500/10 px-2 py-0.5 text-[10px] font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wider">Giao Hàng Nhanh</span>
+                                <span class="font-mono font-bold text-heading">#{{ $order->ghn_order_code }}</span>
+                                <span class="text-muted text-[11px]">({{ $order->ghn_status_label }})</span>
+                            </div>
+                            <a
+                                href="{{ $order->ghn_tracking_url }}"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="text-xs font-bold text-primary hover:underline inline-flex items-center gap-1"
+                            >
+                                <span>Tra cứu vận đơn</span>
+                                <span>↗</span>
+                            </a>
+                        </div>
+                    @endif
+
+                    @if ($order->coupon_code && $order->discount_amount > 0)
+                        <div class="sm:col-span-2">
+                            <span class="font-semibold text-heading">Mã khuyến mãi:</span>
+                            <span class="font-mono font-bold text-emerald-600 dark:text-emerald-400">{{ $order->coupon_code }}</span>
+                            <span class="text-emerald-600 dark:text-emerald-400">(-{{ number_format((float) $order->discount_amount, 0, ',', '.') }}₫)</span>
+                        </div>
+                    @endif
                 </div>
 
                 @if ($order->payment_method === 'bank_transfer')

@@ -17,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->validateCsrfTokens(except: [
             'api/payment/momo/ipn',
+            'api/shipping/ghn/webhook',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

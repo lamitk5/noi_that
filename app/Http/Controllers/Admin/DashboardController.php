@@ -62,6 +62,6 @@ class DashboardController extends Controller
             ]);
         }
 
-        return view('admin.dashboard', $data);
+        return app(AnalyticsController::class)->index($request);
     }
 }

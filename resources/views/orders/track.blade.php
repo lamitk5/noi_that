@@ -44,6 +44,27 @@
                     </div>
                 </div>
 
+                @if ($order->ghn_order_code)
+                    <div class="p-4 rounded-xl border border-orange-200 bg-orange-50/70 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div class="space-y-1">
+                            <div class="flex items-center gap-2">
+                                <span class="rounded bg-orange-200 px-2 py-0.5 text-[10px] font-bold text-orange-800 uppercase tracking-wider">Vận đơn GHN Express</span>
+                                <span class="font-mono font-bold text-orange-950">#{{ $order->ghn_order_code }}</span>
+                            </div>
+                            <div class="text-xs text-gray-600">
+                                Trạng thái GHN: <strong>{{ $order->ghn_status_label }}</strong>
+                                @if ($order->ghn_expected_delivery_at)
+                                    • Giao dự kiến: {{ $order->ghn_expected_delivery_at->format('d/m/Y') }}
+                                @endif
+                            </div>
+                        </div>
+                        <a href="{{ $order->ghn_tracking_url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 transition shadow-sm">
+                            <span>Tra cứu GHN</span>
+                            <span>↗</span>
+                        </a>
+                    </div>
+                @endif
+
                 <!-- Item list -->
                 <div class="divide-y border-b pb-4">
                     @foreach($order->items as $item)
@@ -61,6 +82,13 @@
                 <div class="flex justify-between items-baseline pt-2">
                     <span class="font-bold text-gray-700">Tổng thanh toán:</span>
                     <span class="text-2xl font-extrabold text-amber-900">{{ number_format($order->total_amount, 0, ',', '.') }} đ</span>
+                </div>
+
+                <div class="pt-4 border-t flex justify-end">
+                    <a href="{{ route('orders.invoice', $order->order_code ?? $order->order_number) }}" target="_blank" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-amber-800 hover:bg-amber-900 transition shadow">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                        <span>In / Xuất Hóa Đơn PDF</span>
+                    </a>
                 </div>
             </div>
         @else

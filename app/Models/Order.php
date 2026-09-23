@@ -14,13 +14,25 @@ class Order extends Model
     protected $fillable = [
         'user_id',
         'order_code',
+        'ghn_order_code',
+        'ghn_status',
+        'ghn_expected_delivery_at',
+        'ghn_log',
         'customer_name',
         'customer_phone',
         'customer_email',
         'shipping_address',
+        'province_id',
+        'province_name',
+        'district_id',
+        'district_name',
+        'ward_code',
+        'ward_name',
         'note',
         'total_price',
         'shipping_fee',
+        'coupon_code',
+        'discount_amount',
         'payment_method',
         'payment_status',
         'order_status',
@@ -31,6 +43,9 @@ class Order extends Model
         return [
             'total_price' => 'decimal:2',
             'shipping_fee' => 'decimal:2',
+            'discount_amount' => 'decimal:2',
+            'ghn_expected_delivery_at' => 'datetime',
+            'ghn_log' => 'array',
         ];
     }
 
@@ -113,6 +128,35 @@ class Order extends Model
             'paid' => 'Đã thanh toán',
             'failed' => 'Thất bại',
             default => ucfirst($this->payment_status),
+        };
+    }
+
+    public function getGhnTrackingUrlAttribute(): ?string
+    {
+        return $this->ghn_order_code
+            ? 'https://tracking.ghn.vn/?order_code=' . urlencode($this->ghn_order_code)
+            : null;
+    }
+
+    public function getGhnStatusLabelAttribute(): string
+    {
+        return match ($this->ghn_status) {
+            'ready_to_pick' => 'Chờ lấy hàng',
+            'picking' => 'Đang lấy hàng',
+            'cancel' => 'Đã hủy',
+            'money_collect_picking' => 'Đang thu tiền người gửi',
+            'picked' => 'Đã lấy hàng',
+            'storing' => 'Đang ở kho GHN',
+            'transporting' => 'Đang trung chuyển',
+            'sorting' => 'Đang phân loại',
+            'delivering' => 'Đang giao hàng',
+            'money_collect_delivering' => 'Đang thu tiền người nhận',
+            'delivered' => 'Đã giao hàng thành công',
+            'delivery_fail' => 'Giao hàng thất bại',
+            'waiting_to_return' => 'Chờ chuyển hoàn',
+            'return' => 'Đang chuyển hoàn',
+            'returned' => 'Đã chuyển hoàn',
+            default => $this->ghn_status ?: 'Chưa tạo đơn',
         };
     }
 

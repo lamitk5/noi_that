@@ -22,9 +22,15 @@
                     Đặt lúc {{ $order->created_at ? $order->created_at->format('d/m/Y H:i') : '' }}
                 </p>
             </div>
-            <a href="{{ route('orders.index') }}" class="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted hover:text-heading transition">
-                <span>← Trở về danh sách</span>
-            </a>
+            <div class="flex items-center gap-3">
+                <a href="{{ route('orders.invoice', $order->order_code) }}" target="_blank" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition shadow-sm dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                    <span>In / Xuất hóa đơn PDF</span>
+                </a>
+                <a href="{{ route('orders.index') }}" class="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted hover:text-heading transition">
+                    <span>← Trở về danh sách</span>
+                </a>
+            </div>
         </div>
 
         <div class="space-y-6">
@@ -87,6 +93,27 @@
                     </div>
                 </div>
 
+                @if ($order->ghn_order_code)
+                    <div class="mt-6 p-4 rounded-2xl border border-orange-200 bg-orange-50/50 dark:border-orange-900/40 dark:bg-orange-950/20 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div class="space-y-1">
+                            <div class="flex items-center gap-2">
+                                <span class="rounded bg-orange-500/10 px-2 py-0.5 text-[10px] font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wider">Vận đơn GHN Express</span>
+                                <span class="font-mono font-bold text-heading">#{{ $order->ghn_order_code }}</span>
+                            </div>
+                            <div class="text-xs text-muted">
+                                Trạng thái vận chuyển: <strong class="text-heading">{{ $order->ghn_status_label }}</strong>
+                                @if ($order->ghn_expected_delivery_at)
+                                    • Dự kiến giao: {{ $order->ghn_expected_delivery_at->format('d/m/Y') }}
+                                @endif
+                            </div>
+                        </div>
+                        <a href="{{ $order->ghn_tracking_url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center gap-1.5 rounded-xl bg-orange-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-orange-700 transition">
+                            <span>Tra cứu hành trình GHN</span>
+                            <span>↗</span>
+                        </a>
+                    </div>
+                @endif
+
                 @if (in_array($order->payment_method, ['vnpay', 'momo']) && $order->payment_status !== 'paid' && $order->order_status !== 'canceled')
                     <div class="mt-6 pt-5 border-t border-ui-border flex flex-col sm:flex-row items-center justify-between gap-4 bg-surface-alt/50 -mx-6 -mb-6 p-6 rounded-b-3xl">
                         <div class="text-xs text-muted">
@@ -118,7 +145,7 @@
                             <div class="flex items-center gap-4 min-w-0">
                                 <div class="size-14 rounded-xl border border-ui-border bg-surface-alt overflow-hidden shrink-0">
                                     @if ($item->variant && $item->variant->product && $item->variant->product->primaryImage)
-                                        <img src="{{ $item->variant->product->primaryImage->image_path }}" alt="{{ $item->product_name }}" class="size-full object-cover">
+                                        <img src="{{ $item->variant->product?->primary_image_url }}" alt="{{ $item->product_name }}" class="h-full w-full object-cover" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=400&q=80'">
                                     @else
                                         <div class="size-full flex items-center justify-center text-muted">
                                             <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>

@@ -10,6 +10,7 @@ use App\Models\ProductImage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
@@ -18,7 +19,7 @@ class ProductController extends Controller
 {
     public function index(Request $request): View|JsonResponse
     {
-        $query = Product::with(['category', 'images']);
+        $query = Product::with(['category', 'images', 'variants']);
 
         if ($request->filled('search')) {
             $search = $request->input('search');
@@ -49,54 +50,77 @@ class ProductController extends Controller
     public function create(): View
     {
         $categories = Category::active()->get();
+
         return view('admin.products.create', compact('categories'));
     }
 
     public function store(ProductRequest $request): RedirectResponse|JsonResponse
     {
-        $data = $request->validated();
-        $price = $data['price'] ?? 0;
-        $stock = $data['stock_quantity'] ?? 0;
-        $data['base_price'] = $price;
-        $data['slug'] = Str::slug($data['name']) . '-' . Str::random(5);
-        $data['sku'] = $data['sku'] ?? 'FURN-' . strtoupper(Str::random(8));
-        $data['is_featured'] = $request->boolean('is_featured', false);
-        $data['is_active'] = $request->boolean('is_active', true);
+        try {
+            $data = $request->validated();
+            $price = (float) ($data['price'] ?? 0);
+            $stock = (int) ($data['stock_quantity'] ?? 0);
+            $salePrice = $this->normalizeSalePrice($data['sale_price'] ?? null, $price);
 
-        $product = Product::create($data);
+            $payload = [
+                'category_id' => $data['category_id'],
+                'name' => $data['name'],
+                'slug' => Str::slug($data['name']).'-'.Str::random(5),
+                'sku' => $data['sku'] ?? ('FURN-'.strtoupper(Str::random(8))),
+                'short_description' => $data['short_description'] ?? null,
+                'description' => $data['description'] ?? null,
+                'base_price' => $price,
+                'sale_price' => $salePrice,
+                'material' => $data['material'] ?? null,
+                'dimensions' => $data['dimensions'] ?? null,
+                'color' => $data['color'] ?? null,
+                'is_featured' => $request->boolean('is_featured', false),
+                'is_active' => $request->boolean('is_active', true),
+            ];
 
-        // Create default variant for frontend catalog, cart, and checkout compatibility
-        $product->variants()->create([
-            'sku' => $product->sku . '-DEF',
-            'color' => $data['color'] ?? 'Tiêu chuẩn',
-            'material' => $data['material'] ?? 'Gỗ tự nhiên',
-            'size' => $data['dimensions'] ?? 'Tiêu chuẩn',
-            'price' => $price,
-            'stock' => $stock,
-        ]);
+            $product = Product::create($payload);
 
-        // Handle multiple image uploads
-        if ($request->hasFile('images')) {
-            $isFirst = true;
-            foreach ($request->file('images') as $file) {
-                $path = $file->store('products', 'public');
-                $product->images()->create([
-                    'image_path' => $path,
-                    'is_primary' => $isFirst,
-                ]);
-                $isFirst = false;
+            $product->variants()->create([
+                'sku' => $product->sku.'-DEF',
+                'color' => $data['color'] ?? 'Tiêu chuẩn',
+                'material' => $data['material'] ?? 'Gỗ tự nhiên',
+                'size' => $data['dimensions'] ?? 'Tiêu chuẩn',
+                'price' => $price,
+                'stock' => $stock,
+            ]);
+
+            $this->attachUploadedImages($product, $request);
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Lưu sản phẩm thành công!',
+                    'data' => $product->load(['images', 'variants']),
+                ], 201);
             }
-        }
 
-        if ($request->wantsJson()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Tạo sản phẩm nội thất thành công!',
-                'data' => $product->load(['images', 'variants']),
-            ], 201);
-        }
+            return redirect()
+                ->route('admin.products.index')
+                ->with('success', 'Lưu sản phẩm thành công!');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::warning('Product store validation failed', [
+                'errors' => $e->errors(),
+                'input' => $request->except(['images', '_token']),
+            ]);
 
-        return redirect()->route('admin.products.index')->with('success', 'Tạo sản phẩm mới thành công!');
+            throw $e;
+        } catch (\Throwable $e) {
+            Log::error('Product store failed', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            $message = 'Không thể lưu sản phẩm: '.$e->getMessage();
+
+            return $request->wantsJson()
+                ? response()->json(['success' => false, 'message' => $message], 500)
+                : back()->withInput()->with('error', $message);
+        }
     }
 
     public function edit(Product $product): View
@@ -109,87 +133,123 @@ class ProductController extends Controller
 
     public function update(ProductRequest $request, Product $product): RedirectResponse|JsonResponse
     {
-        $data = $request->validated();
-        if (isset($data['price'])) {
-            $data['base_price'] = $data['price'];
-        }
-        $data['is_featured'] = $request->boolean('is_featured', false);
-        $data['is_active'] = $request->boolean('is_active', true);
+        try {
+            $data = $request->validated();
 
-        $product->update($data);
+            $price = array_key_exists('price', $data)
+                ? (float) $data['price']
+                : (float) $product->base_price;
 
-        // Update default variant or create if not exists
-        $firstVariant = $product->variants()->first();
-        if ($firstVariant) {
-            $variantUpdates = [];
-            if (isset($data['price'])) $variantUpdates['price'] = $data['price'];
-            if (isset($data['stock_quantity'])) $variantUpdates['stock'] = $data['stock_quantity'];
-            if (isset($data['color'])) $variantUpdates['color'] = $data['color'];
-            if (isset($data['material'])) $variantUpdates['material'] = $data['material'];
-            if (isset($data['dimensions'])) $variantUpdates['size'] = $data['dimensions'];
-            $firstVariant->update($variantUpdates);
-        } else {
-            $product->variants()->create([
-                'sku' => $product->sku . '-DEF',
-                'color' => $data['color'] ?? 'Tiêu chuẩn',
-                'material' => $data['material'] ?? 'Gỗ tự nhiên',
-                'size' => $data['dimensions'] ?? 'Tiêu chuẩn',
-                'price' => $data['price'] ?? $product->base_price,
-                'stock' => $data['stock_quantity'] ?? 0,
+            $salePrice = array_key_exists('sale_price', $data)
+                ? $this->normalizeSalePrice($data['sale_price'], $price)
+                : $product->sale_price;
+
+            $stock = array_key_exists('stock_quantity', $data)
+                ? (int) $data['stock_quantity']
+                : $product->totalStock();
+
+            $product->update([
+                'category_id' => $data['category_id'] ?? $product->category_id,
+                'name' => $data['name'] ?? $product->name,
+                'short_description' => $data['short_description'] ?? $product->short_description,
+                'description' => $data['description'] ?? $product->description,
+                'base_price' => $price,
+                'sale_price' => $salePrice,
+                'material' => $data['material'] ?? $product->material,
+                'dimensions' => $data['dimensions'] ?? $product->dimensions,
+                'color' => $data['color'] ?? $product->color,
+                'sku' => $data['sku'] ?? $product->sku,
+                'is_featured' => $request->boolean('is_featured', false),
+                'is_active' => $request->boolean('is_active', true),
             ]);
-        }
 
-        // Handle uploaded new images
-        if ($request->hasFile('images')) {
-            $hasPrimary = $product->images()->where('is_primary', true)->exists();
-            $isFirst = !$hasPrimary;
-
-            foreach ($request->file('images') as $file) {
-                $path = $file->store('products', 'public');
-                $product->images()->create([
-                    'image_path' => $path,
-                    'is_primary' => $isFirst,
+            $firstVariant = $product->variants()->first();
+            if ($firstVariant) {
+                $firstVariant->update([
+                    'price' => $price,
+                    'stock' => $stock,
+                    'color' => $data['color'] ?? $firstVariant->color,
+                    'material' => $data['material'] ?? $firstVariant->material,
+                    'size' => $data['dimensions'] ?? $firstVariant->size,
                 ]);
-                $isFirst = false;
+            } else {
+                $product->variants()->create([
+                    'sku' => $product->sku.'-DEF',
+                    'color' => $data['color'] ?? 'Tiêu chuẩn',
+                    'material' => $data['material'] ?? 'Gỗ tự nhiên',
+                    'size' => $data['dimensions'] ?? 'Tiêu chuẩn',
+                    'price' => $price,
+                    'stock' => $stock,
+                ]);
             }
-        }
 
-        if ($request->wantsJson()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Cập nhật sản phẩm thành công!',
-                'data' => $product->load('images'),
+            // Only process when admin actually uploaded valid files — keep existing images otherwise
+            $this->attachUploadedImages($product, $request);
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Cập nhật sản phẩm thành công!',
+                    'data' => $product->load(['images', 'variants']),
+                ]);
+            }
+
+            return redirect()
+                ->route('admin.products.edit', $product)
+                ->with('success', 'Cập nhật sản phẩm thành công!');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::warning('Product update validation failed', [
+                'product_id' => $product->id,
+                'errors' => $e->errors(),
             ]);
-        }
 
-        return redirect()->route('admin.products.index')->with('success', 'Cập nhật sản phẩm thành công!');
+            throw $e;
+        } catch (\Throwable $e) {
+            Log::error('Product update failed', [
+                'product_id' => $product->id,
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            $message = 'Cập nhật sản phẩm thất bại: '.$e->getMessage();
+
+            return $request->wantsJson()
+                ? response()->json(['success' => false, 'message' => $message], 500)
+                : back()->withInput()->with('error', $message);
+        }
     }
 
     public function destroy(Request $request, Product $product): RedirectResponse|JsonResponse
     {
-        foreach ($product->images as $image) {
-            if ($image->image_path && Storage::disk('public')->exists($image->image_path)) {
-                Storage::disk('public')->delete($image->image_path);
+        try {
+            foreach ($product->images as $image) {
+                $this->deletePictureFile($image->image_path);
             }
+
+            $product->delete();
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Đã xóa sản phẩm thành công.',
+                ]);
+            }
+
+            return redirect()->route('admin.products.index')->with('success', 'Đã xóa sản phẩm thành công.');
+        } catch (\Throwable $e) {
+            Log::error('Product destroy failed', ['product_id' => $product->id, 'error' => $e->getMessage()]);
+            $message = 'Không thể xóa sản phẩm: '.$e->getMessage();
+
+            return $request->wantsJson()
+                ? response()->json(['success' => false, 'message' => $message], 500)
+                : back()->with('error', $message);
         }
-
-        $product->delete();
-
-        if ($request->wantsJson()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Đã xóa sản phẩm thành công.',
-            ]);
-        }
-
-        return redirect()->route('admin.products.index')->with('success', 'Đã xóa sản phẩm thành công.');
     }
 
     public function setPrimaryImage(ProductImage $image): RedirectResponse|JsonResponse
     {
         $productId = $image->product_id;
 
-        // Reset all images of this product
         ProductImage::where('product_id', $productId)->update(['is_primary' => false]);
         $image->update(['is_primary' => true]);
 
@@ -198,22 +258,117 @@ class ProductController extends Controller
 
     public function deleteImage(ProductImage $image): RedirectResponse|JsonResponse
     {
-        if ($image->image_path && Storage::disk('public')->exists($image->image_path)) {
-            Storage::disk('public')->delete($image->image_path);
-        }
+        try {
+            $this->deletePictureFile($image->image_path);
 
-        $productId = $image->product_id;
-        $wasPrimary = $image->is_primary;
-        $image->delete();
+            $productId = $image->product_id;
+            $wasPrimary = $image->is_primary;
+            $image->delete();
 
-        // If deleted image was primary, set the next one as primary
-        if ($wasPrimary) {
-            $nextImage = ProductImage::where('product_id', $productId)->first();
-            if ($nextImage) {
-                $nextImage->update(['is_primary' => true]);
+            if ($wasPrimary) {
+                $nextImage = ProductImage::where('product_id', $productId)->first();
+                if ($nextImage) {
+                    $nextImage->update(['is_primary' => true]);
+                }
             }
+
+            return back()->with('success', 'Đã xóa ảnh sản phẩm.');
+        } catch (\Throwable $e) {
+            Log::error('Delete product image failed', ['image_id' => $image->id, 'error' => $e->getMessage()]);
+
+            return back()->with('error', 'Không thể xóa ảnh: '.$e->getMessage());
+        }
+    }
+
+    /**
+     * Attach only valid uploaded files. Empty/null file inputs are ignored
+     * so existing images stay intact when admin doesn't pick new files.
+     */
+    private function attachUploadedImages(Product $product, Request $request): void
+    {
+        if (! $request->hasFile('images')) {
+            return;
         }
 
-        return back()->with('success', 'Đã xóa ảnh sản phẩm.');
+        $files = array_values(array_filter(
+            (array) $request->file('images'),
+            static fn ($file) => $file !== null && $file->isValid()
+        ));
+
+        if ($files === []) {
+            return;
+        }
+
+        $hasPrimary = $product->images()->where('is_primary', true)->exists();
+        $isFirst = ! $hasPrimary;
+        $sort = (int) $product->images()->max('sort_order') + 1;
+
+        foreach ($files as $file) {
+            $path = $this->storePicture($file);
+            $product->images()->create([
+                'image_path' => $path,
+                'is_primary' => $isFirst,
+                'sort_order' => $sort++,
+            ]);
+            $isFirst = false;
+        }
+    }
+
+    private function normalizeSalePrice(mixed $salePrice, float $basePrice): ?float
+    {
+        if ($salePrice === null || $salePrice === '') {
+            return null;
+        }
+
+        $value = (float) $salePrice;
+        if ($value <= 0 || $value >= $basePrice) {
+            return null;
+        }
+
+        return $value;
+    }
+
+    /**
+     * Save uploaded image into storage/picture (master folder).
+     */
+    private function storePicture(\Illuminate\Http\UploadedFile $file): string
+    {
+        $dir = storage_path('picture');
+        if (! is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+
+        $original = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+        $extension = strtolower($file->getClientOriginalExtension() ?: 'jpg');
+        $base = Str::slug($original) ?: 'product';
+        $filename = $base.'-'.Str::lower(Str::random(6)).'.'.$extension;
+
+        while (is_file($dir.DIRECTORY_SEPARATOR.$filename)) {
+            $filename = $base.'-'.Str::lower(Str::random(6)).'.'.$extension;
+        }
+
+        $file->move($dir, $filename);
+
+        return 'picture/'.$filename;
+    }
+
+    private function deletePictureFile(?string $imagePath): void
+    {
+        if (! $imagePath) {
+            return;
+        }
+
+        if (Str::startsWith($imagePath, 'picture/')) {
+            $full = storage_path('picture/'.basename($imagePath));
+            if (is_file($full)) {
+                @unlink($full);
+            }
+
+            return;
+        }
+
+        if (Storage::disk('public')->exists($imagePath)) {
+            Storage::disk('public')->delete($imagePath);
+        }
     }
 }

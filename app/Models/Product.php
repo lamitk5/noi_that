@@ -20,6 +20,7 @@ class Product extends Model
         'short_description',
         'description',
         'base_price',
+        'sale_price',
         'material',
         'dimensions',
         'color',
@@ -33,6 +34,7 @@ class Product extends Model
     {
         return [
             'base_price' => 'decimal:2',
+            'sale_price' => 'decimal:2',
             'is_featured' => 'boolean',
             'is_active' => 'boolean',
             'weight' => 'decimal:2',
@@ -70,6 +72,50 @@ class Product extends Model
             'id',
             'id'
         );
+    }
+
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(Review::class)->latest();
+    }
+
+    public function approvedReviews(): HasMany
+    {
+        return $this->hasMany(Review::class)->where('is_approved', true)->latest();
+    }
+
+    public function wishlists(): HasMany
+    {
+        return $this->hasMany(Wishlist::class);
+    }
+
+    public function isWishlistedBy(?User $user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        return $this->wishlists()->where('user_id', $user->id)->exists();
+    }
+
+    public function averageRating(): float
+    {
+        if ($this->relationLoaded('reviews')) {
+            $approved = $this->reviews->where('is_approved', true);
+            return $approved->count() > 0 ? round((float) $approved->avg('rating'), 1) : 5.0;
+        }
+
+        $avg = $this->approvedReviews()->avg('rating');
+        return $avg ? round((float) $avg, 1) : 5.0;
+    }
+
+    public function reviewsCount(): int
+    {
+        if ($this->relationLoaded('reviews')) {
+            return $this->reviews->where('is_approved', true)->count();
+        }
+
+        return $this->approvedReviews()->count();
     }
 
     public const LOW_STOCK_THRESHOLD = 5;
@@ -127,9 +173,30 @@ class Product extends Model
         $this->attributes['base_price'] = $value;
     }
 
+    public function getIsOnSaleAttribute(): bool
+    {
+        return $this->sale_price !== null
+            && (float) $this->sale_price > 0
+            && (float) $this->sale_price < (float) $this->base_price;
+    }
+
     public function getFinalPriceAttribute(): float
     {
-        return (float) $this->base_price;
+        return $this->is_on_sale ? (float) $this->sale_price : (float) $this->base_price;
+    }
+
+    public function getDiscountPercentAttribute(): int
+    {
+        if (! $this->is_on_sale) {
+            return 0;
+        }
+
+        $base = (float) $this->base_price;
+        if ($base <= 0) {
+            return 0;
+        }
+
+        return (int) round((1 - ((float) $this->sale_price / $base)) * 100);
     }
 
     public function getStockQuantityAttribute(): int
@@ -144,7 +211,8 @@ class Product extends Model
 
     public function getPrimaryImageUrlAttribute(): string
     {
-        return $this->primaryImage?->image_path ?? 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=800&q=80';
+        return $this->primaryImage?->url
+            ?? 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=800&q=80';
     }
 
     public function scopeBestSelling($query, int $limit = 4)
