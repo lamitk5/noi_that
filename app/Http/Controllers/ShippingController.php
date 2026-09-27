@@ -31,22 +31,22 @@ class ShippingController extends Controller
     /**
      * Get list of districts by province ID from GHN.
      */
-    public function getDistricts(int $provinceId): JsonResponse
+    public function getDistricts(mixed $provinceId): JsonResponse
     {
         return response()->json([
             'success' => true,
-            'data' => $this->ghnService->getDistricts($provinceId),
+            'data' => $this->ghnService->getDistricts((int) $provinceId),
         ]);
     }
 
     /**
      * Get list of wards by district ID from GHN.
      */
-    public function getWards(int $districtId): JsonResponse
+    public function getWards(mixed $districtId): JsonResponse
     {
         return response()->json([
             'success' => true,
-            'data' => $this->ghnService->getWards($districtId),
+            'data' => $this->ghnService->getWards((int) $districtId),
         ]);
     }
 
@@ -81,13 +81,15 @@ class ShippingController extends Controller
         ]);
 
         $subtotal = $this->cartService->getSubtotal();
-        $totalPrice = $subtotal + $fee;
+        $discountAmount = $this->cartService->getDiscountAmount();
+        $totalPrice = max(0.0, $subtotal + $fee - $discountAmount);
 
         return response()->json([
             'success' => true,
             'shipping_fee' => $fee,
             'formatted_fee' => number_format($fee, 0, ',', '.') . '₫',
             'subtotal' => $subtotal,
+            'discount_amount' => $discountAmount,
             'total_price' => $totalPrice,
             'formatted_total' => number_format($totalPrice, 0, ',', '.') . '₫',
         ]);

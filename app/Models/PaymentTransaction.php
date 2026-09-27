@@ -12,12 +12,14 @@ class PaymentTransaction extends Model
 
     protected $fillable = [
         'order_id',
+        'gateway',
         'provider',
         'provider_reference',
         'request_id',
         'provider_transaction_id',
         'amount',
         'status',
+        'message',
         'response_code',
         'paid_at',
         'failed_at',

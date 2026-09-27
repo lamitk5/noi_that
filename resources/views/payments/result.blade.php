@@ -74,7 +74,7 @@
 
                 <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
                     <a
-                        href="{{ route('orders.show', $order->order_code) }}"
+                        href="{{ route('checkout.success', $order->order_code) }}"
                         class="w-full sm:w-auto inline-flex items-center justify-center rounded-full bg-primary px-7 py-3 text-xs font-bold uppercase tracking-wider text-primary-foreground shadow-lg shadow-primary/20 transition hover:-translate-y-0.5"
                     >
                         Xem chi tiết đơn hàng

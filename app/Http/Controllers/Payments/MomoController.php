@@ -46,33 +46,37 @@ class MomoController extends Controller
         }
 
         try {
-            $reference = 'MOMO_' . $order->id . '_' . time() . '_' . strtoupper(Str::random(4));
-            $requestId = (string) Str::uuid();
+            $reference = 'MOMO'.$order->id.time().strtoupper(Str::random(4));
+            $requestId = 'REQ'.strtoupper(Str::random(20));
 
             $transaction = PaymentTransaction::create([
-                'order_id' => $order->id,
-                'provider' => 'momo',
+                'order_id'           => $order->id,
+                'provider'           => 'momo',
                 'provider_reference' => $reference,
-                'request_id' => $requestId,
-                'amount' => $order->total_price,
-                'status' => 'pending',
+                'request_id'         => $requestId,
+                'amount'             => $order->total_price,
+                'status'             => 'pending',
             ]);
 
             $payUrl = $this->momoService->createPayment($order, $transaction);
 
             return redirect()->away($payUrl);
         } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('MoMo createPayment failed: '.$e->getMessage(), [
+                'order_code' => $order->order_code,
+                'order_id'   => $order->id,
+            ]);
             return redirect()
                 ->route('checkout.success', $order->order_code)
-                ->with('error', $e->getMessage());
+                ->with('error', 'Không thể kết nối cổng thanh toán MoMo: '.$e->getMessage().'. Đơn hàng đã được ghi nhận, vui lòng liên hệ hỗ trợ.');
         }
     }
 
     public function return(Request $request): View
     {
-        $orderId = $request->query('orderId');
+        $orderId     = $request->query('orderId');
         $transaction = null;
-        $order = null;
+        $order       = null;
 
         if ($orderId) {
             $transaction = PaymentTransaction::where('provider', 'momo')
@@ -83,14 +87,38 @@ class MomoController extends Controller
         }
 
         $isValidSignature = $this->momoService->verifyCallbackSignature($request->query());
-        $resultCode = $request->query('resultCode');
+        $resultCode       = $request->query('resultCode');
+
+        if ($isValidSignature && (string) $resultCode === '0' && $transaction && $transaction->status === 'pending') {
+            DB::transaction(function () use ($transaction, $request) {
+                $transaction->update([
+                    'status'                  => 'success',
+                    'provider_transaction_id' => $request->query('transId'),
+                    'response_code'           => '0',
+                    'paid_at'                 => now(),
+                ]);
+                $transaction->order->update([
+                    'payment_status' => Order::PAYMENT_PAID,
+                    'order_status'   => Order::STATUS_SHIPPING,
+                ]);
+            });
+            $order?->refresh();
+            $transaction->refresh();
+        } elseif ($isValidSignature && $resultCode !== null && (string) $resultCode !== '0' && $transaction && $transaction->status === 'pending') {
+            $transaction->update([
+                'status'        => 'failed',
+                'response_code' => (string) $resultCode,
+                'failed_at'     => now(),
+            ]);
+            $transaction->refresh();
+        }
 
         return view('payments.result', [
-            'provider' => 'MoMo',
-            'order' => $order,
-            'transaction' => $transaction,
+            'provider'         => 'MoMo',
+            'order'            => $order,
+            'transaction'      => $transaction,
             'isValidSignature' => $isValidSignature,
-            'responseCode' => $resultCode,
+            'responseCode'     => $resultCode,
         ]);
     }
 
@@ -106,7 +134,7 @@ class MomoController extends Controller
             return response()->noContent(400);
         }
 
-        $orderId = $data['orderId'] ?? null;
+        $orderId     = $data['orderId'] ?? null;
         $transaction = PaymentTransaction::where('provider', 'momo')
             ->where('provider_reference', $orderId)
             ->with('order')
@@ -126,25 +154,73 @@ class MomoController extends Controller
 
         DB::transaction(function () use ($data, $transaction) {
             $resultCode = (int) ($data['resultCode'] ?? -1);
-            $transId = $data['transId'] ?? null;
+            $transId    = $data['transId'] ?? null;
 
             if ($resultCode === 0) {
                 $transaction->update([
-                    'status' => 'success',
+                    'status'                  => 'success',
                     'provider_transaction_id' => $transId,
-                    'response_code' => (string) $resultCode,
-                    'paid_at' => now(),
+                    'response_code'           => (string) $resultCode,
+                    'paid_at'                 => now(),
                 ]);
-                $transaction->order->update(['payment_status' => 'paid']);
+                $transaction->order->update([
+                    'payment_status' => Order::PAYMENT_PAID,
+                    'order_status'   => Order::STATUS_SHIPPING,
+                ]);
             } else {
                 $transaction->update([
-                    'status' => 'failed',
+                    'status'        => 'failed',
                     'response_code' => (string) $resultCode,
-                    'failed_at' => now(),
+                    'failed_at'     => now(),
                 ]);
             }
         });
 
         return response()->noContent(204);
+    }
+
+    /**
+     * Dev mock: Giả lập thanh toán MoMo thành công (chỉ dùng khi MOMO_MOCK=true hoặc APP_ENV=local).
+     */
+    public function mockConfirm(Request $request): RedirectResponse|View
+    {
+        abort_unless(config('services.momo.mock', false) || app()->isLocal(), 403, 'Mock chỉ hoạt động ở môi trường local.');
+
+        $orderCode = $request->query('orderCode');
+        $reference = $request->query('reference');
+
+        if (! $orderCode || ! $reference) {
+            return redirect()->route('orders.track')->with('error', 'Tham số mock không hợp lệ.');
+        }
+
+        $transaction = PaymentTransaction::where('provider', 'momo')
+            ->where('provider_reference', $reference)
+            ->with('order')
+            ->first();
+
+        if ($transaction && $transaction->status === 'pending') {
+            DB::transaction(function () use ($transaction) {
+                $transaction->update([
+                    'status'                  => 'success',
+                    'provider_transaction_id' => 'MOCK_'.strtoupper(Str::random(10)),
+                    'response_code'           => '0',
+                    'paid_at'                 => now(),
+                ]);
+                $transaction->order->update([
+                    'payment_status' => Order::PAYMENT_PAID,
+                    'order_status'   => Order::STATUS_SHIPPING,
+                ]);
+            });
+        }
+
+        $order = $transaction?->order?->fresh();
+
+        return view('payments.result', [
+            'provider'         => 'MoMo (Dev Mock)',
+            'order'            => $order,
+            'transaction'      => $transaction?->fresh(),
+            'isValidSignature' => true,
+            'responseCode'     => '0',
+        ]);
     }
 }

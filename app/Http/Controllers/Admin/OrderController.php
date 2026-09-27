@@ -49,51 +49,72 @@ class OrderController extends Controller
 
     public function show(Order $order): View|JsonResponse
     {
-        $order->load(['items.variant', 'user']);
+        $order->load(['items.variant.product', 'user']);
 
         return view('admin.orders.show', compact('order'));
     }
 
     public function updateStatus(Request $request, Order $order): RedirectResponse|JsonResponse
     {
-        $validated = $request->validate([
-            'order_status' => ['required', 'in:pending,confirmed,shipping,completed,cancelled'],
-            'payment_status' => ['required', 'in:pending,paid,failed'],
-        ]);
-
-        $oldStatus = $order->order_status;
-        $newStatus = $validated['order_status'];
-
-        DB::transaction(function () use ($order, $validated, $oldStatus, $newStatus) {
-            // If cancelling an order that was not cancelled, restore inventory
-            if ($oldStatus !== Order::STATUS_CANCELLED && $newStatus === Order::STATUS_CANCELLED) {
-                foreach ($order->items as $item) {
-                    if ($item->product_variant_id) {
-                        \App\Models\ProductVariant::where('id', $item->product_variant_id)->increment('stock', $item->quantity);
-                    }
-                }
-            }
-
-            // If reactivating a cancelled order, re-decrement inventory
-            if ($oldStatus === Order::STATUS_CANCELLED && $newStatus !== Order::STATUS_CANCELLED) {
-                foreach ($order->items as $item) {
-                    if ($item->product_variant_id) {
-                        \App\Models\ProductVariant::where('id', $item->product_variant_id)->decrement('stock', $item->quantity);
-                    }
-                }
-            }
-
-            $order->update($validated);
-        });
-
-        if ($request->wantsJson()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Cập nhật trạng thái đơn hàng thành công!',
-                'order' => $order->fresh(),
+        try {
+            $validated = $request->validate([
+                'order_status' => ['required', 'in:pending,confirmed,shipping,completed,cancelled,canceled'],
+                'payment_status' => ['required', 'in:pending,paid,failed'],
+            ], [
+                'order_status.required' => 'Vui lòng chọn trạng thái đơn hàng.',
+                'order_status.in' => 'Trạng thái đơn hàng không hợp lệ.',
+                'payment_status.required' => 'Vui lòng chọn trạng thái thanh toán.',
+                'payment_status.in' => 'Trạng thái thanh toán không hợp lệ.',
             ]);
-        }
 
-        return redirect()->route('admin.orders.show', $order)->with('success', 'Cập nhật trạng thái đơn hàng thành công!');
+            $oldStatus = $order->order_status;
+            $newStatus = $validated['order_status'];
+
+            $isOldCancelled = in_array($oldStatus, ['canceled', 'cancelled']);
+            $isNewCancelled = in_array($newStatus, ['canceled', 'cancelled']);
+
+            DB::transaction(function () use ($order, $validated, $isOldCancelled, $isNewCancelled, $newStatus) {
+                if (!$isOldCancelled && $isNewCancelled) {
+                    foreach ($order->items as $item) {
+                        if ($item->variant) {
+                            $item->variant->increment('stock', $item->quantity);
+                        }
+                    }
+                }
+
+                if ($isOldCancelled && !$isNewCancelled) {
+                    foreach ($order->items as $item) {
+                        if ($item->variant) {
+                            $item->variant->decrement('stock', $item->quantity);
+                        }
+                    }
+                }
+
+                $validated['order_status'] = $isNewCancelled ? 'canceled' : $newStatus;
+                $order->update($validated);
+            });
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Cập nhật trạng thái đơn hàng thành công!',
+                    'order' => $order->fresh(),
+                ]);
+            }
+
+            return redirect()->route('admin.orders.show', $order)->with('success', 'Cập nhật trạng thái đơn hàng thành công!');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Order status update failed', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+            ]);
+            $message = 'Cập nhật trạng thái đơn hàng thất bại: '.$e->getMessage();
+
+            return $request->wantsJson()
+                ? response()->json(['success' => false, 'message' => $message], 500)
+                : back()->with('error', $message);
+        }
     }
 }

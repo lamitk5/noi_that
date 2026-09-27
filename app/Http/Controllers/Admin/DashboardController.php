@@ -12,27 +12,26 @@ use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
-    /**
-     * Display admin overview metrics.
-     */
     public function index(Request $request): View|JsonResponse
     {
-        $totalRevenue = (float) Order::where('order_status', '!=', Order::STATUS_CANCELLED)
+        $totalRevenue = (float) Order::whereNotIn('order_status', ['canceled', 'cancelled'])
             ->where(function ($q) {
-                $q->where('payment_status', Order::PAYMENT_PAID)
-                    ->orWhere('order_status', Order::STATUS_COMPLETED);
+                $q->where('payment_status', 'paid')
+                    ->orWhere('order_status', 'completed');
             })
             ->sum('total_price');
 
         $totalOrders = Order::count();
-        $pendingOrders = Order::where('order_status', Order::STATUS_PENDING)->count();
+        $pendingOrders = Order::where('order_status', 'pending')->count();
         $totalProducts = Product::count();
-        $lowStockCount = \App\Models\ProductVariant::where('stock', '<=', 5)->count();
+        $lowStockCount = Product::whereHas('variants', function ($q) {
+            $q->where('stock', '<=', 5);
+        })->count();
         $totalCustomers = User::where('role', 'customer')->count();
 
         $recentOrders = Order::with('items')
             ->latest()
-            ->take(10)
+            ->take(8)
             ->get();
 
         $lowStockProducts = Product::with(['category', 'variants'])
@@ -42,7 +41,10 @@ class DashboardController extends Controller
             ->take(5)
             ->get();
 
+        $user = $request->user();
+
         $data = compact(
+            'user',
             'totalRevenue',
             'totalOrders',
             'pendingOrders',
@@ -60,6 +62,6 @@ class DashboardController extends Controller
             ]);
         }
 
-        return view('admin.dashboard', $data);
+        return app(AnalyticsController::class)->index($request);
     }
 }

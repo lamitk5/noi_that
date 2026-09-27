@@ -16,14 +16,18 @@ class CartController extends Controller
 
     public function index(Request $request): View|JsonResponse
     {
+        $this->cartService->setBuyNowMode(false);
         $items = $this->cartService->getItems();
         $cart = $this->cartService->getCart();
         $subtotal = $this->cartService->getSubtotal();
         $shippingFee = $this->cartService->getShippingFee();
+        $coupon = $this->cartService->getCoupon();
+        $discountAmount = $this->cartService->getDiscountAmount();
+        $availableCoupons = $this->cartService->getAvailableCoupons();
         $total = $this->cartService->getTotal();
         $count = $this->cartService->count();
 
-        $data = compact('cart', 'items', 'subtotal', 'shippingFee', 'total', 'count');
+        $data = compact('cart', 'items', 'subtotal', 'shippingFee', 'coupon', 'discountAmount', 'availableCoupons', 'total', 'count');
 
         if ($request->wantsJson()) {
             return response()->json(['success' => true, 'data' => $data]);
@@ -57,7 +61,49 @@ class CartController extends Controller
         $variant = $variantId
             ? ProductVariant::where('product_id', $product->id)->find($variantId)
             : null;
+        $isBuyNow = (bool) $request->input('buy_now', false);
 
+        // Luồng Mua nhanh: lưu phiên mua ngay riêng, KHÔNG thêm vào giỏ hàng
+        if ($isBuyNow) {
+            try {
+                if (! $variant) {
+                    $variant = $product->variants()->where('stock', '>', 0)->first();
+                }
+
+                if (! $variant) {
+                    throw new \InvalidArgumentException('Sản phẩm chưa có biến thể khả dụng.');
+                }
+
+                if (! $product->is_active) {
+                    throw new \InvalidArgumentException('Sản phẩm hiện không khả dụng.');
+                }
+
+                if ($quantity > $variant->stock) {
+                    throw new \InvalidArgumentException("Số lượng yêu cầu ({$quantity}) vượt quá số lượng còn lại trong kho ({$variant->stock}).");
+                }
+
+                $this->cartService->setBuyNowItem($product, $quantity, $variant);
+
+                if ($request->wantsJson()) {
+                    return response()->json([
+                        'success' => true,
+                        'redirect_url' => route('checkout.index', ['buy_now' => 1]),
+                        'message' => 'Đang chuyển đến trang thanh toán...',
+                    ]);
+                }
+
+                return redirect()->route('checkout.index', ['buy_now' => 1]);
+            } catch (\InvalidArgumentException $e) {
+                if ($request->wantsJson()) {
+                    return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+                }
+
+                return redirect()->back()->with('error', $e->getMessage());
+            }
+        }
+
+        // Luồng Thêm vào giỏ hàng thông thường
+        $this->cartService->setBuyNowMode(false);
         try {
             $this->cartService->add($product, $quantity, $variant);
             $label = $product->name;
@@ -79,6 +125,67 @@ class CartController extends Controller
 
             return redirect()->back()->with('error', $e->getMessage());
         }
+    }
+
+    public function applyCoupon(Request $request): RedirectResponse|JsonResponse
+    {
+        $request->validate([
+            'coupon_code' => ['nullable', 'string', 'max:50'],
+            'code' => ['nullable', 'string', 'max:50'],
+        ]);
+
+        $code = (string) ($request->input('coupon_code') ?? $request->input('code') ?? '');
+
+        if (trim($code) === '') {
+            $msg = 'Vui lòng nhập mã giảm giá.';
+            if ($request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $msg], 422);
+            }
+            return redirect()->back()->with('error', $msg);
+        }
+
+        try {
+            $coupon = $this->cartService->applyCoupon($code);
+            $discount = $this->cartService->getDiscountAmount();
+            $msg = 'Áp dụng mã giảm giá "'.$coupon['code'].'" thành công!';
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => $msg,
+                    'coupon' => $coupon,
+                    'discount_amount' => $discount,
+                    'subtotal' => $this->cartService->getSubtotal(),
+                    'shipping_fee' => $this->cartService->getShippingFee(),
+                    'total' => $this->cartService->getTotal(),
+                ]);
+            }
+
+            return redirect()->back()->with('success', $msg);
+        } catch (\InvalidArgumentException $e) {
+            if ($request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+            }
+
+            return redirect()->back()->with('error', $e->getMessage());
+        }
+    }
+
+    public function removeCoupon(Request $request): RedirectResponse|JsonResponse
+    {
+        $this->cartService->removeCoupon();
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Đã gỡ bỏ mã giảm giá.',
+                'subtotal' => $this->cartService->getSubtotal(),
+                'shipping_fee' => $this->cartService->getShippingFee(),
+                'total' => $this->cartService->getTotal(),
+            ]);
+        }
+
+        return redirect()->back()->with('success', 'Đã gỡ bỏ mã giảm giá.');
     }
 
     public function update(Request $request, string $cartKey): RedirectResponse|JsonResponse

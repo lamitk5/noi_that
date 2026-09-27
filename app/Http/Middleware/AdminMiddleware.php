@@ -14,14 +14,14 @@ class AdminMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (!Auth::check() || !Auth::user()->isAdmin()) {
+        if (!Auth::check() || (!Auth::user()->isAdmin() && !Auth::user()->isStaff())) {
             if ($request->expectsJson()) {
                 return response()->json([
                     'message' => 'Bạn không có quyền truy cập khu vực quản trị.',
                 ], 403);
             }
 
-            return redirect()->route('login')->with('error', 'Bạn cần đăng nhập với tài khoản Quản trị viên để truy cập.');
+            return redirect()->route('login')->with('error', 'Bạn cần đăng nhập với tài khoản quản trị hoặc nhân viên để truy cập.');
         }
 
         return $next($request);

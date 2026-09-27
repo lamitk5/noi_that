@@ -19,6 +19,7 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
+        'username',
         'name',
         'email',
         'password',
@@ -26,6 +27,10 @@ class User extends Authenticatable
         'phone',
         'address',
         'avatar',
+        'provider',
+        'provider_id',
+        'is_active',
+        'email_verified_at',
     ];
 
     /**
@@ -59,12 +64,34 @@ class User extends Authenticatable
         return $this->role === 'admin';
     }
 
+    public function isActive(): bool
+    {
+        return (bool) $this->is_active;
+    }
+
     /**
      * Check if user is a customer.
      */
     public function isCustomer(): bool
     {
         return $this->role === 'customer';
+    }
+
+    /**
+     * Check if user is staff or manager (admin area access).
+     */
+    public function isStaff(): bool
+    {
+        return in_array($this->role, ['staff', 'manager'], true);
+    }
+
+    /**
+     * Staff members (for chat assignment).
+     */
+    public static function staffList()
+    {
+        return static::whereIn('role', ['staff', 'manager'])->where('is_active', true)
+            ->orderBy('name')->get(['id', 'name', 'role']);
     }
 
     /**

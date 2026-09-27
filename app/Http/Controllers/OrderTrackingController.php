@@ -17,10 +17,13 @@ class OrderTrackingController extends Controller
         $order = null;
         $searched = false;
 
-        if ($request->filled(['order_number', 'customer_phone'])) {
+        $orderCode = $request->input('order_number') ?: $request->input('order_code');
+        $phone = $request->input('customer_phone');
+
+        if (!empty($orderCode) && !empty($phone)) {
             $searched = true;
-            $order = Order::where('order_code', trim($request->input('order_number')))
-                ->where('customer_phone', trim($request->input('customer_phone')))
+            $order = Order::where('order_code', trim((string) $orderCode))
+                ->where('customer_phone', trim((string) $phone))
                 ->with(['items.variant'])
                 ->first();
         }

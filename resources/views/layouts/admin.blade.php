@@ -1,86 +1,273 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-full">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@yield('title', 'Quản Trị Nội Thất - Admin Panel')</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
+    <title>@yield('title', 'Quản trị Mộc An')</title>
+
+    <link rel="preconnect" href="https://fonts.bunny.net">
+    <link href="https://fonts.bunny.net/css?family=be-vietnam-pro:300,400,500,600,700|playfair-display:500,600,700&display=swap" rel="stylesheet" />
+
+    <script>
+        (function () {
+            const savedTheme = localStorage.getItem('moc-an-theme') || 'wood';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        })();
+    </script>
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        .text-2xs { font-size: 0.625rem; line-height: 0.875rem; }
+
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+
+    @stack('styles')
+
+    <style media="print">
+        @page { margin: 12mm; }
+
+        /* Ẩn khung giao diện admin, chỉ giữ nội dung báo cáo */
+        aside,
+        header,
+        .no-print,
+        #admin-toast,
+        #admin-chat-badge { display: none !important; }
+
+        .print-only { display: block !important; }
+
+        html, body, main, .bg-page, .bg-surface {
+            background: #fff !important;
+        }
+
+        main { padding: 0 !important; }
+
+        * {
+            box-shadow: none !important;
+            text-shadow: none !important;
+        }
+
+        a[href]:after { content: none !important; }
+
+        .rounded-2xl, table, th, td, .border-ui-border, thead {
+            border-color: #d4d4d4 !important;
+        }
+
+        table { page-break-inside: auto; }
+        tr { page-break-inside: avoid; }
+        thead { display: table-header-group; }
+
+        .lg\:grid-cols-12, .lg\:grid-cols-3, .sm\:grid-cols-2, .sm\:grid-cols-4 {
+            display: block !important;
+        }
+
+        canvas { max-width: 100% !important; }
     </style>
 </head>
-<body class="bg-gray-100 text-gray-800 font-sans flex min-h-screen">
-    <!-- Sidebar -->
-    <aside class="w-64 bg-gray-900 text-white flex-shrink-0 flex flex-col justify-between">
-        <div>
-            <div class="p-6 border-b border-gray-800 flex items-center space-x-3">
-                <i class="fa-solid fa-couch text-amber-500 text-2xl"></i>
-                <span class="text-lg font-bold">FURNITURE ADMIN</span>
-            </div>
-            <nav class="p-4 space-y-1.5 text-sm">
-                <a href="{{ route('admin.dashboard') }}" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-gray-800 {{ request()->routeIs('admin.dashboard') ? 'bg-amber-800 text-white font-bold' : 'text-gray-300' }}">
-                    <i class="fa-solid fa-chart-line w-5"></i>
-                    <span>Tổng quan (Dashboard)</span>
-                </a>
-                <a href="{{ route('admin.categories.index') }}" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-gray-800 {{ request()->routeIs('admin.categories.*') ? 'bg-amber-800 text-white font-bold' : 'text-gray-300' }}">
-                    <i class="fa-solid fa-tags w-5"></i>
-                    <span>Quản lý Danh mục</span>
-                </a>
-                <a href="{{ route('admin.products.index') }}" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-gray-800 {{ request()->routeIs('admin.products.*') ? 'bg-amber-800 text-white font-bold' : 'text-gray-300' }}">
-                    <i class="fa-solid fa-couch w-5"></i>
-                    <span>Quản lý Sản phẩm</span>
-                </a>
-                <a href="{{ route('admin.orders.index') }}" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-gray-800 {{ request()->routeIs('admin.orders.*') ? 'bg-amber-800 text-white font-bold' : 'text-gray-300' }}">
-                    <i class="fa-solid fa-receipt w-5"></i>
-                    <span>Quản lý Đơn hàng</span>
-                </a>
-            </nav>
-        </div>
-
-        <div class="p-4 border-t border-gray-800">
-            <a href="{{ route('home') }}" target="_blank" class="block text-xs text-amber-400 hover:underline mb-2">
-                <i class="fa-solid fa-arrow-up-right-from-square mr-1"></i> Xem cửa hàng ngoài
-            </a>
-            <form action="{{ route('logout') }}" method="POST">
-                @csrf
-                <button type="submit" class="w-full text-left text-xs text-rose-400 hover:text-rose-300 py-1">
-                    <i class="fa-solid fa-right-from-bracket mr-1"></i> Đăng xuất
-                </button>
-            </form>
-        </div>
-    </aside>
-
-    <!-- Main Content Area -->
-    <div class="flex-grow flex flex-col min-w-0">
-        <!-- Top Bar -->
-        <header class="bg-white border-b h-16 flex items-center justify-between px-8">
-            <h2 class="font-bold text-gray-800 text-lg">@yield('page_title', 'Bảng Điều Khiển')</h2>
-            <div class="flex items-center space-x-3 text-sm">
-                <span class="font-medium text-gray-700">{{ auth()->user()->name }}</span>
-                <span class="bg-amber-100 text-amber-900 text-xs px-2.5 py-0.5 rounded-full font-bold">Admin</span>
-            </div>
-        </header>
-
-        <!-- Flash messages -->
-        <div class="px-8 mt-4">
-            @if(session('success'))
-                <div class="bg-emerald-50 border-l-4 border-emerald-500 text-emerald-700 p-3 rounded text-sm mb-3">
-                    {{ session('success') }}
+<body class="h-full bg-page font-sans text-body antialiased flex flex-col">
+    <div class="flex-1 flex min-h-screen">
+        <!-- Admin Sidebar -->
+        <aside class="w-64 shrink-0 border-r border-ui-border bg-surface flex flex-col justify-between">
+            <div>
+                <!-- Brand / Logo -->
+                <div class="h-16 flex items-center px-6 border-b border-ui-border">
+                    <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-2.5">
+                        <span class="size-8 rounded-lg bg-primary text-primary-foreground font-display font-bold text-sm grid place-items-center">M</span>
+                        <div class="flex flex-col">
+                            <span class="font-display font-bold text-base text-heading leading-none">Quản trị Mộc An</span>
+                            <span class="text-[10px] font-semibold uppercase tracking-wider text-accent mt-0.5">Bảng điều khiển</span>
+                        </div>
+                    </a>
                 </div>
-            @endif
-            @if(session('error'))
-                <div class="bg-rose-50 border-l-4 border-rose-500 text-rose-700 p-3 rounded text-sm mb-3">
-                    {{ session('error') }}
-                </div>
-            @endif
-        </div>
 
-        <!-- Page body -->
-        <main class="p-8 flex-grow">
-            @yield('content')
-        </main>
+                <!-- Navigation Links -->
+                <nav class="p-4 space-y-1.5 text-xs font-semibold" aria-label="Menu quản trị">
+                    @if (auth()->user()?->isAdmin())
+                        <a
+                            href="{{ route('admin.dashboard') }}"
+                            class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition {{ (request()->routeIs('admin.dashboard') || request()->routeIs('admin.analytics.*')) ? 'bg-primary text-primary-foreground shadow-xs' : 'text-body hover:bg-surface-alt hover:text-heading' }}"
+                        >
+                            <svg viewBox="0 0 24 24" class="size-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"/></svg>
+                            <span>Báo cáo & Phân tích</span>
+                        </a>
+                    @endif
+
+                    <div class="pt-4 pb-1 px-3.5 text-[10px] font-bold uppercase tracking-widest text-muted">Quản lý cửa hàng</div>
+                    <a
+                        href="{{ route('admin.products.index') }}"
+                        class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition {{ request()->routeIs('admin.products.*') ? 'bg-primary text-primary-foreground shadow-xs' : 'text-body hover:bg-surface-alt hover:text-heading' }}"
+                    >
+                        <svg viewBox="0 0 24 24" class="size-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z"/></svg>
+                        <span>Quản lý Sản phẩm</span>
+                    </a>
+
+                    <a
+                        href="{{ route('admin.categories.index') }}"
+                        class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition {{ request()->routeIs('admin.categories.*') ? 'bg-primary text-primary-foreground shadow-xs' : 'text-body hover:bg-surface-alt hover:text-heading' }}"
+                    >
+                        <svg viewBox="0 0 24 24" class="size-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z"/></svg>
+                        <span>Quản lý Danh mục</span>
+                    </a>
+
+                    <a
+                        href="{{ route('admin.orders.index') }}"
+                        class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition {{ request()->routeIs('admin.orders.*') ? 'bg-primary text-primary-foreground shadow-xs' : 'text-body hover:bg-surface-alt hover:text-heading' }}"
+                    >
+                        <svg viewBox="0 0 24 24" class="size-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007ZM8.625 10.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm7.5 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"/></svg>
+                        <span>Quản lý Đơn hàng</span>
+                    </a>
+
+                    <a
+                        href="{{ route('admin.finance.index') }}"
+                        class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition {{ request()->routeIs('admin.finance.index') ? 'bg-primary text-primary-foreground shadow-xs' : 'text-body hover:bg-surface-alt hover:text-heading' }}"
+                    >
+                        <svg viewBox="0 0 24 24" class="size-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"/></svg>
+                        <span>Thống kê tài chính</span>
+                    </a>
+
+                    <a
+                        href="{{ route('admin.finance.transactions') }}"
+                        class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition {{ request()->routeIs('admin.finance.transactions') ? 'bg-primary text-primary-foreground shadow-xs' : 'text-body hover:bg-surface-alt hover:text-heading' }}"
+                    >
+                        <svg viewBox="0 0 24 24" class="size-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6H2.25m0 0v8.25m0 0a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V6.75A.75.75 0 0 0 18.75 6H3m0 0a.75.75 0 0 1 .75-.75h15a.75.75 0 0 1 .75.75v12a.75.75 0 0 1-.75.75H3.75A.75.75 0 0 1 3 18V6Z"/></svg>
+                        <span>Giao dịch thanh toán</span>
+                    </a>
+
+                    <a
+                        href="{{ route('admin.coupons.index') }}"
+                        class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition {{ request()->routeIs('admin.coupons.*') ? 'bg-primary text-primary-foreground shadow-xs' : 'text-body hover:bg-surface-alt hover:text-heading' }}"
+                    >
+                        <svg viewBox="0 0 24 24" class="size-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 0 1 0 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 0 1 0-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375Z"/></svg>
+                        <span>Mã giảm giá</span>
+                    </a>
+
+                    <a
+                        href="{{ route('admin.customers.index') }}"
+                        class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition {{ request()->routeIs('admin.customers.*') ? 'bg-primary text-primary-foreground shadow-xs' : 'text-body hover:bg-surface-alt hover:text-heading' }}"
+                    >
+                        <svg viewBox="0 0 24 24" class="size-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z"/></svg>
+                        <span>Khách hàng</span>
+                    </a>
+
+                    <a
+                        href="{{ route('admin.chats.index') }}"
+                        class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition {{ request()->routeIs('admin.chats.*') ? 'bg-primary text-primary-foreground shadow-xs' : 'text-body hover:bg-surface-alt hover:text-heading' }}"
+                    >
+                        <svg viewBox="0 0 24 24" class="size-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z"/></svg>
+                        <span>Trò chuyện khách hàng</span>
+                        <span id="admin-chat-badge" class="ml-auto hidden min-w-5 rounded-full bg-rose-500 px-1.5 py-0.5 text-center text-[10px] font-bold text-white"></span>
+                    </a>
+
+                    @if (auth()->user()?->isAdmin())
+                        <a
+                            href="{{ route('admin.staff.index') }}"
+                            class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition {{ request()->routeIs('admin.staff.*') ? 'bg-primary text-primary-foreground shadow-xs' : 'text-body hover:bg-surface-alt hover:text-heading' }}"
+                        >
+                            <svg viewBox="0 0 24 24" class="size-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z"/></svg>
+                            <span>Quản lý Nhân viên</span>
+                        </a>
+                    @endif
+
+                    <a
+                        href="{{ route('admin.reviews.index') }}"
+                        class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition {{ request()->routeIs('admin.reviews.*') ? 'bg-primary text-primary-foreground shadow-xs' : 'text-body hover:bg-surface-alt hover:text-heading' }}"
+                    >
+                        <svg viewBox="0 0 24 24" class="size-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z"/></svg>
+                        <span>Đánh giá</span>
+                    </a>
+                </nav>
+            </div>
+
+            <!-- Bottom Actions -->
+            <div class="p-4 border-t border-ui-border space-y-2">
+                <a
+                    href="{{ route('home') }}"
+                    class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-muted hover:text-heading hover:bg-surface-alt transition"
+                >
+                    <svg viewBox="0 0 24 24" class="size-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 21v-7.5a.75.75 0 0 1 .75-.75h3a.75.75 0 0 1 .75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349m-16.5 0V21m0 0H2.36m0 0L12 3l9.64 8.349"/></svg>
+                    <span>Về trang bán hàng</span>
+                </a>
+                <form method="POST" action="{{ route('logout') }}">
+                    @csrf
+                    <button
+                        type="submit"
+                        class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-red-500 hover:bg-red-500/10 transition"
+                    >
+                        <svg viewBox="0 0 24 24" class="size-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9"/></svg>
+                        <span>Đăng xuất</span>
+                    </button>
+                </form>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <div class="flex-1 flex flex-col min-w-0">
+            <!-- Topbar -->
+            <header class="h-16 border-b border-ui-border bg-surface px-6 flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-4">
+                    <span class="text-xs font-bold uppercase tracking-wider text-muted md:hidden">Mộc An Admin</span>
+                    <h2 class="text-sm font-bold text-heading hidden md:block">{!! html_entity_decode(View::yieldContent('header-title', View::yieldContent('page_title', 'Bảng điều khiển quản trị'))) !!}</h2>
+                </div>
+
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-2.5">
+                        <div class="size-8 rounded-full bg-primary text-primary-foreground text-xs font-bold grid place-items-center">
+                            {{ mb_strtoupper(mb_substr(auth()->user()?->name ?? 'A', 0, 1)) }}
+                        </div>
+                        <div class="hidden sm:flex flex-col text-left">
+                            <span class="text-xs font-bold text-heading leading-tight">{{ auth()->user()?->name ?? 'Quản trị viên' }}</span>
+                            <span class="text-[10px] font-semibold text-accent uppercase">
+                                {{ match (auth()->user()?->role) {
+                                    'admin' => 'Quản trị viên',
+                                    'manager' => 'Quản lý',
+                                    'staff' => 'Nhân viên',
+                                    default => 'Quản trị',
+                                } }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Page Content -->
+            <main class="flex-1 p-6 sm:p-8 lg:p-10 bg-page">
+                @yield('content')
+            </main>
+        </div>
     </div>
-    @stack('scripts')
+
+    @include('partials.admin-toast')
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            @if (session('success'))
+                window.AdminToast?.success(@js(session('success')));
+            @endif
+            @if (session('error'))
+                window.AdminToast?.error(@js(session('error')));
+            @endif
+            @if (isset($errors) && $errors->any())
+                window.AdminToast?.error(@js($errors->first()));
+            @endif
+        });
+    </script>
+    <script>
+        (function () {
+            const badge = document.getElementById('admin-chat-badge');
+            if (!badge) return;
+            async function poll() {
+                try {
+                    const res = await fetch(@json(route('admin.chats.unread')), {
+                        headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    });
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    const count = data.unread || 0;
+                    badge.textContent = count > 99 ? '99+' : String(count);
+                    badge.classList.toggle('hidden', count === 0);
+                } catch (e) {}
+            }
+            poll();
+            setInterval(poll, 15000);
+        })();
+    </script>
 </body>
 </html>

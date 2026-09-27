@@ -160,12 +160,8 @@ class Product extends Model
 
         $primary = $primary ?? ($this->relationLoaded('images') ? $this->images->first() : $this->images()->first());
 
-        if ($primary && $primary->image_path) {
-            if (Str::startsWith($primary->image_path, ['http://', 'https://'])) {
-                return $primary->image_path;
-            }
-
-            return asset('storage/' . $primary->image_path);
+        if ($primary) {
+            return $primary->url;
         }
 
         return 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=800&q=80';
