@@ -7,8 +7,20 @@ cd /var/www
 # Copy only the CA certificate at runtime to an app-readable private location.
 if [[ -n "${MYSQL_ATTR_SSL_CA:-}" ]]; then
     if [[ ! -f "$MYSQL_ATTR_SSL_CA" || ! -r "$MYSQL_ATTR_SSL_CA" ]]; then
-        echo "Cannot read MySQL CA file. Check Render Secret Files and MYSQL_ATTR_SSL_CA." >&2
-        exit 1
+        found_ca=""
+        for candidate in /etc/secrets/ca.pem /etc/secrets/ca.pe /etc/secrets/*; do
+            if [[ -f "$candidate" && -r "$candidate" ]] && grep -q "BEGIN CERTIFICATE" "$candidate" 2>/dev/null; then
+                found_ca="$candidate"
+                break
+            fi
+        done
+        if [[ -n "$found_ca" ]]; then
+            echo "Auto-detected MySQL CA file at $found_ca"
+            MYSQL_ATTR_SSL_CA="$found_ca"
+        else
+            echo "Cannot read MySQL CA file. Check Render Secret Files and MYSQL_ATTR_SSL_CA." >&2
+            exit 1
+        fi
     fi
     (
         umask 077
