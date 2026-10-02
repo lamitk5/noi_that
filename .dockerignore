@@ -21,6 +21,7 @@ public/storage
 database/*.sqlite*
 **/*.sql
 **/*.pem
+!docker/aiven-ca.pem
 **/*.key
 **/*.log
 test.cs

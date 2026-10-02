@@ -3,36 +3,37 @@ set -Eeuo pipefail
 
 cd /var/www
 
-# Render secret mounts may be readable by root but not by www-data.
-# Copy only the CA certificate at runtime to an app-readable private location.
-if [[ -n "${MYSQL_ATTR_SSL_CA:-}" ]]; then
-    if [[ ! -f "$MYSQL_ATTR_SSL_CA" || ! -r "$MYSQL_ATTR_SSL_CA" ]]; then
-        found_ca=""
-        for candidate in /etc/secrets/ca.pem /etc/secrets/ca.pe /etc/secrets/*; do
-            if [[ -f "$candidate" && -r "$candidate" ]] && grep -q "BEGIN CERTIFICATE" "$candidate" 2>/dev/null; then
-                found_ca="$candidate"
-                break
-            fi
-        done
-        if [[ -n "$found_ca" ]]; then
-            echo "Auto-detected MySQL CA file at $found_ca"
-            MYSQL_ATTR_SSL_CA="$found_ca"
-        else
-            echo "Cannot read MySQL CA file. Check Render Secret Files and MYSQL_ATTR_SSL_CA." >&2
-            exit 1
+# Locate MySQL CA certificate
+ca_source=""
+if [[ -n "${MYSQL_ATTR_SSL_CA:-}" && -f "$MYSQL_ATTR_SSL_CA" && -r "$MYSQL_ATTR_SSL_CA" ]]; then
+    ca_source="$MYSQL_ATTR_SSL_CA"
+elif [[ -f "/var/www/docker/aiven-ca.pem" && -r "/var/www/docker/aiven-ca.pem" ]]; then
+    ca_source="/var/www/docker/aiven-ca.pem"
+else
+    for candidate in /etc/secrets/ca.pem /etc/secrets/ca.pe /etc/secrets/*; do
+        if [[ -f "$candidate" && -r "$candidate" ]] && grep -q "BEGIN CERTIFICATE" "$candidate" 2>/dev/null; then
+            ca_source="$candidate"
+            break
         fi
-    fi
+    done
+fi
+
+if [[ -n "$ca_source" ]]; then
+    echo "Using MySQL CA certificate from: $ca_source"
     (
         umask 077
         mkdir -p /run/app-certificates
         chown root:www-data /run/app-certificates
         chmod 750 /run/app-certificates
-        cp "$MYSQL_ATTR_SSL_CA" /run/app-certificates/mysql-ca.pem
+        cp "$ca_source" /run/app-certificates/mysql-ca.pem
         chown www-data:www-data /run/app-certificates/mysql-ca.pem
-        chmod 400 /run/app-certificates/mysql-ca.pem
+        chmod 444 /run/app-certificates/mysql-ca.pem
     )
     export MYSQL_ATTR_SSL_CA=/run/app-certificates/mysql-ca.pem
     su-exec www-data php docker/check-ca.php
+elif [[ -n "${MYSQL_ATTR_SSL_CA:-}" ]]; then
+    echo "Warning: MYSQL_ATTR_SSL_CA was set but no valid certificate found. Proceeding without SSL CA." >&2
+    unset MYSQL_ATTR_SSL_CA
 fi
 
 # Allow maintenance commands with: docker run ... IMAGE php artisan ...
