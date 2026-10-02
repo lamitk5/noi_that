@@ -17,6 +17,7 @@ class HomeController extends Controller
 
         $featuredProducts = Product::query()
             ->with(['category', 'primaryImage'])
+            ->withRatingSummary()
             ->where('is_active', true)
             ->latest()
             ->limit(8)
@@ -24,6 +25,7 @@ class HomeController extends Controller
 
         $bestSellers = Product::bestSelling(4)
             ->with(['category', 'primaryImage'])
+            ->withRatingSummary()
             ->get();
 
         return view('home', compact('categories', 'featuredProducts', 'bestSellers'));

@@ -20,8 +20,25 @@ COPY . .
 
 RUN mkdir -p bootstrap/cache storage/framework/cache/data \
     storage/framework/sessions storage/framework/views storage/logs storage/app/public \
+    && rm -rf public/build public/hot \
     && composer dump-autoload --no-dev --optimize --no-interaction \
     && composer check-platform-reqs --no-dev
+
+FROM node:22-bookworm-slim AS assets
+
+WORKDIR /app
+COPY package.json package-lock.json ./
+ARG NPM_CACHE_BUST=1
+RUN npm ci --no-audit --no-fund \
+    && npm install --no-save --no-audit --no-fund \
+        @rollup/rollup-linux-x64-gnu@4.63.3 \
+        lightningcss-linux-x64-gnu@1.32.0 \
+        @tailwindcss/oxide-linux-x64-gnu@4.3.3
+COPY vite.config.js ./
+COPY resources ./resources
+COPY --from=build /var/www/vendor/laravel/framework/src/Illuminate/Pagination/resources/views \
+    ./vendor/laravel/framework/src/Illuminate/Pagination/resources/views
+RUN npm run build
 
 FROM php-base AS production
 
@@ -30,6 +47,9 @@ ENV APP_ENV=production APP_DEBUG=false LOG_CHANNEL=stderr LOG_LEVEL=info \
     CACHE_STORE=database QUEUE_CONNECTION=sync PORT=10000 RUN_MIGRATIONS=true
 
 COPY --from=build --chown=www-data:www-data /var/www /var/www
+COPY --from=assets --chown=www-data:www-data /app/public/build /var/www/public/build
+# Kept outside /var/www/storage so a Render disk mounted there does not hide the catalog photos.
+COPY --from=build --chown=www-data:www-data /var/www/storage/picture /opt/catalog-pictures
 COPY docker/nginx.conf /etc/nginx/templates/default.conf.template
 COPY docker/php.ini /usr/local/etc/php/conf.d/zz-app.ini
 COPY docker/php-fpm.conf /usr/local/etc/php-fpm.d/zz-app.conf

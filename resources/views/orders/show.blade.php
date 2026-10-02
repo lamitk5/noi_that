@@ -205,6 +205,11 @@
 
                     <div class="text-right flex-shrink-0">
                         <span class="text-base font-bold text-heading">{{ number_format($item->price * $item->quantity, 0, ',', '.') }}đ</span>
+                        @if($order->order_status === \App\Models\Order::STATUS_COMPLETED && $item->variant?->product?->slug)
+                            <a href="{{ route('products.show', $item->variant->product->slug) }}#reviews" class="mt-1.5 flex items-center justify-end gap-1 text-xs font-semibold text-primary hover:underline">
+                                ★ Đánh giá
+                            </a>
+                        @endif
                     </div>
                 </div>
             @endforeach

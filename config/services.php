@@ -41,8 +41,8 @@ return [
 
     'ghn' => [
         'url' => env('GHN_API_URL', 'https://dev-online-gateway.ghn.vn/shiip/public-api/'),
-        'token' => env('GHN_TOKEN', 'd3555875-a814-11f1-a973-aee5264794df'),
-        'shop_id' => (int) env('GHN_SHOP_ID', 216783),
+        'token' => env('GHN_TOKEN'),
+        'shop_id' => (int) env('GHN_SHOP_ID', 0),
         'from_district_id' => (int) env('GHN_FROM_DISTRICT_ID', 1442),
         'from_ward_code' => (string) env('GHN_FROM_WARD_CODE', '20101'),
         'auto_create_order' => (bool) env('GHN_AUTO_CREATE_ORDER', true),
@@ -52,7 +52,32 @@ return [
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
-        'redirect' => env('GOOGLE_REDIRECT_URI', 'https://moc-an.onrender.com/auth/google/callback'),
+        'redirect' => env('GOOGLE_REDIRECT_URI', rtrim((string) env('APP_URL', 'http://localhost'), '/').'/auth/google/callback'),
+    ],
+
+    'gemini' => [
+        'key' => env('GEMINI_API_KEY'),
+        'model' => env('GEMINI_MODEL', 'gemini-2.0-flash'),
+        'endpoint' => env('GEMINI_ENDPOINT', 'https://generativelanguage.googleapis.com/v1beta'),
+        'timeout' => (int) env('GEMINI_TIMEOUT', 20),
+    ],
+
+    'sms' => [
+        'provider' => env('SMS_PROVIDER'),
+        'esms' => [
+            'api_key' => env('ESMS_API_KEY'),
+            'secret_key' => env('ESMS_SECRET_KEY'),
+            'brandname' => env('ESMS_BRANDNAME', 'Baotrimang'),
+        ],
+        'speedsms' => [
+            'access_token' => env('SPEEDSMS_ACCESS_TOKEN'),
+            'sender' => env('SPEEDSMS_SENDER', ''),
+        ],
+        'twilio' => [
+            'sid' => env('TWILIO_SID'),
+            'token' => env('TWILIO_AUTH_TOKEN'),
+            'from' => env('TWILIO_FROM'),
+        ],
     ],
 
 ];

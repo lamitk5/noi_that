@@ -28,11 +28,10 @@ class AdminUserSeeder extends Seeder
             if ($user) {
                 $user->forceFill([
                     'role' => 'admin',
-                    'password' => Hash::make($rawPassword),
                     'is_active' => true,
                     'email_verified_at' => $user->email_verified_at ?? now(),
                 ])->save();
-                $this->command?->info("Admin updated: {$email}");
+                $this->command?->info("Admin kept: {$email}");
             } else {
                 User::create([
                     'name' => config('seeding.admin.name') ?: 'Shop Admin',

@@ -32,13 +32,14 @@ furniture-shop/
 │   │   │   │   ├── ChatController.php      # Tiếp nhận & phản hồi tin nhắn khách hàng
 │   │   │   │   ├── CouponController.php    # Quản lý mã giảm giá / khuyến mãi
 │   │   │   │   ├── CustomerController.php  # Quản lý hồ sơ khách hàng
-│   │   │   │   ├── DashboardController.php # Bảng điều khiển thống kê tổng quan
 │   │   │   │   ├── FinanceController.php   # Quản lý tài chính & lịch sử giao dịch
 │   │   │   │   ├── OrderController.php     # Xử lý đơn hàng & xuất vận đơn GHN
 │   │   │   │   ├── ProductController.php   # Quản lý sản phẩm, biến thể, hình ảnh
 │   │   │   │   ├── ReviewController.php    # Kiểm duyệt đánh giá sản phẩm
 │   │   │   │   └── StaffController.php     # Quản lý tài khoản nhân viên & phân quyền
-│   │   │   ├── Auth/                       # Đăng nhập mạng xã hội (Google OAuth)
+│   │   │   ├── Auth/                       # Google OAuth & quên mật khẩu bằng OTP (PasswordResetController)
+│   │   │   ├── AiChatController.php        # API trợ lý AI tư vấn sản phẩm (Gemini)
+│   │   │   ├── ReviewController.php        # Đánh giá sản phẩm của khách đã mua
 │   │   │   ├── Customer/                   # Tính năng khách hàng cá nhân (Đơn mua, Hủy đơn)
 │   │   │   ├── Payments/                   # Cổng thanh toán trực tuyến (VNPAY, MoMo)
 │   │   │   ├── AuthController.php          # Đăng nhập, đăng ký, xác thực OTP email/SĐT
@@ -57,6 +58,8 @@ furniture-shop/
 │   └── Services/                           # Tầng nghiệp vụ độc lập
 │       ├── CartService.php                 # Quản lý trạng thái giỏ hàng & áp dụng coupon
 │       ├── SmsService.php                  # Dịch vụ gửi mã OTP qua SMS
+│       ├── OtpSender.php                   # Gửi mã OTP qua email / SMS (đăng ký, quên mật khẩu)
+│       ├── Ai/                             # GeminiService + ProductRecommender (gợi ý sản phẩm)
 │       ├── Payments/                       # Logic tạo chữ ký số & gọi API VNPAY, MoMo
 │       └── Shipping/                       # Logic tích hợp API Giao Hàng Nhanh (GHN)
 ├── bootstrap/                              # Khởi tạo ứng dụng & cấu hình pipeline
@@ -85,11 +88,8 @@ furniture-shop/
 ├── routes/
 │   ├── web.php                             # Định tuyến toàn bộ ứng dụng web & API nội bộ
 │   └── console.php                         # Lệnh chạy dòng lệnh Artisan
-├── storage/                                # Lưu trữ file tải lên, log ứng dụng, cache
-└── tests/
-    ├── Feature/                            # Kiểm thử chức năng (Giỏ hàng, Chat, Toast, Thanh toán...)
-    ├── Unit/                               # Kiểm thử đơn vị
-    └── e2e/                                # Kiểm thử tự động giao diện End-to-End (Playwright)
+├── storage/                                # File tải lên, log, cache; storage/picture chứa ảnh sản phẩm gốc
+└── docker/                                 # Nginx, PHP-FPM, entrypoint và mẫu biến môi trường cho Render
 ```
 
 ---
@@ -119,6 +119,9 @@ furniture-shop/
   - Ví điện tử MoMo (MoMo ATM).
 - **Hệ thống Toast Notification**: Thông báo nổi góc màn hình tức thì khi đăng nhập, đặt hàng, thêm giỏ hàng thành công.
 - **Live Chat Hỗ trợ**: Khách hàng đã đăng nhập có thể trò chuyện trực tiếp với tư vấn viên, lưu trữ lịch sử cuộc gọi.
+- **Trợ lý AI tư vấn (Gemini)**: Tab "Tư vấn AI" trong khung chat, mở cho cả khách chưa đăng nhập; AI chỉ gợi ý sản phẩm đang có trong kho và hiển thị thẻ sản phẩm. Khi chưa cấu hình `GEMINI_API_KEY`, hệ thống tự gợi ý theo từ khóa.
+- **Đánh giá sản phẩm**: Chỉ khách có đơn hàng chứa sản phẩm ở trạng thái "Hoàn thành" mới được đánh giá (1-5 sao + nhận xét); hiển thị điểm trung bình trên trang chi tiết và thẻ sản phẩm.
+- **Quên mật khẩu bảo mật**: Mã OTP 6 số gửi qua email hoặc SMS, lưu dạng băm, hết hạn sau 10 phút, tối đa 5 lần nhập sai, giới hạn tần suất gửi; đổi mật khẩu xong sẽ đăng xuất mọi phiên khác và gửi email thông báo.
 - **Tích hợp GHN**: Tính phí giao hàng tự động theo Quận/Huyện/Xã và tra cứu mã vận đơn thực tế.
 
 ### Phân hệ Quản trị (Admin Portal - `/admin`)
@@ -157,6 +160,16 @@ php artisan serve
 ```
 
 Truy cập website tại: `http://127.0.0.1:8000`
+
+Khi chạy bằng XAMPP (MySQL): tạo database `utf8mb4_unicode_ci` trong phpMyAdmin rồi sửa `DB_CONNECTION=mysql`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` trong `.env`. Nạp danh mục sản phẩm có ảnh thật bằng `php artisan db:seed --class=PictureProductSeeder`.
+
+Lỗi `Vite manifest not found`: chạy `npm run build` (thư mục `public/build` không còn được commit).
+
+### Triển khai lên Render (Docker)
+- Render build từ `Dockerfile`: tự cài Composer, build Vite (Node 22) và đóng gói ảnh trong `storage/picture`.
+- Khai báo biến môi trường theo mẫu `docker/render.env.example`. Bắt buộc: `APP_KEY`, `APP_URL`, thông tin MySQL, SMTP (`MAIL_*`, vì mã OTP không còn hiện trên màn hình ở production), `GHN_TOKEN`/`GHN_SHOP_ID`; tùy chọn: `GEMINI_API_KEY`, `SMS_PROVIDER`, VNPAY/MoMo, Google OAuth.
+- Ảnh catalog trong `storage/picture` được đóng vào image và được chép lại nếu thiếu. Ảnh admin tải thêm nằm trên đĩa container: vào Render → Disks, tạo Persistent Disk và mount tại `/var/www/storage` thì ảnh đó còn sau mỗi lần deploy.
+- Giữ nguyên `APP_KEY` và `DB_HOST` / `DB_DATABASE` / `DB_USERNAME` / `DB_PASSWORD`. `RUN_SEEDERS` phải là `false`. Không chạy `migrate:fresh`.
 
 ---
 

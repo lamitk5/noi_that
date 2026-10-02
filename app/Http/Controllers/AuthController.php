@@ -3,19 +3,21 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
-use App\Services\SmsService;
+use App\Services\OtpSender;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\View\View;
-use Throwable;
 
 class AuthController extends Controller
 {
+    public function __construct(protected OtpSender $otp)
+    {
+    }
+
     public function showLogin(): View
     {
         return view('auth.login');
@@ -45,29 +47,10 @@ class AuthController extends Controller
         if ($user && Hash::check($password, $user->password)) {
             // Check if user is active/verified
             if (isset($user->is_active) && !$user->is_active) {
-                $code = (string) random_int(100000, 999999);
+                $code = OtpSender::generateCode();
                 $type = !empty($user->email) ? 'email' : 'phone';
                 $target = $user->email ?: $user->phone;
-                $sentSuccessfully = false;
-
-                if ($type === 'email') {
-                    try {
-                        $this->sendEmailVerification($user->email, $code);
-                        $sentSuccessfully = true;
-                    } catch (Throwable $e) {
-                        Log::warning('Send verification email error on login: ' . $e->getMessage());
-                    }
-                } else {
-                    if (!app()->runningUnitTests()) {
-                        $smsResult = (new SmsService())->sendOtp($user->phone, $code);
-                        $sentSuccessfully = $smsResult['success'] ?? false;
-                        if (!$sentSuccessfully) {
-                            Log::warning('Send OTP SMS error on login: ' . ($smsResult['message'] ?? 'Unknown'));
-                        }
-                    } else {
-                        $sentSuccessfully = true;
-                    }
-                }
+                $sentSuccessfully = $this->otp->send($type, $target, $code);
 
                 if ($request->hasSession()) {
                     $request->session()->put('verify_data', [
@@ -89,10 +72,10 @@ class AuthController extends Controller
 
                 $warningMsg = $sentSuccessfully
                     ? 'Tài khoản chưa kích hoạt. Vui lòng nhập mã xác thực vừa được gửi.'
-                    : "Tài khoản chưa kích hoạt. Mã xác thực của bạn là: {$code}";
+                    : 'Tài khoản chưa kích hoạt. Hệ thống chưa gửi được mã xác thực, vui lòng bấm "Gửi lại mã" hoặc liên hệ hỗ trợ.';
 
-                if (config('mail.default') === 'log' && $sentSuccessfully) {
-                    $warningMsg .= " (Chưa cấu hình SMTP: Mã của bạn là {$code})";
+                if (OtpSender::canRevealCode()) {
+                    $warningMsg .= " (Môi trường local - mã của bạn là {$code})";
                 }
 
                 return redirect()->route('auth.verify')->with('warning', $warningMsg);
@@ -199,30 +182,9 @@ class AuthController extends Controller
             'email_verified_at' => null,
         ]);
 
-        // Generate 6-digit verification code / OTP
-        $code = (string) random_int(100000, 999999);
+        $code = OtpSender::generateCode();
         $target = $type === 'email' ? $email : $phone;
-        $sentSuccessfully = false;
-
-        // Send Real Email or Real SMS with non-blocking fail-safe
-        if ($type === 'email') {
-            try {
-                $this->sendEmailVerification($email, $code);
-                $sentSuccessfully = true;
-            } catch (Throwable $e) {
-                Log::warning('Send verification email error on register: ' . $e->getMessage());
-            }
-        } else {
-            if (!app()->runningUnitTests()) {
-                $smsResult = (new SmsService())->sendOtp($phone, $code);
-                $sentSuccessfully = $smsResult['success'] ?? false;
-                if (!$sentSuccessfully) {
-                    Log::warning('Send SMS OTP error on register: ' . ($smsResult['message'] ?? 'Unknown'));
-                }
-            } else {
-                $sentSuccessfully = true;
-            }
-        }
+        $sentSuccessfully = $this->otp->send($type, $target, $code);
 
         if ($request->hasSession()) {
             $request->session()->put('verify_data', [
@@ -250,12 +212,12 @@ class AuthController extends Controller
             $infoMsg = $type === 'email'
                 ? "Mã xác thực 6 chữ số đã được gửi về email {$email}. Vui lòng nhập mã để hoàn tất đăng ký."
                 : "Mã OTP 6 chữ số đã được gửi về số điện thoại {$phone}. Vui lòng nhập mã để hoàn tất đăng ký.";
-
-            if (config('mail.default') === 'log') {
-                $infoMsg .= " (Chưa cấu hình SMTP: Mã của bạn là {$code})";
-            }
         } else {
-            $infoMsg = "Mã xác thực tài khoản của bạn là: {$code}. (Hệ thống không thể gửi email tự động do giới hạn máy chủ, vui lòng dùng mã này để kích hoạt).";
+            $infoMsg = 'Tài khoản đã được tạo nhưng hệ thống chưa gửi được mã xác thực. Vui lòng bấm "Gửi lại mã xác thực".';
+        }
+
+        if (OtpSender::canRevealCode()) {
+            $infoMsg .= " (Môi trường local - mã của bạn là {$code})";
         }
 
         return redirect()->route('auth.verify')->with('info', $infoMsg);
@@ -292,7 +254,14 @@ class AuthController extends Controller
             return back()->withErrors(['code' => 'Mã xác thực đã hết hạn. Vui lòng nhấn gửi lại mã.']);
         }
 
-        if (trim($request->input('code')) !== (string) $verifyData['code']) {
+        if (($verifyData['attempts'] ?? 0) >= 5) {
+            return back()->withErrors(['code' => 'Bạn đã nhập sai quá nhiều lần. Vui lòng bấm gửi lại mã.']);
+        }
+
+        if (! hash_equals((string) $verifyData['code'], trim((string) $request->input('code')))) {
+            $verifyData['attempts'] = ($verifyData['attempts'] ?? 0) + 1;
+            $request->session()->put('verify_data', $verifyData);
+
             return back()->withErrors(['code' => 'Mã xác thực không chính xác. Vui lòng kiểm tra lại.'])->withInput();
         }
 
@@ -329,30 +298,24 @@ class AuthController extends Controller
             return redirect()->route('login')->withErrors(['email' => 'Phiên xác thực đã hết hạn.']);
         }
 
-        $newCode = (string) random_int(100000, 999999);
+        $limiterKey = 'verify-resend:'.($verifyData['user_id'] ?? $request->session()->getId());
+        if (RateLimiter::tooManyAttempts($limiterKey, 3)) {
+            return back()->withErrors(['code' => 'Bạn đã yêu cầu gửi lại quá nhiều lần. Vui lòng thử lại sau ít phút.']);
+        }
+        RateLimiter::hit($limiterKey, 600);
+
+        $newCode = OtpSender::generateCode();
         $verifyData['code'] = $newCode;
         $verifyData['expires_at'] = now()->addMinutes(10)->timestamp;
+        $verifyData['attempts'] = 0;
 
         $user = User::find($verifyData['user_id']);
         $sentSuccessfully = false;
 
         if ($verifyData['type'] === 'email' && $user && $user->email) {
-            try {
-                $this->sendEmailVerification($user->email, $newCode);
-                $sentSuccessfully = true;
-            } catch (Throwable $e) {
-                Log::warning('Resend verification email error: ' . $e->getMessage());
-            }
+            $sentSuccessfully = $this->otp->sendEmail($user->email, $newCode);
         } elseif ($user && $user->phone) {
-            if (!app()->runningUnitTests()) {
-                $smsResult = (new SmsService())->sendOtp($user->phone, $newCode);
-                $sentSuccessfully = $smsResult['success'] ?? false;
-                if (!$sentSuccessfully) {
-                    Log::warning('Resend SMS OTP error: ' . ($smsResult['message'] ?? 'Unknown'));
-                }
-            } else {
-                $sentSuccessfully = true;
-            }
+            $sentSuccessfully = $this->otp->sendSms($user->phone, $newCode);
         }
 
         $request->session()->put('verify_data', $verifyData);
@@ -364,13 +327,12 @@ class AuthController extends Controller
             ]);
         }
 
-        if ($sentSuccessfully) {
-            $resendSuccessMsg = 'Mã xác thực mới đã được gửi!';
-            if (config('mail.default') === 'log') {
-                $resendSuccessMsg .= " (Chưa cấu hình SMTP: Mã của bạn là {$newCode})";
-            }
-        } else {
-            $resendSuccessMsg = "Mã xác thực mới của bạn là: {$newCode}. (Không thể gửi email tự động).";
+        $resendSuccessMsg = $sentSuccessfully
+            ? 'Mã xác thực mới đã được gửi!'
+            : 'Hệ thống chưa gửi được mã xác thực. Vui lòng thử lại sau hoặc liên hệ hỗ trợ.';
+
+        if (OtpSender::canRevealCode()) {
+            $resendSuccessMsg .= " (Môi trường local - mã của bạn là {$newCode})";
         }
 
         return back()->with('success', $resendSuccessMsg);
@@ -394,42 +356,4 @@ class AuthController extends Controller
         return redirect()->route('home')->with('success', 'Đã đăng xuất.');
     }
 
-    /**
-     * Send branded HTML verification email
-     */
-    protected function sendEmailVerification(string $email, string $code): void
-    {
-        $html = "
-        <div style='font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; padding: 28px; border: 1px solid #e5e7eb; border-radius: 12px; background-color: #ffffff;'>
-            <div style='text-align: center; margin-bottom: 24px;'>
-                <h1 style='color: #78350f; font-size: 24px; font-weight: bold; margin: 0;'>MỘC AN</h1>
-                <p style='color: #92400e; font-size: 13px; margin: 4px 0 0 0;'>Nội Thất Gỗ Tự Nhiên & Sang Trọng</p>
-            </div>
-            <div style='border-top: 1px solid #f3f4f6; padding-top: 20px;'>
-                <p style='color: #1f2937; font-size: 15px; margin: 0 0 12px 0;'>Xin chào,</p>
-                <p style='color: #4b5563; font-size: 14px; line-height: 1.6; margin: 0 0 20px 0;'>
-                    Cảm ơn bạn đã đăng ký tài khoản tại <strong>Mộc An</strong>. Dưới đây là mã xác thực tài khoản của bạn:
-                </p>
-                <div style='text-align: center; margin: 24px 0;'>
-                    <span style='display: inline-block; font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #78350f; background: #fef3c7; border: 1px dashed #d97706; padding: 12px 28px; border-radius: 8px;'>{$code}</span>
-                </div>
-                <p style='color: #6b7280; font-size: 13px; line-height: 1.5; margin: 0 0 8px 0;'>
-                    • Mã xác thực có hiệu lực trong <strong>10 phút</strong>.
-                </p>
-                <p style='color: #ef4444; font-size: 12px; line-height: 1.5; margin: 0;'>
-                    • Tuyệt đối không chia sẻ mã này cho bất kỳ ai để bảo vệ tài khoản của bạn.
-                </p>
-            </div>
-            <div style='border-top: 1px solid #f3f4f6; margin-top: 24px; padding-top: 16px; text-align: center; color: #9ca3af; font-size: 12px;'>
-                © " . date('Y') . " Mộc An. Mọi quyền được bảo lưu.
-            </div>
-        </div>";
-
-        Mail::html($html, function ($message) use ($email, $code) {
-            $message->to($email)
-                ->subject("[Mộc An] Mã xác thực tài khoản của bạn: {$code}");
-        });
-
-        Log::info("[EMAIL VERIFICATION] Mã {$code} đã được gửi đến {$email}");
-    }
 }

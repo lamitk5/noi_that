@@ -15,7 +15,7 @@ class SmsService
      */
     public function sendOtp(string $phone, string $code): array
     {
-        $provider = strtolower((string) env('SMS_PROVIDER', ''));
+        $provider = strtolower((string) config('services.sms.provider', ''));
         $content = "Ma xac thuc Moc An cua ban la: {$code}. Hieu luc trong 10 phut. Khong chia se ma nay voi ai.";
 
         // Normalize phone number (0912345678 -> 84912345678)
@@ -58,9 +58,9 @@ class SmsService
      */
     protected function sendViaEsms(string $phone, string $code): array
     {
-        $apiKey = env('ESMS_API_KEY');
-        $secretKey = env('ESMS_SECRET_KEY');
-        $brandname = env('ESMS_BRANDNAME', 'Baotrimang');
+        $apiKey = config('services.sms.esms.api_key');
+        $secretKey = config('services.sms.esms.secret_key');
+        $brandname = config('services.sms.esms.brandname', 'Baotrimang');
 
         if (empty($apiKey) || empty($secretKey)) {
             return ['success' => false, 'message' => 'Thiếu ESMS_API_KEY hoặc ESMS_SECRET_KEY trong .env.'];
@@ -77,7 +77,7 @@ class SmsService
 
         $data = $response->json();
         if (($data['CodeResult'] ?? '') == '100') {
-            Log::info("[eSMS SUCCESS] Đã gửi OTP {$code} đến {$phone}");
+            Log::info("[eSMS SUCCESS] Đã gửi OTP đến {$phone}");
             return ['success' => true, 'message' => 'Đã gửi SMS OTP thành công.'];
         }
 
@@ -91,12 +91,12 @@ class SmsService
      */
     protected function sendViaSpeedSms(string $phone, string $content): array
     {
-        $accessToken = env('SPEEDSMS_ACCESS_TOKEN');
+        $accessToken = config('services.sms.speedsms.access_token');
         if (empty($accessToken)) {
             return ['success' => false, 'message' => 'Thiếu SPEEDSMS_ACCESS_TOKEN trong .env.'];
         }
 
-        $sender = env('SPEEDSMS_SENDER', '');
+        $sender = config('services.sms.speedsms.sender', '');
         $response = Http::withBasicAuth($accessToken, 'x')
             ->timeout(10)
             ->post('https://api.speedsms.vn/index.php/sms/send', [
@@ -121,9 +121,9 @@ class SmsService
      */
     protected function sendViaTwilio(string $e164Phone, string $content): array
     {
-        $sid = env('TWILIO_SID');
-        $token = env('TWILIO_AUTH_TOKEN');
-        $from = env('TWILIO_FROM');
+        $sid = config('services.sms.twilio.sid');
+        $token = config('services.sms.twilio.token');
+        $from = config('services.sms.twilio.from');
 
         if (empty($sid) || empty($token) || empty($from)) {
             return ['success' => false, 'message' => 'Thiếu TWILIO_SID, TWILIO_AUTH_TOKEN hoặc TWILIO_FROM trong .env.'];

@@ -131,6 +131,15 @@
                     {{ $product->name }}
                 </h1>
 
+                <a href="#reviews" class="mt-2 inline-flex items-center gap-2 text-xs text-muted hover:text-heading transition">
+                    @include('partials.rating-stars', ['rating' => $ratingAvg, 'size' => 'size-4'])
+                    @if ($ratingTotal > 0)
+                        <span><strong class="text-heading">{{ number_format($ratingAvg, 1) }}</strong> ({{ $ratingTotal }} đánh giá)</span>
+                    @else
+                        <span>Chưa có đánh giá</span>
+                    @endif
+                </a>
+
                 <!-- Price Block -->
                 <div class="mt-4 flex items-baseline gap-3 pb-6 border-b border-ui-border">
                     <span class="text-2xl sm:text-3xl font-bold tracking-tight text-heading" x-text="formatCurrency(activePrice)">
@@ -321,6 +330,117 @@
             </div>
         @endif
 
+        <!-- Reviews Section -->
+        <section id="reviews" class="mt-16 sm:mt-24 scroll-mt-24 rounded-3xl border border-ui-border bg-surface p-6 sm:p-10 shadow-xs">
+            <h2 class="font-display text-2xl font-semibold text-heading mb-6">Đánh giá từ khách hàng</h2>
+
+            @error('review')
+                <div class="mb-6 p-3 bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-sm rounded-xl">{{ $message }}</div>
+            @enderror
+
+            <div class="grid gap-10 lg:grid-cols-12">
+                <!-- Summary -->
+                <div class="lg:col-span-4">
+                    <div class="flex items-end gap-3">
+                        <span class="text-5xl font-bold text-heading">{{ number_format($ratingAvg, 1) }}</span>
+                        <span class="pb-1.5 text-sm text-muted">/ 5</span>
+                    </div>
+                    <div class="mt-2">
+                        @include('partials.rating-stars', ['rating' => $ratingAvg, 'size' => 'size-5'])
+                    </div>
+                    <p class="mt-1 text-xs text-muted">{{ $ratingTotal }} đánh giá đã xác thực mua hàng</p>
+
+                    <div class="mt-5 space-y-2">
+                        @for ($star = 5; $star >= 1; $star--)
+                            @php
+                                $count = (int) ($ratingCounts[$star] ?? 0);
+                                $percent = $ratingTotal > 0 ? round($count / $ratingTotal * 100) : 0;
+                            @endphp
+                            <div class="flex items-center gap-3 text-xs">
+                                <span class="w-8 text-muted">{{ $star }} ★</span>
+                                <div class="h-2 flex-1 overflow-hidden rounded-full bg-surface-alt">
+                                    <div class="h-full rounded-full bg-amber-500" style="width: {{ $percent }}%"></div>
+                                </div>
+                                <span class="w-8 text-right text-muted">{{ $count }}</span>
+                            </div>
+                        @endfor
+                    </div>
+
+                    <!-- Review form -->
+                    <div class="mt-8 border-t border-ui-border pt-6">
+                        @guest
+                            <p class="text-sm text-muted">
+                                <a href="{{ route('login') }}" class="text-primary font-semibold hover:underline">Đăng nhập</a>
+                                để đánh giá sản phẩm bạn đã mua.
+                            </p>
+                        @else
+                            @if ($canReview)
+                                <form method="POST" action="{{ route('reviews.store', $product) }}" class="space-y-3" x-data="{ rating: {{ (int) old('rating', $userReview?->rating ?? 5) }}, hover: 0 }">
+                                    @csrf
+                                    <p class="text-sm font-semibold text-heading">{{ $userReview ? 'Cập nhật đánh giá của bạn' : 'Viết đánh giá của bạn' }}</p>
+                                    <input type="hidden" name="rating" :value="rating">
+                                    <div class="flex items-center gap-1" @mouseleave="hover = 0">
+                                        @for ($i = 1; $i <= 5; $i++)
+                                            <button type="button" @click="rating = {{ $i }}" @mouseenter="hover = {{ $i }}" class="text-amber-500 transition hover:scale-110" aria-label="{{ $i }} sao">
+                                                <svg viewBox="0 0 20 20" class="size-7" stroke="currentColor" stroke-width="1.2" :class="(hover || rating) >= {{ $i }} ? 'fill-current' : 'fill-none'">
+                                                    <path d="M10 1.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.5 7.7l5.9-.9L10 1.5z"/>
+                                                </svg>
+                                            </button>
+                                        @endfor
+                                    </div>
+                                    @error('rating') <span class="text-xs text-rose-500 block">{{ $message }}</span> @enderror
+                                    <textarea
+                                        name="comment"
+                                        rows="4"
+                                        maxlength="1000"
+                                        required
+                                        placeholder="Chia sẻ cảm nhận về chất lượng, màu gỗ, giao hàng..."
+                                        class="w-full text-sm rounded-xl border border-ui-border bg-surface-alt px-3.5 py-2.5 text-heading placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition @error('comment') border-rose-500 @enderror"
+                                    >{{ old('comment', $userReview?->comment) }}</textarea>
+                                    @error('comment') <span class="text-xs text-rose-500 block">{{ $message }}</span> @enderror
+                                    <button type="submit" class="w-full bg-primary hover:opacity-90 text-primary-foreground font-bold py-2.5 rounded-xl transition shadow-sm text-sm">
+                                        {{ $userReview ? 'Cập nhật đánh giá' : 'Gửi đánh giá' }}
+                                    </button>
+                                </form>
+                            @else
+                                <p class="text-sm text-muted">Chỉ khách đã mua và nhận hàng mới được đánh giá sản phẩm này.</p>
+                            @endif
+                        @endguest
+                    </div>
+                </div>
+
+                <!-- Review list -->
+                <div class="lg:col-span-8">
+                    @forelse ($reviews as $review)
+                        <article class="border-b border-ui-border py-5 first:pt-0 last:border-b-0">
+                            <div class="flex items-center justify-between gap-4">
+                                <div class="flex items-center gap-3">
+                                    <span class="inline-flex size-9 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+                                        {{ mb_strtoupper(mb_substr($review->user?->name ?? 'K', 0, 1)) }}
+                                    </span>
+                                    <div>
+                                        <p class="text-sm font-semibold text-heading">{{ $review->user?->name ?? 'Khách hàng' }}</p>
+                                        <p class="text-[11px] text-emerald-600 dark:text-emerald-400">✓ Đã mua hàng</p>
+                                    </div>
+                                </div>
+                                <span class="text-xs text-muted">{{ $review->created_at->format('d/m/Y') }}</span>
+                            </div>
+                            <div class="mt-3">
+                                @include('partials.rating-stars', ['rating' => $review->rating])
+                            </div>
+                            <p class="mt-2 text-sm leading-relaxed text-body whitespace-pre-line">{{ $review->comment }}</p>
+                        </article>
+                    @empty
+                        <p class="text-sm text-muted">Chưa có đánh giá nào cho sản phẩm này.</p>
+                    @endforelse
+
+                    @if ($reviews->hasPages())
+                        <div class="mt-6">{{ $reviews->links() }}</div>
+                    @endif
+                </div>
+            </div>
+        </section>
+
         <!-- Related Products Section -->
         @if ($relatedProducts->isNotEmpty())
             <div class="mt-16 sm:mt-24">
@@ -360,6 +480,12 @@
                                 <h3 class="mt-2 font-display text-[1.25rem] font-semibold leading-snug text-heading">
                                     <a class="transition-colors hover:text-accent" href="{{ route('products.show', $related->slug) }}">{{ $related->name }}</a>
                                 </h3>
+                                @if ($related->rating_count > 0)
+                                    <div class="mt-2 flex items-center gap-1.5 text-[11px] text-muted">
+                                        @include('partials.rating-stars', ['rating' => $related->rating_avg])
+                                        <span>({{ $related->rating_count }})</span>
+                                    </div>
+                                @endif
                                 <div class="mt-3 flex items-center gap-2">
                                     <span class="text-[15px] font-bold tracking-tight text-body">{{ number_format((float) $related->base_price, 0, ',', '.') }}₫</span>
                                 </div>

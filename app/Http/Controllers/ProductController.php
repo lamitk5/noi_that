@@ -16,6 +16,7 @@ class ProductController extends Controller
 
         $query = Product::query()
             ->with(['category', 'primaryImage'])
+            ->withRatingSummary()
             ->where('is_active', true);
 
         if ($searchQuery !== '') {
@@ -54,7 +55,7 @@ class ProductController extends Controller
         ));
     }
 
-    public function show(string $slug)
+    public function show(Request $request, string $slug)
     {
         $product = Product::query()
             ->where('slug', $slug)
@@ -66,6 +67,7 @@ class ProductController extends Controller
 
         $relatedProducts = Product::query()
             ->with(['category', 'primaryImage'])
+            ->withRatingSummary()
             ->where('category_id', $product->category_id)
             ->where('is_active', true)
             ->where('id', '!=', $product->id)
@@ -73,6 +75,36 @@ class ProductController extends Controller
             ->limit(4)
             ->get();
 
-        return view('products.show', compact('product', 'relatedProducts'));
+        $reviews = $product->approvedReviews()
+            ->with('user:id,name')
+            ->latest()
+            ->paginate(5, ['*'], 'review_page')
+            ->withQueryString()
+            ->fragment('reviews');
+
+        $ratingCounts = $product->approvedReviews()
+            ->selectRaw('rating, COUNT(*) as total')
+            ->groupBy('rating')
+            ->pluck('total', 'rating');
+
+        $ratingTotal = (int) $ratingCounts->sum();
+        $ratingAvg = $ratingTotal > 0
+            ? round($ratingCounts->reduce(fn ($carry, $count, $rating) => $carry + $rating * $count, 0) / $ratingTotal, 1)
+            : 0.0;
+
+        $user = $request->user();
+        $canReview = $product->wasPurchasedBy($user);
+        $userReview = $user ? $product->reviews()->where('user_id', $user->id)->first() : null;
+
+        return view('products.show', compact(
+            'product',
+            'relatedProducts',
+            'reviews',
+            'ratingCounts',
+            'ratingTotal',
+            'ratingAvg',
+            'canReview',
+            'userReview',
+        ));
     }
 }

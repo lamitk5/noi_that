@@ -198,7 +198,7 @@
 
             <!-- CTA Button -->
             <div style="text-align: center; margin-top: 28px;">
-                <a href="{{ route('orders.invoice', $order->order_code) }}" class="cta-btn" target="_blank">
+                <a href="{{ \Illuminate\Support\Facades\URL::temporarySignedRoute('orders.invoice', now()->addDays(30), ['orderCode' => $order->order_code]) }}" class="cta-btn" target="_blank">
                     Xem & Tải Hóa Đơn PDF (A4)
                 </a>
             </div>

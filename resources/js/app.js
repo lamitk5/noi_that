@@ -28,6 +28,18 @@ Alpine.data('headerSettings', () => ({
 
 Alpine.data('chatWidget', () => ({
     open: false,
+    tab: 'ai',
+    aiMessages: [],
+    aiDraft: '',
+    aiSending: false,
+    aiLoaded: false,
+    aiError: '',
+    aiSuggestions: [
+        'Sofa phòng khách dưới 15 triệu',
+        'Giường gỗ cho phòng ngủ nhỏ',
+        'Bàn làm việc gỗ sồi',
+        'Bộ bàn ăn 6 ghế',
+    ],
     auth: false,
     chatId: null,
     messages: [],
@@ -71,12 +83,83 @@ Alpine.data('chatWidget', () => ({
     async toggle() {
         this.open = !this.open;
         if (this.open) {
-            this.unread = 0;
-            await this.bootstrap();
-            this.startPolling();
+            await this.activateTab(this.tab);
         } else {
             this.stopPolling();
         }
+    },
+
+    async activateTab(tab) {
+        this.tab = tab;
+        if (tab === 'ai') {
+            this.stopPolling();
+            await this.loadAiHistory();
+            this.scrollToBottom(false);
+            return;
+        }
+        this.unread = 0;
+        await this.bootstrap();
+        this.startPolling();
+    },
+
+    async loadAiHistory() {
+        if (this.aiLoaded) return;
+        this.aiLoaded = true;
+        try {
+            const res = await fetch('/api/ai-chat', { headers: this.headers() });
+            if (!res.ok) return;
+            const data = await res.json();
+            if (data.success && Array.isArray(data.messages)) {
+                this.aiMessages = data.messages;
+            }
+        } catch (e) { /* ignore */ }
+    },
+
+    async sendAi(preset = null) {
+        const text = (preset ?? this.aiDraft).trim();
+        if (!text || this.aiSending) return;
+        this.aiSending = true;
+        this.aiError = '';
+        const pending = { id: `local-${Date.now()}`, role: 'user', content: text, created_at: '', products: [] };
+        this.aiMessages.push(pending);
+        this.aiDraft = '';
+        this.scrollToBottom();
+        try {
+            const res = await fetch('/api/ai-chat', {
+                method: 'POST',
+                headers: { ...this.headers(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: text }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (res.status === 419) {
+                this.aiError = 'Phiên làm việc đã hết hạn. Vui lòng tải lại trang.';
+            } else if (res.status === 429) {
+                this.aiError = 'Bạn hỏi hơi nhanh, vui lòng đợi một chút rồi thử lại nhé.';
+            } else if (!res.ok || !data.success) {
+                this.aiError = data.message || 'Trợ lý AI đang bận. Vui lòng thử lại.';
+            } else {
+                this.aiMessages.push(data.message);
+            }
+            if (this.aiError) {
+                this.aiMessages = this.aiMessages.filter((m) => m.id !== pending.id);
+                this.aiDraft = text;
+            }
+        } catch (e) {
+            this.aiMessages = this.aiMessages.filter((m) => m.id !== pending.id);
+            this.aiDraft = text;
+            this.aiError = 'Không kết nối được trợ lý AI. Vui lòng thử lại.';
+        } finally {
+            this.aiSending = false;
+            this.scrollToBottom();
+        }
+    },
+
+    async resetAi() {
+        this.aiMessages = [];
+        this.aiError = '';
+        try {
+            await fetch('/api/ai-chat/reset', { method: 'POST', headers: this.headers() });
+        } catch (e) { /* ignore */ }
     },
 
     async bootstrap() {
@@ -179,7 +262,7 @@ Alpine.data('chatWidget', () => ({
 
     scrollToBottom(smooth = true) {
         this.$nextTick(() => {
-            const el = this.$refs.list;
+            const el = this.tab === 'ai' ? this.$refs.aiList : this.$refs.list;
             if (!el) return;
             el.scrollTo({ top: el.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
         });

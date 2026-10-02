@@ -64,6 +64,7 @@
                     <input type="checkbox" name="remember" class="mr-2 rounded border-ui-border bg-surface-alt text-primary focus:ring-primary">
                     Ghi nhớ đăng nhập
                 </label>
+                <a href="{{ route('password.request') }}" class="text-primary font-semibold hover:underline">Quên mật khẩu?</a>
             </div>
 
             <button type="submit" class="w-full bg-primary hover:opacity-90 text-primary-foreground font-bold py-3 rounded-xl transition shadow-sm text-sm">

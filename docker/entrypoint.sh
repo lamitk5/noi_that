@@ -53,10 +53,18 @@ fi
 # Substitute PORT only; preserve Nginx variables such as $uri and $query_string.
 envsubst '${PORT}' < /etc/nginx/templates/default.conf.template > /etc/nginx/http.d/default.conf
 
-mkdir -p storage/framework/{cache/data,sessions,views} storage/logs storage/app/public bootstrap/cache
+mkdir -p storage/framework/{cache/data,sessions,views} storage/logs storage/app/public storage/picture bootstrap/cache
+
+# Restore catalog photos that are missing (first boot, or a new persistent disk).
+# -n keeps files already on the disk, including pictures uploaded from the admin.
+if [[ -d /opt/catalog-pictures ]]; then
+    cp -an /opt/catalog-pictures/. storage/picture/ || true
+fi
+
 chown -R www-data:www-data storage bootstrap/cache
 
 su-exec www-data php artisan config:cache
+su-exec www-data php artisan storage:link --force --no-interaction || true
 
 case "${RUN_MIGRATIONS:-true}" in
     true) su-exec www-data php artisan migrate --force --no-interaction ;;
@@ -64,7 +72,7 @@ case "${RUN_MIGRATIONS:-true}" in
     *) echo "RUN_MIGRATIONS must be true or false" >&2; exit 1 ;;
 esac
 
-# Always ensure admin user exists and password is synchronized
+# Create the admin account when it is missing. Does not wipe products, orders, or reviews.
 su-exec www-data php artisan db:seed --class=AdminUserSeeder --force --no-interaction || true
 
 case "${RUN_SEEDERS:-false}" in

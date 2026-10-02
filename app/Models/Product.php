@@ -89,6 +89,40 @@ class Product extends Model
         return $this->hasMany(Wishlist::class);
     }
 
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(Review::class);
+    }
+
+    public function approvedReviews(): HasMany
+    {
+        return $this->reviews()->where('is_approved', true);
+    }
+
+    public function scopeWithRatingSummary(Builder $query): Builder
+    {
+        return $query
+            ->withAvg('approvedReviews as rating_avg', 'rating')
+            ->withCount('approvedReviews as rating_count');
+    }
+
+    /**
+     * True when the user has a completed order containing any variant of this product.
+     */
+    public function wasPurchasedBy(?User $user): bool
+    {
+        return $user !== null && $this->completedOrderFor($user) !== null;
+    }
+
+    public function completedOrderFor(User $user): ?Order
+    {
+        return Order::where('user_id', $user->id)
+            ->where('order_status', Order::STATUS_COMPLETED)
+            ->whereHas('items.variant', fn ($q) => $q->where('product_id', $this->id))
+            ->latest()
+            ->first();
+    }
+
     public function orderItems(): HasMany
     {
         return $this->hasMany(OrderItem::class, 'product_variant_id');

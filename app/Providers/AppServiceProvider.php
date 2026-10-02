@@ -2,7 +2,11 @@
 
 namespace App\Providers;
 
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Str;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -22,6 +26,19 @@ class AppServiceProvider extends ServiceProvider
         if (config('app.env') === 'production' || str_starts_with((string) config('app.url'), 'https://')) {
             \Illuminate\Support\Facades\URL::forceScheme('https');
         }
+
+        RateLimiter::for('login', function (Request $request) {
+            $account = Str::lower((string) ($request->input('email') ?? $request->input('username') ?? ''));
+
+            return [
+                Limit::perMinute(5)->by('login:'.$account.'|'.$request->ip()),
+                Limit::perMinute(20)->by('login-ip:'.$request->ip()),
+            ];
+        });
+
+        RateLimiter::for('password-reset', fn (Request $request) => Limit::perMinutes(10, 10)->by('pwreset-ip:'.$request->ip()));
+
+        RateLimiter::for('ai-chat', fn (Request $request) => Limit::perMinute(20)->by('ai-chat:'.($request->user()?->id ?? $request->ip())));
 
         \Illuminate\Support\Facades\View::composer('*', function ($view) {
             $cart = session('furniture_cart', []);

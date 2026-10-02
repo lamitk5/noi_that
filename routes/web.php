@@ -1,20 +1,24 @@
 <?php
 
 use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
-use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\FinanceController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
+use App\Http\Controllers\AiChatController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Auth\SocialAuthController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\PageController;
 use App\Http\Controllers\OrderTrackingController;
 use App\Http\Controllers\Payments\MomoController;
 use App\Http\Controllers\Payments\VnpayController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\ShippingController;
 use App\Http\Controllers\WishlistController;
 use Illuminate\Support\Facades\Route;
@@ -22,6 +26,9 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/products', [ProductController::class, 'index'])->name('products.index');
 Route::get('/products/{slug}', [ProductController::class, 'show'])->name('products.show');
+Route::post('/products/{product}/reviews', [ReviewController::class, 'store'])
+    ->middleware(['auth', 'throttle:10,1'])
+    ->name('reviews.store');
 
 Route::prefix('cart')->name('cart.')->group(function () {
     Route::get('/', [CartController::class, 'index'])->name('index');
@@ -58,6 +65,13 @@ Route::prefix('api/chat')->name('chat.')->middleware('auth')->group(function () 
     Route::get('/session', [ChatController::class, 'session'])->name('session');
     Route::get('/{chatId}/messages', [ChatController::class, 'messages'])->name('messages');
     Route::post('/{chatId}/message', [ChatController::class, 'send'])->name('send');
+});
+
+// Trợ lý AI tư vấn sản phẩm (mở cho cả khách chưa đăng nhập)
+Route::prefix('api/ai-chat')->name('ai-chat.')->middleware('throttle:ai-chat')->group(function () {
+    Route::get('/', [AiChatController::class, 'history'])->name('history');
+    Route::post('/', [AiChatController::class, 'send'])->name('send');
+    Route::post('/reset', [AiChatController::class, 'reset'])->name('reset');
 });
 
 // GHN
@@ -107,6 +121,12 @@ Route::get('/thanh-toan/vnpay/mock/confirm', [VnpayController::class, 'mockConfi
 use App\Http\Controllers\Customer\OrderController as CustomerOrderController;
 
 Route::get('/orders/track', [OrderTrackingController::class, 'index'])->name('orders.track');
+Route::get('/orders/{orderCode}/invoice', [InvoiceController::class, 'show'])->name('orders.invoice');
+
+Route::get('/lien-he', [PageController::class, 'contact'])->name('pages.contact');
+Route::get('/cau-hoi-thuong-gap', [PageController::class, 'faq'])->name('pages.faq');
+Route::get('/chinh-sach-bao-hanh', [PageController::class, 'warranty'])->name('pages.warranty');
+Route::get('/chinh-sach-doi-tra', [PageController::class, 'returnPolicy'])->name('pages.return');
 
 Route::middleware('auth')->group(function () {
     Route::get('/orders', [CustomerOrderController::class, 'index'])->name('orders.index');
@@ -124,18 +144,26 @@ Route::middleware('auth')->group(function () {
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-    Route::post('/login', [AuthController::class, 'login'])->name('login.submit');
+    Route::post('/login', [AuthController::class, 'login'])->name('login.submit')->middleware('throttle:login');
     Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
     Route::post('/register', [AuthController::class, 'register'])->name('register.submit');
     Route::post('/register/store', [AuthController::class, 'register'])->name('register.store');
+
+    Route::get('/quen-mat-khau', [PasswordResetController::class, 'showRequest'])->name('password.request');
+    Route::post('/quen-mat-khau', [PasswordResetController::class, 'sendCode'])->name('password.email')->middleware('throttle:password-reset');
+    Route::get('/quen-mat-khau/xac-thuc', [PasswordResetController::class, 'showVerify'])->name('password.verify');
+    Route::post('/quen-mat-khau/xac-thuc', [PasswordResetController::class, 'verifyCode'])->name('password.verify.submit')->middleware('throttle:password-reset');
+    Route::post('/quen-mat-khau/gui-lai', [PasswordResetController::class, 'resend'])->name('password.resend')->middleware('throttle:password-reset');
+    Route::get('/dat-lai-mat-khau', [PasswordResetController::class, 'showReset'])->name('password.reset');
+    Route::post('/dat-lai-mat-khau', [PasswordResetController::class, 'reset'])->name('password.update');
 
     Route::get('/auth/{provider}/redirect', [SocialAuthController::class, 'redirect'])->name('auth.social.redirect');
     Route::get('/auth/{provider}/callback', [SocialAuthController::class, 'callback'])->name('auth.social.callback');
 });
 
 Route::get('/xac-thuc', [AuthController::class, 'showVerify'])->name('auth.verify');
-Route::post('/xac-thuc', [AuthController::class, 'verify'])->name('auth.verify.submit');
-Route::post('/xac-thuc/gui-lai', [AuthController::class, 'resendVerify'])->name('auth.verify.resend');
+Route::post('/xac-thuc', [AuthController::class, 'verify'])->name('auth.verify.submit')->middleware('throttle:10,1');
+Route::post('/xac-thuc/gui-lai', [AuthController::class, 'resendVerify'])->name('auth.verify.resend')->middleware('throttle:5,1');
 
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
 

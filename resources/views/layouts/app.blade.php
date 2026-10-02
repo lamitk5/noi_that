@@ -326,11 +326,11 @@
                     <h3 class="font-display text-base font-bold uppercase tracking-wider text-heading">Hỗ trợ</h3>
                     <ul class="mt-4 space-y-2.5 text-xs text-muted">
                         <li><a href="{{ route('wishlist.index') }}" class="hover:text-primary transition-colors">Sản phẩm đã lưu</a></li>
-                        <li><a href="{{ route('home') }}#lien-he" class="hover:text-primary transition-colors">Câu hỏi thường gặp (FAQ)</a></li>
-                        <li><a href="{{ route('home') }}#lien-he" class="hover:text-primary transition-colors">Hướng dẫn đặt hàng & thanh toán</a></li>
-                        <li><a href="{{ route('home') }}#lien-he" class="hover:text-primary transition-colors">Chính sách bảo hành 5 năm</a></li>
-                        <li><a href="{{ route('home') }}#lien-he" class="hover:text-primary transition-colors">Chính sách giao nhận & lắp đặt</a></li>
-                        <li><a href="{{ route('home') }}#lien-he" class="hover:text-primary transition-colors">Chính sách đổi trả & hoàn tiền</a></li>
+                        <li><a href="{{ route('pages.faq') }}" class="hover:text-primary transition-colors">Câu hỏi thường gặp (FAQ)</a></li>
+                        <li><a href="{{ route('orders.track') }}" class="hover:text-primary transition-colors">Tra cứu đơn hàng</a></li>
+                        <li><a href="{{ route('pages.warranty') }}" class="hover:text-primary transition-colors">Chính sách bảo hành</a></li>
+                        <li><a href="{{ route('pages.return') }}" class="hover:text-primary transition-colors">Chính sách đổi trả & hoàn tiền</a></li>
+                        <li><a href="{{ route('pages.contact') }}" class="hover:text-primary transition-colors">Liên hệ</a></li>
                     </ul>
                 </div>
 
@@ -381,7 +381,7 @@
         </div>
     </footer>
 
-    {{-- Floating chat với nhân viên --}}
+    {{-- Floating chat: trợ lý AI + nhân viên --}}
     <div class="fixed bottom-5 right-5 z-50" x-data="chatWidget" data-auth="{{ auth()->check() && !auth()->user()->isAdmin() && !auth()->user()->isStaff() ? '1' : '0' }}">
         <div
             x-show="open"
@@ -392,7 +392,7 @@
             x-transition:leave="transition ease-in duration-150"
             x-transition:leave-start="opacity-100 translate-y-0 scale-100"
             x-transition:leave-end="opacity-0 translate-y-4 scale-95"
-            class="mb-3 w-[min(360px,calc(100vw-2.5rem))] overflow-hidden rounded-2xl border border-ui-border bg-surface shadow-2xl ring-1 ring-black/5 flex flex-col h-[min(480px,70vh)]"
+            class="mb-3 w-[min(360px,calc(100vw-2.5rem))] overflow-hidden rounded-2xl border border-ui-border bg-surface shadow-2xl ring-1 ring-black/5 flex flex-col h-[min(560px,75vh)]"
         >
             <div class="flex items-center justify-between gap-3 px-4 py-3 bg-primary text-primary-foreground">
                 <div class="flex items-center gap-2.5">
@@ -401,14 +401,101 @@
                     </span>
                     <div>
                         <p class="text-sm font-bold leading-tight">Tư vấn trực tuyến</p>
-                        <p class="text-[11px] opacity-80">Mộc An • Phản hồi trong vài phút</p>
+                        <p class="text-[11px] opacity-80" x-text="tab === 'ai' ? 'Trợ lý AI • Gợi ý sản phẩm tức thì' : 'Mộc An • Phản hồi trong vài phút'">Mộc An • Phản hồi trong vài phút</p>
                     </div>
                 </div>
-                <button type="button" @click="open = false; stopPolling()" aria-label="Đóng khung chat" class="rounded-full p-1.5 hover:bg-white/15 transition">
-                    <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="m6 6 12 12M18 6 6 18"/></svg>
+                <div class="flex items-center gap-1">
+                    <button type="button" x-show="tab === 'ai' && aiMessages.length > 0" x-cloak @click="resetAi()" aria-label="Bắt đầu cuộc trò chuyện mới" title="Cuộc trò chuyện mới" class="rounded-full p-1.5 hover:bg-white/15 transition">
+                        <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/></svg>
+                    </button>
+                    <button type="button" @click="open = false; stopPolling()" aria-label="Đóng khung chat" class="rounded-full p-1.5 hover:bg-white/15 transition">
+                        <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="m6 6 12 12M18 6 6 18"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 border-b border-ui-border text-xs font-semibold" role="tablist">
+                <button type="button" role="tab" @click="activateTab('ai')" :aria-selected="tab === 'ai'"
+                        class="py-2.5 transition border-b-2"
+                        :class="tab === 'ai' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-heading'">
+                    ✨ Tư vấn AI
+                </button>
+                <button type="button" role="tab" @click="activateTab('staff')" :aria-selected="tab === 'staff'"
+                        class="relative py-2.5 transition border-b-2"
+                        :class="tab === 'staff' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-heading'">
+                    Nhân viên
+                    <span x-show="unread > 0" x-cloak class="ml-1 inline-flex min-w-4 h-4 px-1 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white" x-text="unread"></span>
                 </button>
             </div>
 
+            {{-- Tab: Trợ lý AI --}}
+            <div x-show="tab === 'ai'" class="flex-1 flex flex-col min-h-0">
+                <div x-ref="aiList" class="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-page/40">
+                    <div x-show="aiMessages.length === 0" class="space-y-3">
+                        <div class="rounded-2xl rounded-tl-sm border border-ui-border bg-surface px-3.5 py-2 text-sm leading-relaxed text-body shadow-sm max-w-[85%]">
+                            Xin chào 👋 Mình là trợ lý AI của Mộc An. Bạn đang tìm nội thất cho không gian nào, phong cách và ngân sách ra sao? Mình sẽ gợi ý sản phẩm phù hợp.
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <template x-for="s in aiSuggestions" :key="s">
+                                <button type="button" @click="sendAi(s)" :disabled="aiSending" class="rounded-full border border-primary/40 bg-primary/5 px-3 py-1 text-[11px] font-medium text-primary hover:bg-primary hover:text-primary-foreground transition disabled:opacity-50" x-text="s"></button>
+                            </template>
+                        </div>
+                    </div>
+                    <template x-for="m in aiMessages" :key="m.id">
+                        <div class="flex" :class="m.role === 'user' ? 'justify-end' : 'justify-start'">
+                            <div class="max-w-[85%] space-y-2">
+                                <div class="rounded-2xl px-3.5 py-2 text-sm leading-relaxed break-words whitespace-pre-line shadow-sm"
+                                     :class="m.role === 'user'
+                                        ? 'bg-primary text-primary-foreground rounded-tr-sm'
+                                        : 'bg-surface text-body border border-ui-border rounded-tl-sm'"
+                                     x-text="m.content"></div>
+                                <template x-for="p in (m.products || [])" :key="p.id">
+                                    <a :href="p.url" class="flex items-center gap-3 rounded-xl border border-ui-border bg-surface p-2 shadow-xs hover:border-primary transition">
+                                        <img :src="p.image" :alt="p.name" class="size-14 shrink-0 rounded-lg object-cover bg-surface-alt" loading="lazy">
+                                        <div class="min-w-0">
+                                            <p class="truncate text-xs font-semibold text-heading" x-text="p.name"></p>
+                                            <p class="text-[11px] text-muted" x-text="p.category"></p>
+                                            <p class="text-xs font-bold text-primary">
+                                                <span x-text="p.price"></span>
+                                                <span x-show="p.rating" class="ml-1 font-medium text-amber-500" x-text="'★ ' + p.rating"></span>
+                                            </p>
+                                        </div>
+                                    </a>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                    <div x-show="aiSending" x-cloak class="flex justify-start">
+                        <div class="rounded-2xl rounded-tl-sm border border-ui-border bg-surface px-3.5 py-2 text-xs text-muted shadow-sm">Trợ lý đang tìm sản phẩm phù hợp...</div>
+                    </div>
+                </div>
+
+                <div class="border-t border-ui-border p-3">
+                    <p x-show="aiError" x-cloak class="mb-2 rounded-lg bg-rose-50 px-3 py-2 text-[11px] text-rose-600" x-text="aiError"></p>
+                    <form @submit.prevent="sendAi()" class="flex items-end gap-2">
+                        <textarea
+                            x-model="aiDraft"
+                            @keydown.enter.exact.prevent="sendAi()"
+                            rows="1"
+                            maxlength="500"
+                            placeholder="Ví dụ: tủ quần áo gỗ dưới 10 triệu..."
+                            class="max-h-24 flex-1 resize-none rounded-xl border border-ui-border bg-page px-3.5 py-2.5 text-sm text-heading placeholder:text-muted focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                        ></textarea>
+                        <button
+                            type="submit"
+                            :disabled="aiSending || !aiDraft.trim()"
+                            class="grid size-10 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground transition hover:opacity-90 disabled:opacity-40"
+                            aria-label="Gửi câu hỏi cho trợ lý AI"
+                        >
+                            <svg viewBox="0 0 24 24" class="size-4.5" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.126A59.768 59.768 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.876L5.999 12Zm0 0h7.5"/></svg>
+                        </button>
+                    </form>
+                    <p class="mt-1.5 text-center text-[10px] text-muted">Gợi ý từ AI chỉ mang tính tham khảo.</p>
+                </div>
+            </div>
+
+            {{-- Tab: Nhân viên --}}
+            <div x-show="tab === 'staff'" x-cloak class="flex-1 flex flex-col min-h-0">
             @guest
                 <div class="flex-1 flex flex-col items-center justify-center gap-3 p-6 text-center">
                     <svg viewBox="0 0 24 24" class="size-10 text-muted" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9"/></svg>
@@ -468,6 +555,7 @@
                     </div>
                 @endif
             @endguest
+            </div>
         </div>
 
         <button

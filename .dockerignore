@@ -2,6 +2,7 @@
 .github
 .agents
 .codex
+.cursor
 .idea
 .vscode
 .env
@@ -11,10 +12,18 @@
 auth.json
 vendor
 node_modules
+public/build
 tests
+docs
+scripts
+test-results
+playwright-report
+*.jmx
+*.jtl
 .phpunit.cache
 .phpunit.result.cache
-storage
+storage/*
+!storage/picture
 bootstrap/cache
 public/hot
 public/storage

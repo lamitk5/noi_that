@@ -14,36 +14,29 @@ class InvoiceController extends Controller
             ->with(['items.variant.product'])
             ->firstOrFail();
 
-        $user = $request->user();
-        $isAuthorized = false;
-
-        if ($user) {
-            if ($user->role === 'admin' || $user->id === $order->user_id) {
-                $isAuthorized = true;
-            }
-        }
-
-        // Guest check via phone or session
-        $phone = trim((string) $request->input('phone', ''));
-        if ($phone !== '' && $order->customer_phone === $phone) {
-            $isAuthorized = true;
-        }
-
-        // If placed just now in current session
-        if (session('last_order_code') === $orderCode) {
-            $isAuthorized = true;
-        }
-
-        // Allow public invoice viewing if guest has direct invoice link from email
-        if (! $user && ! $isAuthorized && $request->has('auth_token')) {
-            if (hash_equals(md5($order->order_code . $order->created_at), (string) $request->input('auth_token'))) {
-                $isAuthorized = true;
-            }
-        }
-
-        // Default open for invoice printing if directly requested by code (customer receipt)
-        $isAuthorized = true;
+        abort_unless($this->canView($request, $order), 403, 'Bạn không có quyền xem hóa đơn này.');
 
         return view('orders.invoice', compact('order'));
+    }
+
+    protected function canView(Request $request, Order $order): bool
+    {
+        $user = $request->user();
+        if ($user && ($user->isAdmin() || $user->isStaff() || $user->id === $order->user_id)) {
+            return true;
+        }
+
+        // Links sent in the order confirmation email are signed.
+        if ($request->hasValidSignature()) {
+            return true;
+        }
+
+        if ($request->session()->get('last_order_code') === $order->order_code) {
+            return true;
+        }
+
+        $phone = preg_replace('/[^0-9]/', '', (string) $request->input('phone', ''));
+
+        return $phone !== '' && $phone === preg_replace('/[^0-9]/', '', (string) $order->customer_phone);
     }
 }
