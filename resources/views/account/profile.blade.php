@@ -12,6 +12,7 @@
         <div class="mt-6 flex flex-wrap gap-2 text-xs font-semibold">
             <a href="{{ route('profile.edit') }}" class="rounded-lg bg-primary px-3.5 py-2 text-primary-foreground">Hồ sơ</a>
             <a href="{{ route('orders.index') }}" class="rounded-lg border border-ui-border bg-surface px-3.5 py-2 text-heading hover:bg-surface-alt transition">Lịch sử đơn hàng</a>
+            <a href="{{ route('wishlist.index') }}" class="rounded-lg border border-ui-border bg-surface px-3.5 py-2 text-heading hover:bg-surface-alt transition">Danh sách yêu thích ({{ $wishlistCount ?? 0 }})</a>
         </div>
 
         @if (session('success'))

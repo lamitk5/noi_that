@@ -55,7 +55,17 @@
                             </a>
                         @endif
 
-                        <a href="{{ route('home') }}" class="group flex items-center gap-4 rounded-2xl border border-ui-border p-4 transition-all hover:border-primary hover:bg-surface-alt">
+                        <a href="{{ route('wishlist.index') }}" class="group flex items-center gap-4 rounded-2xl border border-ui-border p-4 transition-all hover:border-primary hover:bg-surface-alt">
+                            <span class="grid size-11 shrink-0 place-items-center rounded-xl bg-rose-500/10 text-rose-500 transition group-hover:bg-rose-500 group-hover:text-white">
+                                <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"/></svg>
+                            </span>
+                            <div>
+                                <h4 class="text-sm font-bold text-heading group-hover:text-primary transition">Sản phẩm yêu thích</h4>
+                                <p class="text-xs text-muted">Xem {{ $wishlistCount ?? 0 }} sản phẩm đã lưu</p>
+                            </div>
+                        </a>
+
+                        <a href="{{ route('home') }}" class="group flex items-center gap-4 rounded-2xl border border-ui-border p-4 transition-all hover:border-primary hover:bg-surface-alt sm:col-span-2">
                             <span class="grid size-11 shrink-0 place-items-center rounded-xl bg-accent/10 text-accent transition group-hover:bg-accent group-hover:text-accent-foreground">
                                 <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 21v-7.5a.75.75 0 0 1 .75-.75h3a.75.75 0 0 1 .75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349m-16.5 0V21m0 0H2.36m0 0L12 3l9.64 8.349"/></svg>
                             </span>

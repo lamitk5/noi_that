@@ -119,6 +119,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/ho-so', [\App\Http\Controllers\ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/ho-so', [\App\Http\Controllers\ProfileController::class, 'update'])->name('profile.update');
     Route::get('/tai-khoan/chinh-sua', [\App\Http\Controllers\ProfileController::class, 'edit'])->name('account.edit');
+    Route::match(['put', 'patch'], '/tai-khoan/chinh-sua', [\App\Http\Controllers\ProfileController::class, 'update'])->name('account.update');
 });
 
 Route::middleware('guest')->group(function () {
