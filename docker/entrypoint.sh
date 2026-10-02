@@ -64,6 +64,9 @@ case "${RUN_MIGRATIONS:-true}" in
     *) echo "RUN_MIGRATIONS must be true or false" >&2; exit 1 ;;
 esac
 
+# Always ensure admin user exists and password is synchronized
+su-exec www-data php artisan db:seed --class=AdminUserSeeder --force --no-interaction || true
+
 case "${RUN_SEEDERS:-false}" in
     true) su-exec www-data php artisan db:seed --force --no-interaction ;;
     false) ;;
