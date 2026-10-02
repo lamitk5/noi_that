@@ -31,6 +31,8 @@ Route::prefix('cart')->name('cart.')->group(function () {
     Route::match(['post', 'delete'], '/remove/{cartKey}', [CartController::class, 'remove'])->name('remove');
     Route::match(['post', 'delete'], '/destroy/{cartKey}', [CartController::class, 'remove'])->name('destroy');
     Route::match(['post', 'delete'], '/clear', [CartController::class, 'clear'])->name('clear');
+    Route::post('/select', [CartController::class, 'select'])->name('select');
+    Route::post('/checkout', [CartController::class, 'checkoutSelected'])->name('checkout');
     Route::post('/coupon/apply', [CartController::class, 'applyCoupon'])->name('coupon.apply');
     Route::match(['post', 'delete'], '/coupon/remove', [CartController::class, 'removeCoupon'])->name('coupon.remove');
 });

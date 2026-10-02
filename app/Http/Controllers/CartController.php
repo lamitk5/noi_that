@@ -19,7 +19,10 @@ class CartController extends Controller
         $this->cartService->setBuyNowMode(false);
         $items = $this->cartService->getItems();
         $cart = $this->cartService->getCart();
-        $subtotal = $this->cartService->getSubtotal();
+        $selectedKeys = $this->cartService->getSelectedKeys();
+        $selectedCount = count($selectedKeys);
+        $subtotal = $this->cartService->getSelectedSubtotal();
+        $hasCalculatedShipping = $this->cartService->hasCalculatedShipping();
         $shippingFee = $this->cartService->getShippingFee();
         $coupon = $this->cartService->getCoupon();
         $discountAmount = $this->cartService->getDiscountAmount();
@@ -27,7 +30,7 @@ class CartController extends Controller
         $total = $this->cartService->getTotal();
         $count = $this->cartService->count();
 
-        $data = compact('cart', 'items', 'subtotal', 'shippingFee', 'coupon', 'discountAmount', 'availableCoupons', 'total', 'count');
+        $data = compact('cart', 'items', 'selectedKeys', 'selectedCount', 'subtotal', 'hasCalculatedShipping', 'shippingFee', 'coupon', 'discountAmount', 'availableCoupons', 'total', 'count');
 
         if ($request->wantsJson()) {
             return response()->json(['success' => true, 'data' => $data]);
@@ -240,5 +243,49 @@ class CartController extends Controller
         }
 
         return redirect()->route('cart.index')->with('success', 'Giỏ hàng đã được làm trống.');
+    }
+
+    public function select(Request $request): JsonResponse
+    {
+        $request->validate([
+            'selected_keys' => ['nullable', 'array'],
+            'selected_keys.*' => ['string'],
+        ]);
+
+        $keys = (array) $request->input('selected_keys', []);
+        $this->cartService->setSelectedKeys($keys);
+
+        $selectedKeys = $this->cartService->getSelectedKeys();
+        $subtotal = $this->cartService->getSelectedSubtotal();
+        $discountAmount = $this->cartService->getDiscountAmount();
+        $shippingFee = $this->cartService->getShippingFee();
+        $total = $this->cartService->getTotal();
+
+        return response()->json([
+            'success' => true,
+            'selected_keys' => $selectedKeys,
+            'selected_count' => count($selectedKeys),
+            'subtotal' => $subtotal,
+            'formatted_subtotal' => number_format($subtotal, 0, ',', '.') . '₫',
+            'discount_amount' => $discountAmount,
+            'formatted_discount' => number_format($discountAmount, 0, ',', '.') . '₫',
+            'shipping_fee' => $shippingFee,
+            'formatted_shipping' => number_format($shippingFee, 0, ',', '.') . '₫',
+            'total' => $total,
+            'formatted_total' => number_format($total, 0, ',', '.') . '₫',
+        ]);
+    }
+
+    public function checkoutSelected(Request $request): RedirectResponse
+    {
+        $keys = (array) ($request->input('selected_items') ?? $request->input('selected_keys') ?? []);
+
+        if (empty($keys)) {
+            return redirect()->route('cart.index')->with('error', 'Vui lòng chọn ít nhất 1 sản phẩm để thanh toán.');
+        }
+
+        $this->cartService->setSelectedKeys($keys);
+
+        return redirect()->route('checkout.index');
     }
 }

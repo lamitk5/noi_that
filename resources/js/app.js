@@ -37,10 +37,23 @@ Alpine.data('chatWidget', () => ({
     error: '',
     lastId: 0,
     timer: null,
+    unread: 0,
 
-    init() {
+    async init() {
         this.auth = this.$root.dataset.auth === '1';
         this.$nextTick(() => this.scrollToBottom(false));
+        if (this.auth) {
+            try {
+                const res = await fetch('/api/chat/session', { headers: this.headers() });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.success) {
+                        this.chatId = data.chat_id;
+                        this.unread = Number(data.unread) || 0;
+                    }
+                }
+            } catch (e) { /* ignore */ }
+        }
     },
 
     csrf() {
@@ -58,6 +71,7 @@ Alpine.data('chatWidget', () => ({
     async toggle() {
         this.open = !this.open;
         if (this.open) {
+            this.unread = 0;
             await this.bootstrap();
             this.startPolling();
         } else {
@@ -67,21 +81,21 @@ Alpine.data('chatWidget', () => ({
 
     async bootstrap() {
         if (!this.auth) return;
-        if (this.chatId) {
-            await this.fetchMessages();
-            return;
-        }
         this.loading = true;
         this.error = '';
         try {
-            const res = await fetch('/api/chat/session', { headers: this.headers() });
-            const data = await res.json();
-            if (res.status === 401) {
-                this.error = 'Vui lòng đăng nhập để trò chuyện.';
-                return;
+            if (!this.chatId) {
+                const res = await fetch('/api/chat/session', { headers: this.headers() });
+                const data = await res.json();
+                if (res.status === 401) {
+                    this.error = 'Vui lòng đăng nhập để trò chuyện.';
+                    return;
+                }
+                if (data.success) {
+                    this.chatId = data.chat_id;
+                }
             }
-            if (data.success) {
-                this.chatId = data.chat_id;
+            if (this.chatId) {
                 await this.fetchMessages();
             }
         } catch (e) {
@@ -106,6 +120,9 @@ Alpine.data('chatWidget', () => ({
                     this.lastId = Math.max(this.lastId, m.id);
                 }
             });
+            if (this.open) {
+                this.unread = 0;
+            }
             this.scrollToBottom();
         } catch (e) { /* ignore */ }
     },
@@ -148,8 +165,10 @@ Alpine.data('chatWidget', () => ({
             }
             this.draft = '';
             const m = data.message;
-            this.messages.push({ ...m, role: 'user' });
-            this.lastId = Math.max(this.lastId, m.id);
+            if (!this.messages.some((x) => x.id === m.id)) {
+                this.messages.push({ ...m, role: 'user' });
+                this.lastId = Math.max(this.lastId, m.id);
+            }
             this.scrollToBottom();
         } catch (e) {
             this.error = 'Không gửi được tin nhắn. Vui lòng thử lại.';
@@ -218,6 +237,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 if (data.success) {
                     button.classList.toggle('is-active', !!data.in_wishlist);
+                    const msg = data.message || (data.in_wishlist ? 'Đã thêm vào danh sách yêu thích!' : 'Đã xóa khỏi danh sách yêu thích!');
+                    window.Toast?.success(msg);
+                } else if (data.message) {
+                    window.Toast?.error(data.message);
                 }
             } catch (e) {
                 button.classList.toggle('is-active');
@@ -225,16 +248,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    let toastTimer;
-    const toast = document.querySelector('#toast');
     document.querySelectorAll('.quick-add').forEach((button) => {
         button.addEventListener('click', () => {
-            if (!toast) return;
-            toast.classList.remove('translate-y-8', 'opacity-0');
-            window.clearTimeout(toastTimer);
-            toastTimer = window.setTimeout(() => {
-                toast.classList.add('translate-y-8', 'opacity-0');
-            }, 2200);
+            window.Toast?.success('Đã thêm sản phẩm vào giỏ hàng!');
         });
     });
 

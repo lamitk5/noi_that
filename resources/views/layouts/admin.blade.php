@@ -74,7 +74,7 @@
                         <span class="size-8 rounded-lg bg-primary text-primary-foreground font-display font-bold text-sm grid place-items-center">M</span>
                         <div class="flex flex-col">
                             <span class="font-display font-bold text-base text-heading leading-none">Quản trị Mộc An</span>
-                            <span class="text-[10px] font-semibold uppercase tracking-wider text-accent mt-0.5">Bảng điều khiển</span>
+                            <span class="text-[10px] font-semibold uppercase tracking-wider text-accent mt-0.5">Bảng Điều Khiển</span>
                         </div>
                     </a>
                 </div>
@@ -235,20 +235,7 @@
         </div>
     </div>
 
-    @include('partials.admin-toast')
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            @if (session('success'))
-                window.AdminToast?.success(@js(session('success')));
-            @endif
-            @if (session('error'))
-                window.AdminToast?.error(@js(session('error')));
-            @endif
-            @if (isset($errors) && $errors->any())
-                window.AdminToast?.error(@js($errors->first()));
-            @endif
-        });
-    </script>
+    @include('partials.toast')
     <script>
         (function () {
             const badge = document.getElementById('admin-chat-badge');

@@ -227,23 +227,6 @@
                             </div>
                         </label>
 
-                        <!-- Bank Transfer Option -->
-                        <label class="flex items-start gap-3.5 p-4 rounded-2xl border border-ui-border bg-surface-alt hover:border-primary/60 cursor-pointer transition has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                            <input
-                                type="radio"
-                                name="payment_method"
-                                value="bank_transfer"
-                                class="mt-1 size-4 text-primary focus:ring-primary border-ui-border"
-                                {{ old('payment_method') === 'bank_transfer' ? 'checked' : '' }}
-                            >
-                            <div class="space-y-1">
-                                <div class="flex items-center gap-2">
-                                    <span class="font-semibold text-heading text-sm">Chuyển khoản ngân hàng</span>
-                                    <span class="rounded bg-blue-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">An toàn</span>
-                                </div>
-                                <p class="text-xs text-muted">Thông tin tài khoản ngân hàng chi tiết sẽ được hiển thị ngay sau khi bạn hoàn tất đặt hàng.</p>
-                            </div>
-                        </label>
 
                         <!-- VNPAY Option -->
                         <label class="flex items-start gap-3.5 p-4 rounded-2xl border border-ui-border bg-surface-alt hover:border-primary/60 cursor-pointer transition has-[:checked]:border-primary has-[:checked]:bg-primary/5">
@@ -274,10 +257,16 @@
                             >
                             <div class="space-y-1">
                                 <div class="flex items-center gap-2">
-                                    <span class="font-semibold text-heading text-sm">Ví MoMo</span>
-                                    <span class="rounded bg-pink-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-pink-600 dark:text-pink-400">Ví điện tử</span>
+                                    <span class="font-semibold text-heading text-sm">MoMo - Thẻ ATM & Tài khoản (Sandbox)</span>
+                                    <span class="rounded bg-pink-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-pink-600 dark:text-pink-400">Sandbox</span>
                                 </div>
-                                <p class="text-xs text-muted">Thanh toán nhanh chóng bằng ứng dụng Ví điện tử MoMo.</p>
+                                <p class="text-xs text-muted">Thanh toán trực tiếp bằng thẻ ATM nội địa (bỏ qua quét mã QR MoMo).</p>
+                                <div class="mt-2 rounded-lg border border-pink-200/50 bg-pink-500/5 p-2.5 text-[11px] text-muted space-y-0.5">
+                                    <p class="font-semibold text-pink-600 dark:text-pink-400">Thông tin thẻ thử nghiệm MoMo Sandbox:</p>
+                                    <p>• Số thẻ: <code class="font-mono font-bold text-heading">9704198526191432198</code></p>
+                                    <p>• Tên chủ thẻ: <code class="font-mono font-bold text-heading">NGUYEN VAN A</code> | Hạn: <code class="font-mono font-bold text-heading">07/15</code></p>
+                                    <p>• Mã OTP: <code class="font-mono font-bold text-heading">000000</code></p>
+                                </div>
                             </div>
                         </label>
 

@@ -11,6 +11,7 @@ class CartService
 {
     protected string $sessionKey = 'furniture_cart';
     protected string $buyNowSessionKey = 'buy_now_cart';
+    protected string $selectedSessionKey = 'furniture_cart_selected';
 
     public function isBuyNowMode(): bool
     {
@@ -99,6 +100,83 @@ class CartService
         return (float) $this->getItems()->sum('line_total');
     }
 
+    public function getSelectedKeys(): array
+    {
+        if ($this->isBuyNowMode()) {
+            return array_keys(Session::get($this->buyNowSessionKey, []));
+        }
+
+        $cart = Session::get($this->sessionKey, []);
+        $cartKeys = array_map('strval', array_keys($cart));
+
+        if (empty($cartKeys)) {
+            return [];
+        }
+
+        $selected = Session::get($this->selectedSessionKey);
+
+        if ($selected === null) {
+            return $cartKeys;
+        }
+
+        $selected = array_map('strval', (array) $selected);
+
+        return array_values(array_intersect($selected, $cartKeys));
+    }
+
+    public function setSelectedKeys(array $keys): void
+    {
+        $cart = Session::get($this->sessionKey, []);
+        $cartKeys = array_map('strval', array_keys($cart));
+        $keys = array_map('strval', $keys);
+
+        $validKeys = array_values(array_intersect($keys, $cartKeys));
+        Session::put($this->selectedSessionKey, $validKeys);
+    }
+
+    public function isItemSelected(string $cartKey): bool
+    {
+        return in_array((string) $cartKey, $this->getSelectedKeys(), true);
+    }
+
+    public function getSelectedCart(): array
+    {
+        if ($this->isBuyNowMode()) {
+            return Session::get($this->buyNowSessionKey, []);
+        }
+
+        $cart = Session::get($this->sessionKey, []);
+        $selectedKeys = $this->getSelectedKeys();
+
+        return array_filter($cart, function ($key) use ($selectedKeys) {
+            return in_array((string) $key, $selectedKeys, true);
+        }, ARRAY_FILTER_USE_KEY);
+    }
+
+    public function getSelectedItems(): Collection
+    {
+        return collect($this->getSelectedCart())->map(function (array $line) {
+            $variant = ProductVariant::with('product.category', 'product.primaryImage')->find($line['variant_id'] ?? 0);
+            $product = $variant?->product;
+            $price = (float) ($line['price'] ?? $variant?->price ?? 0);
+            $qty = (int) ($line['quantity'] ?? 1);
+
+            return (object) [
+                'key' => $line['key'] ?? null,
+                'product' => $product,
+                'variant' => $variant,
+                'quantity' => $qty,
+                'unit_price' => $price,
+                'line_total' => $price * $qty,
+            ];
+        })->filter(fn ($item) => $item->product && $item->variant)->values();
+    }
+
+    public function getSelectedSubtotal(): float
+    {
+        return (float) $this->getSelectedItems()->sum('line_total');
+    }
+
     public function lineKey(int $productId, ?int $variantId = null): string
     {
         return $variantId ? "{$productId}-{$variantId}" : (string) $productId;
@@ -149,6 +227,14 @@ class CartService
 
         Session::put($this->sessionKey, $cart);
 
+        if (Session::has($this->selectedSessionKey)) {
+            $selected = Session::get($this->selectedSessionKey, []);
+            if (is_array($selected) && ! in_array($id, $selected, true)) {
+                $selected[] = $id;
+                Session::put($this->selectedSessionKey, $selected);
+            }
+        }
+
         return $cart;
     }
 
@@ -189,6 +275,11 @@ class CartService
 
         unset($cart[$cartKey]);
         Session::put($this->sessionKey, $cart);
+
+        $selected = Session::get($this->selectedSessionKey);
+        if (is_array($selected)) {
+            Session::put($this->selectedSessionKey, array_values(array_diff($selected, [$cartKey])));
+        }
 
         return $cart;
     }
@@ -256,11 +347,15 @@ class CartService
         }
 
         $coupon = self::AVAILABLE_COUPONS[$code];
-        $subtotal = $this->getSubtotal();
+        $subtotal = $this->getSelectedSubtotal();
+
+        if ($subtotal <= 0) {
+            throw new \InvalidArgumentException('Vui lòng chọn ít nhất 1 sản phẩm trước khi áp dụng mã giảm giá.');
+        }
 
         if ($subtotal < $coupon['min_order']) {
             $formattedMin = number_format($coupon['min_order'], 0, ',', '.');
-            throw new \InvalidArgumentException("Mã {$code} chỉ áp dụng cho đơn hàng từ {$formattedMin}₫. Tạm tính hiện tại: ".number_format($subtotal, 0, ',', '.')."₫.");
+            throw new \InvalidArgumentException("Mã {$code} chỉ áp dụng cho đơn hàng từ {$formattedMin}₫. Tạm tính các món đã chọn: ".number_format($subtotal, 0, ',', '.')."₫.");
         }
 
         Session::put($this->couponSessionKey, $coupon);
@@ -273,14 +368,14 @@ class CartService
         Session::forget($this->couponSessionKey);
     }
 
-    public function getDiscountAmount(): float
+    public function getDiscountAmount(?float $subtotal = null): float
     {
         $coupon = $this->getCoupon();
         if (! $coupon) {
             return 0.0;
         }
 
-        $subtotal = $this->getSubtotal();
+        $subtotal = $subtotal ?? $this->getSelectedSubtotal();
         if ($subtotal < ($coupon['min_order'] ?? 0)) {
             return 0.0;
         }
@@ -301,10 +396,37 @@ class CartService
         return (float) $discount;
     }
 
+    public function removeSelected(): void
+    {
+        if ($this->isBuyNowMode()) {
+            $this->clearBuyNow();
+            return;
+        }
+
+        $cart = Session::get($this->sessionKey, []);
+        $selectedKeys = $this->getSelectedKeys();
+
+        foreach ($selectedKeys as $key) {
+            unset($cart[$key]);
+        }
+
+        Session::put($this->sessionKey, $cart);
+        Session::forget([$this->selectedSessionKey, 'shipping_fee', 'shipping_destination']);
+
+        if (empty($cart)) {
+            Session::forget($this->couponSessionKey);
+        }
+    }
+
     public function clear(): void
     {
-        Session::forget($this->sessionKey);
-        Session::forget($this->couponSessionKey);
+        Session::forget([
+            $this->sessionKey,
+            $this->selectedSessionKey,
+            $this->couponSessionKey,
+            'shipping_fee',
+            'shipping_destination',
+        ]);
     }
 
     public function hasCalculatedShipping(): bool
@@ -323,13 +445,13 @@ class CartService
 
     public function getTotal(): float
     {
-        $subtotal = $this->getSubtotal();
+        $subtotal = $this->getSelectedSubtotal();
         if ($subtotal === 0.0) {
             return 0.0;
         }
 
         $shipping = $this->hasCalculatedShipping() ? $this->getShippingFee() : 0.0;
-        $total = $subtotal + $shipping - $this->getDiscountAmount();
+        $total = $subtotal + $shipping - $this->getDiscountAmount($subtotal);
         return max(0.0, (float) $total);
     }
 

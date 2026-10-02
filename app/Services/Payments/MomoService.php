@@ -41,7 +41,7 @@ class MomoService
         $extraData = '';
         // MoMo expects alphanumeric requestId (no hyphens like UUID)
         $requestId = $transaction->request_id ?: $this->generateRequestId();
-        $requestType = 'captureWallet';
+        $requestType = (string) config('services.momo.request_type', 'payWithATM');
 
         if (! $transaction->request_id) {
             $transaction->update(['request_id' => $requestId]);

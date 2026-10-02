@@ -68,7 +68,21 @@
                 <!-- Cart Items List (8 cols) -->
                 <div class="lg:col-span-8 space-y-4">
                     <div class="flex items-center justify-between pb-3 border-b border-ui-border text-xs text-muted">
-                        <span>{{ $items->count() }} mặt hàng (Tổng {{ $items->sum('quantity') }} sản phẩm)</span>
+                        <div class="flex items-center gap-3">
+                            <label class="flex items-center gap-2 cursor-pointer select-none">
+                                <input
+                                    type="checkbox"
+                                    id="select-all-cart-items"
+                                    class="size-4 rounded border-ui-border text-primary focus:ring-primary accent-primary cursor-pointer"
+                                    {{ $selectedCount === $items->count() && $items->isNotEmpty() ? 'checked' : '' }}
+                                >
+                                <span class="font-semibold text-heading text-xs">
+                                    Chọn tất cả (<span id="selected-summary-count">{{ $selectedCount }}</span>/{{ $items->count() }})
+                                </span>
+                            </label>
+                            <span class="text-muted/60 hidden sm:inline">•</span>
+                            <span class="hidden sm:inline">Tổng {{ $items->sum('quantity') }} sản phẩm</span>
+                        </div>
                         <form method="POST" action="{{ route('cart.clear') }}" onsubmit="return confirm('Bạn có chắc chắn muốn xóa toàn bộ giỏ hàng?');">
                             @csrf
                             @method('DELETE')
@@ -79,7 +93,30 @@
                     </div>
 
                     @foreach ($items as $item)
-                        <div class="rounded-2xl border border-ui-border bg-surface p-4 sm:p-5 shadow-xs flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
+                        @php
+                            $isSelected = in_array((string) $item->key, array_map('strval', $selectedKeys), true);
+                        @endphp
+                        <div
+                            class="cart-item-row rounded-2xl border transition-all duration-200 bg-surface p-4 sm:p-5 shadow-xs flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 {{ $isSelected ? 'border-primary/40 ring-1 ring-primary/20' : 'border-ui-border opacity-75' }}"
+                            data-key="{{ $item->key }}"
+                            data-unit-price="{{ $item->unit_price }}"
+                            data-quantity="{{ $item->quantity }}"
+                            data-line-total="{{ $item->line_total }}"
+                        >
+                            <!-- Checkbox -->
+                            <div class="flex items-center self-start sm:self-center shrink-0">
+                                <label class="flex items-center cursor-pointer p-1 -m-1">
+                                    <input
+                                        type="checkbox"
+                                        name="selected_items[]"
+                                        value="{{ $item->key }}"
+                                        class="cart-item-checkbox size-4 sm:size-5 rounded border-ui-border text-primary focus:ring-primary accent-primary cursor-pointer"
+                                        {{ $isSelected ? 'checked' : '' }}
+                                        aria-label="Chọn mua {{ $item->product->name }}"
+                                    >
+                                </label>
+                            </div>
+
                             <!-- Image -->
                             <div class="size-24 sm:size-28 rounded-xl overflow-hidden bg-surface-alt border border-ui-border shrink-0">
                                 <a href="{{ route('products.show', $item->product->slug) }}">
@@ -264,25 +301,23 @@
 
                         <div class="space-y-3 text-sm divide-y divide-ui-border">
                             <div class="flex items-center justify-between pb-3">
-                                <span class="text-muted">Tạm tính</span>
-                                <span class="font-bold text-heading">{{ number_format($subtotal, 0, ',', '.') }}₫</span>
+                                <span class="text-muted">Tạm tính (<span id="summary-selected-count">{{ $selectedCount }}</span> sản phẩm)</span>
+                                <span class="font-bold text-heading" id="summary-subtotal">{{ number_format($subtotal, 0, ',', '.') }}₫</span>
                             </div>
 
-                            @if ($discountAmount > 0)
-                                <div class="flex items-center justify-between py-3 text-emerald-700 font-semibold">
-                                    <span class="flex items-center gap-1">
-                                        <span>Giảm giá</span>
-                                        @if ($coupon)
-                                            <span class="font-mono text-xs bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded">({{ $coupon['code'] }})</span>
-                                        @endif
-                                    </span>
-                                    <span>-{{ number_format($discountAmount, 0, ',', '.') }}₫</span>
-                                </div>
-                            @endif
+                            <div id="summary-discount-row" class="flex items-center justify-between py-3 text-emerald-700 font-semibold {{ $discountAmount > 0 ? '' : 'hidden' }}">
+                                <span class="flex items-center gap-1">
+                                    <span>Giảm giá</span>
+                                    @if ($coupon)
+                                        <span class="font-mono text-xs bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded" id="summary-coupon-badge">({{ $coupon['code'] }})</span>
+                                    @endif
+                                </span>
+                                <span id="summary-discount-amount">-{{ number_format($discountAmount, 0, ',', '.') }}₫</span>
+                            </div>
 
                             <div class="flex items-center justify-between py-3">
                                 <span class="text-muted">Phí vận chuyển</span>
-                                <span class="text-xs font-semibold text-accent">
+                                <span class="text-xs font-semibold text-accent" id="summary-shipping-fee">
                                     {{ $shippingFee > 0 ? number_format($shippingFee, 0, ',', '.') . '₫' : ($subtotal >= 5000000 ? 'Miễn phí' : 'Tính ở thanh toán') }}
                                 </span>
                             </div>
@@ -290,7 +325,7 @@
                             <div class="flex items-baseline justify-between pt-3 text-base">
                                 <span class="font-bold text-heading">Tổng thanh toán</span>
                                 <div class="text-right">
-                                    <span class="font-display text-2xl font-bold text-heading">
+                                    <span class="font-display text-2xl font-bold text-heading" id="summary-total">
                                         {{ number_format($total, 0, ',', '.') }}₫
                                     </span>
                                     <p class="text-[11px] text-muted">Đã bao gồm VAT</p>
@@ -298,15 +333,26 @@
                             </div>
                         </div>
 
-                        <div class="space-y-3 pt-2">
-                            <a
-                                href="{{ route('checkout.index') }}"
-                                class="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-primary hover:opacity-90 px-6 py-3.5 text-sm font-bold text-primary-foreground shadow-sm transition cursor-pointer"
+                        <form id="checkout-selected-form" method="POST" action="{{ route('cart.checkout') }}" class="space-y-3 pt-2">
+                            @csrf
+                            <div id="checkout-hidden-inputs">
+                                @foreach ($selectedKeys as $key)
+                                    <input type="hidden" name="selected_items[]" value="{{ $key }}">
+                                @endforeach
+                            </div>
+                            <button
+                                type="submit"
+                                id="btn-proceed-checkout"
+                                class="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-primary hover:opacity-90 px-6 py-3.5 text-sm font-bold text-primary-foreground shadow-sm transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                {{ $selectedCount === 0 ? 'disabled' : '' }}
                             >
-                                <span>Tiến hành thanh toán</span>
+                                <span id="btn-checkout-label">Tiến hành thanh toán ({{ $selectedCount }})</span>
                                 <span aria-hidden="true">→</span>
-                            </a>
-                        </div>
+                            </button>
+                            <p id="checkout-empty-warning" class="text-xs text-rose-500 text-center font-medium {{ $selectedCount === 0 ? '' : 'hidden' }}">
+                                Vui lòng chọn ít nhất 1 sản phẩm để thanh toán
+                            </p>
+                        </form>
 
                         <div class="pt-4 border-t border-ui-border space-y-2.5 text-xs text-muted">
                             <div class="flex items-center gap-2">
@@ -328,4 +374,207 @@
         @endif
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const selectAllCheckbox = document.getElementById('select-all-cart-items');
+    const itemCheckboxes = document.querySelectorAll('.cart-item-checkbox');
+    const selectedSummaryCount = document.getElementById('selected-summary-count');
+    const summarySelectedCount = document.getElementById('summary-selected-count');
+    const summarySubtotal = document.getElementById('summary-subtotal');
+    const summaryDiscountRow = document.getElementById('summary-discount-row');
+    const summaryDiscountAmount = document.getElementById('summary-discount-amount');
+    const summaryShippingFee = document.getElementById('summary-shipping-fee');
+    const summaryTotal = document.getElementById('summary-total');
+    const btnProceedCheckout = document.getElementById('btn-proceed-checkout');
+    const btnCheckoutLabel = document.getElementById('btn-checkout-label');
+    const checkoutEmptyWarning = document.getElementById('checkout-empty-warning');
+    const hiddenInputsContainer = document.getElementById('checkout-hidden-inputs');
+
+    const config = {
+        selectUrl: "{{ route('cart.select') }}",
+        csrfToken: "{{ csrf_token() }}",
+        coupon: @json($coupon),
+        shippingFee: {{ (float) $shippingFee }},
+        hasCalculatedShipping: {{ ($hasCalculatedShipping ?? false) ? 'true' : 'false' }},
+    };
+
+    let syncTimeout = null;
+
+    function formatVND(amount) {
+        return new Intl.NumberFormat('vi-VN').format(Math.max(0, Math.round(amount))) + '₫';
+    }
+
+    function calculateDiscount(subtotal) {
+        if (!config.coupon) return 0;
+        const c = config.coupon;
+        if (subtotal < (c.min_order || 0)) return 0;
+
+        let discount = 0;
+        if (c.type === 'percent') {
+            discount = subtotal * (parseFloat(c.value) / 100);
+            if (c.max_discount && discount > parseFloat(c.max_discount)) {
+                discount = parseFloat(c.max_discount);
+            }
+        } else if (c.type === 'fixed') {
+            discount = Math.min(subtotal, parseFloat(c.value));
+        } else if (c.type === 'shipping') {
+            const ship = config.shippingFee || 0;
+            discount = Math.min(ship, parseFloat(c.max_discount || 50000));
+        }
+        return discount;
+    }
+
+    function updateCartUI() {
+        const checkedBoxes = Array.from(document.querySelectorAll('.cart-item-checkbox:checked'));
+        const totalCount = itemCheckboxes.length;
+        const selectedCount = checkedBoxes.length;
+
+        // Update Select All Checkbox state
+        if (selectAllCheckbox) {
+            selectAllCheckbox.checked = selectedCount === totalCount && totalCount > 0;
+            selectAllCheckbox.indeterminate = selectedCount > 0 && selectedCount < totalCount;
+        }
+
+        // Update row visual styling
+        itemCheckboxes.forEach(cb => {
+            const row = cb.closest('.cart-item-row');
+            if (row) {
+                if (cb.checked) {
+                    row.classList.add('border-primary/40', 'ring-1', 'ring-primary/20');
+                    row.classList.remove('border-ui-border', 'opacity-75');
+                } else {
+                    row.classList.remove('border-primary/40', 'ring-1', 'ring-primary/20');
+                    row.classList.add('border-ui-border', 'opacity-75');
+                }
+            }
+        });
+
+        // Compute Subtotal
+        let subtotal = 0;
+        const selectedKeys = [];
+        checkedBoxes.forEach(cb => {
+            const row = cb.closest('.cart-item-row');
+            if (row) {
+                const lineTotal = parseFloat(row.dataset.lineTotal || 0);
+                subtotal += lineTotal;
+                selectedKeys.push(cb.value);
+            }
+        });
+
+        // Compute Discount & Shipping & Total
+        const discount = calculateDiscount(subtotal);
+        const shipping = config.hasCalculatedShipping ? config.shippingFee : 0;
+        const total = subtotal === 0 ? 0 : Math.max(0, subtotal - discount + shipping);
+
+        // Update counts
+        if (selectedSummaryCount) selectedSummaryCount.textContent = selectedCount;
+        if (summarySelectedCount) summarySelectedCount.textContent = selectedCount;
+
+        // Update values
+        if (summarySubtotal) summarySubtotal.textContent = formatVND(subtotal);
+
+        if (summaryDiscountRow && summaryDiscountAmount) {
+            if (discount > 0) {
+                summaryDiscountRow.classList.remove('hidden');
+                summaryDiscountAmount.textContent = '-' + formatVND(discount);
+            } else {
+                summaryDiscountRow.classList.add('hidden');
+            }
+        }
+
+        if (summaryShippingFee) {
+            if (config.shippingFee > 0) {
+                summaryShippingFee.textContent = formatVND(config.shippingFee);
+            } else if (subtotal >= 5000000) {
+                summaryShippingFee.textContent = 'Miễn phí';
+            } else {
+                summaryShippingFee.textContent = 'Tính ở thanh toán';
+            }
+        }
+
+        if (summaryTotal) summaryTotal.textContent = formatVND(total);
+
+        // Update Checkout Button & Warnings
+        if (btnProceedCheckout) {
+            btnProceedCheckout.disabled = selectedCount === 0;
+        }
+        if (btnCheckoutLabel) {
+            btnCheckoutLabel.textContent = `Tiến hành thanh toán (${selectedCount})`;
+        }
+        if (checkoutEmptyWarning) {
+            if (selectedCount === 0) {
+                checkoutEmptyWarning.classList.remove('hidden');
+            } else {
+                checkoutEmptyWarning.classList.add('hidden');
+            }
+        }
+
+        // Update hidden inputs for fallback form submit
+        if (hiddenInputsContainer) {
+            hiddenInputsContainer.innerHTML = '';
+            selectedKeys.forEach(k => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'selected_items[]';
+                input.value = k;
+                hiddenInputsContainer.appendChild(input);
+            });
+        }
+
+        // Sync with backend session
+        clearTimeout(syncTimeout);
+        syncTimeout = setTimeout(() => {
+            fetch(config.selectUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': config.csrfToken
+                },
+                body: JSON.stringify({ selected_keys: selectedKeys })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.success) {
+                    if (summarySubtotal) summarySubtotal.textContent = data.formatted_subtotal;
+                    if (summaryTotal) summaryTotal.textContent = data.formatted_total;
+                    if (data.discount_amount > 0 && summaryDiscountAmount) {
+                        summaryDiscountAmount.textContent = '-' + data.formatted_discount;
+                    }
+                }
+            })
+            .catch(() => {});
+        }, 200);
+    }
+
+    // Attach listener to "Select All"
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function () {
+            const isChecked = this.checked;
+            itemCheckboxes.forEach(cb => {
+                cb.checked = isChecked;
+            });
+            updateCartUI();
+        });
+    }
+
+    // Attach listener to each item checkbox
+    itemCheckboxes.forEach(cb => {
+        cb.addEventListener('change', updateCartUI);
+    });
+
+    // Form submit check
+    const checkoutForm = document.getElementById('checkout-selected-form');
+    if (checkoutForm) {
+        checkoutForm.addEventListener('submit', function (e) {
+            const checked = document.querySelectorAll('.cart-item-checkbox:checked');
+            if (checked.length === 0) {
+                e.preventDefault();
+                alert('Vui lòng chọn ít nhất 1 sản phẩm trước khi thanh toán.');
+            }
+        });
+    }
+});
+</script>
 @endsection

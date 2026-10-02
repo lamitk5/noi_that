@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\DB;
 class ChatController extends Controller
 {
     /**
-     * Get or create the current user's open chat.
+     * Get or create the current user's chat.
      */
     public function session(Request $request): JsonResponse
     {
@@ -20,20 +20,16 @@ class ChatController extends Controller
             return response()->json(['success' => false, 'message' => 'Vui lòng đăng nhập để trò chuyện.'], 401);
         }
 
-        $chat = Chat::where('user_id', Auth::id())
-            ->where('status', Chat::STATUS_OPEN)
-            ->latest()
-            ->first();
-
-        if (! $chat) {
-            $chat = Chat::create([
-                'user_id' => Auth::id(),
+        // Mỗi tài khoản chỉ duy trì 1 cuộc trò chuyện duy nhất
+        $chat = Chat::firstOrCreate(
+            ['user_id' => Auth::id()],
+            [
                 'status' => Chat::STATUS_OPEN,
-                'last_message_at' => now(),
-            ]);
-        }
+                'last_message_at' => null,
+            ]
+        );
 
-        $unread = $chat->messages()
+        $unread = ChatMessage::where('chat_id', $chat->id)
             ->where('sender_id', '!=', Auth::id())
             ->where('is_read', false)
             ->count();
@@ -47,7 +43,7 @@ class ChatController extends Controller
     }
 
     /**
-     * List messages for a chat (only own chats for customers).
+     * List messages for customer chat.
      */
     public function messages(Request $request, int $chatId): JsonResponse
     {
@@ -64,13 +60,14 @@ class ChatController extends Controller
         $messages = $chat->messages()
             ->with('sender:id,name,role')
             ->when($after > 0, fn ($q) => $q->where('id', '>', $after))
+            ->orderBy('id', 'asc')
             ->get()
             ->map(fn ($m) => [
                 'id' => $m->id,
                 'role' => $m->sender_id === Auth::id() ? 'user' : 'staff',
-                'sender' => $m->sender?->name,
+                'sender' => $m->sender?->name ?? ($m->sender_id === Auth::id() ? Auth::user()->name : 'Nhân viên Mộc An'),
                 'content' => $m->message,
-                'created_at' => $m->created_at->format('H:i'),
+                'created_at' => $m->created_at->format('H:i d/m'),
             ]);
 
         // Mark staff messages as read
@@ -99,8 +96,9 @@ class ChatController extends Controller
             ->where('user_id', Auth::id())
             ->firstOrFail();
 
+        // If the conversation was closed, automatically reopen it so customer can continue chatting
         if ($chat->status !== Chat::STATUS_OPEN) {
-            return response()->json(['success' => false, 'message' => 'Cuộc trò chuyện đã đóng.'], 422);
+            $chat->update(['status' => Chat::STATUS_OPEN]);
         }
 
         $msg = DB::transaction(function () use ($chat, $request) {
@@ -109,7 +107,10 @@ class ChatController extends Controller
                 'message' => $request->input('message'),
                 'is_read' => false,
             ]);
-            $chat->update(['last_message_at' => now()]);
+            $chat->update([
+                'last_message_at' => now(),
+                'status' => Chat::STATUS_OPEN,
+            ]);
 
             return $msg;
         });
@@ -121,7 +122,7 @@ class ChatController extends Controller
                 'role' => 'user',
                 'sender' => Auth::user()->name,
                 'content' => $msg->message,
-                'created_at' => $msg->created_at->format('H:i'),
+                'created_at' => $msg->created_at->format('H:i d/m'),
             ],
         ]);
     }

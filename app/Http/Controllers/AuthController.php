@@ -111,7 +111,7 @@ class AuthController extends Controller
             }
 
             if ($user->isAdmin()) {
-                return redirect()->intended(route('admin.dashboard'));
+                return redirect()->intended(route('admin.dashboard'))->with('success', 'Đăng nhập thành công! Xin chào ' . $user->name . '.');
             }
 
             return redirect()->intended(route('home'))->with('success', 'Đăng nhập thành công!');

@@ -23,7 +23,7 @@ class CheckoutController extends Controller
         $isBuyNow = $request->boolean('buy_now') || session('is_buy_now', false);
         $this->cartService->setBuyNowMode($isBuyNow);
 
-        $cart = $this->cartService->getCart();
+        $cart = $this->cartService->getSelectedCart();
 
         if (empty($cart)) {
             if ($isBuyNow) {
@@ -35,20 +35,20 @@ class CheckoutController extends Controller
             if ($request->wantsJson()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Giỏ hàng của bạn đang trống.',
+                    'message' => 'Bạn chưa chọn sản phẩm nào để thanh toán.',
                 ], 400);
             }
 
             return redirect()->route('cart.index')
-                ->with('error', 'Giỏ hàng của bạn đang trống. Hãy chọn sản phẩm trước khi thanh toán.');
+                ->with('error', 'Vui lòng chọn ít nhất 1 sản phẩm trước khi thanh toán.');
         }
 
         if (! $request->has('ward_code') && ! old('ward_code')) {
             session()->forget(['shipping_fee', 'shipping_destination']);
         }
 
-        $items = $this->cartService->getItems();
-        $subtotal = $this->cartService->getSubtotal();
+        $items = $this->cartService->getSelectedItems();
+        $subtotal = $this->cartService->getSelectedSubtotal();
         $hasCalculatedShipping = $this->cartService->hasCalculatedShipping();
         $shippingFee = $this->cartService->getShippingFee();
         $coupon = $this->cartService->getCoupon();
@@ -74,24 +74,21 @@ class CheckoutController extends Controller
         $isBuyNow = $request->boolean('is_buy_now') || session('is_buy_now', false);
         $this->cartService->setBuyNowMode($isBuyNow);
 
-        $cart = $this->cartService->getCart();
+        $cart = $this->cartService->getSelectedCart();
 
         if (empty($cart)) {
             if ($request->wantsJson()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Đơn hàng không có sản phẩm nào.',
+                    'message' => 'Đơn hàng không có sản phẩm nào được chọn.',
                 ], 400);
             }
 
             return redirect()->route($isBuyNow ? 'products.index' : 'cart.index')
-                ->with('error', 'Đơn hàng của bạn đang trống.');
+                ->with('error', 'Vui lòng chọn ít nhất 1 sản phẩm trước khi thanh toán.');
         }
 
         $paymentMethod = $request->input('payment_method');
-        if ($paymentMethod === 'bank_transfer') {
-            $paymentMethod = 'banking';
-        }
 
         try {
             $order = DB::transaction(function () use ($request, $cart, $paymentMethod, $isBuyNow) {
@@ -162,7 +159,7 @@ class CheckoutController extends Controller
                 if ($isBuyNow) {
                     $this->cartService->clearBuyNow();
                 } else {
-                    $this->cartService->clear();
+                    $this->cartService->removeSelected();
                 }
 
                 session()->forget(['shipping_fee', 'shipping_destination', 'checkout_token']);

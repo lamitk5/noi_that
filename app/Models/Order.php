@@ -24,6 +24,7 @@ class Order extends Model
 
     protected $fillable = [
         'order_code',
+        'order_number',
         'user_id',
         'name',
         'phone',
@@ -35,6 +36,8 @@ class Order extends Model
         'discount_amount',
         'coupon_code',
         'total_price',
+        'total_amount',
+        'subtotal',
         'payment_method',
         'payment_status',
         'status',
@@ -67,6 +70,18 @@ class Order extends Model
         'ghn_status_label',
         'ghn_tracking_url',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (Order $order) {
+            if (empty($order->order_code)) {
+                $order->order_code = static::generateOrderNumber();
+            }
+            if (!isset($order->total_price) || $order->total_price === null) {
+                $order->total_price = (float) ($order->attributes['_subtotal'] ?? 0);
+            }
+        });
+    }
 
     public static function generateOrderNumber(): string
     {

@@ -16,6 +16,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'adminonly' => \App\Http\Middleware\AdminOnlyMiddleware::class,
         ]);
 
+        $middleware->trustProxies(at: '*');
+
         $middleware->validateCsrfTokens(except: [
             'api/payment/momo/ipn',
             'api/payment/vnpay/ipn',

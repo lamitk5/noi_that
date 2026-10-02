@@ -14,15 +14,7 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        $admin = User::firstOrCreate(
-            ['email' => 'admin@furniture.com'],
-            [
-                'name' => 'Quản Trị Viên Nội Thất',
-                'password' => Hash::make('password123'),
-                'role' => 'admin',
-                'phone' => '0901234567',
-            ]
-        );
+        $this->call(AdminUserSeeder::class);
 
         $customer = User::firstOrCreate(
             ['email' => 'customer@example.com'],

@@ -20,11 +20,11 @@ class ChatController extends Controller
      */
     public function index(Request $request): View|JsonResponse
     {
-        $query = Chat::with(['user:id,name,email,phone', 'staff:id,name'])
+        $query = Chat::has('messages')
+            ->with(['user:id,name,email,phone', 'staff:id,name', 'latestMessage'])
             ->withCount(['messages as unread_count' => function ($q) {
                 $q->where('is_read', false);
-            }])
-            ->with('messages', fn ($q) => $q->latest('created_at')->limit(1));
+            }]);
 
         if ($request->filled('status')) {
             $query->where('status', $request->input('status'));
@@ -33,18 +33,19 @@ class ChatController extends Controller
         if ($request->filled('search')) {
             $search = $request->input('search');
             $query->where(function ($q) use ($search) {
-                $q->where('user.name', 'like', "%{$search}%")
-                    ->orWhere('user.email', 'like', "%{$search}%")
-                    ->orWhere('user.phone', 'like', "%{$search}%")
-                    ->orWhere('subject', 'like', "%{$search}%");
+                $q->whereHas('user', function ($uq) use ($search) {
+                    $uq->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhere('phone', 'like', "%{$search}%");
+                })->orWhere('subject', 'like', "%{$search}%");
             });
         }
 
         $chats = $query->latest('last_message_at')->paginate(15)->withQueryString();
 
         $stats = [
-            'open' => Chat::where('status', Chat::STATUS_OPEN)->count(),
-            'closed' => Chat::where('status', Chat::STATUS_CLOSED)->count(),
+            'open' => Chat::has('messages')->where('status', Chat::STATUS_OPEN)->count(),
+            'closed' => Chat::has('messages')->where('status', Chat::STATUS_CLOSED)->count(),
             'unread' => ChatMessage::where('is_read', false)
                 ->whereHas('chat', fn ($q) => $q->whereHas('user'))
                 ->count(),

@@ -71,7 +71,7 @@
                                 <span class="text-muted text-[11px]">{{ $chat->user?->email }}</span>
                             </td>
                             <td class="py-3 px-3 max-w-xs">
-                                <span class="line-clamp-1 text-muted">{{ $chat->messages->first()?->message ?? '—' }}</span>
+                                <span class="line-clamp-1 text-muted">{{ $chat->latestMessage?->message ?? $chat->messages->first()?->message ?? '—' }}</span>
                             </td>
                             <td class="py-3 px-3">{{ $chat->staff?->name ?? '—' }}</td>
                             <td class="py-3 px-3">
