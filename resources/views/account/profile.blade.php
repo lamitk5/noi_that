@@ -25,6 +25,11 @@
                 {{ session('error') }}
             </div>
         @endif
+        @if (session('warning'))
+            <div class="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                {{ session('warning') }}
+            </div>
+        @endif
 
         <form action="{{ route('profile.update') }}" method="POST" class="mt-6 rounded-2xl border border-ui-border bg-surface p-6 shadow-xs space-y-5">
             @csrf
@@ -60,7 +65,8 @@
                 </div>
 
                 <div class="sm:col-span-2 pt-2 border-t border-ui-border">
-                    <p class="text-[11px] font-bold text-heading uppercase tracking-wider mb-3">Đổi mật khẩu (không bắt buộc)</p>
+                    <p class="text-[11px] font-bold text-heading uppercase tracking-wider mb-1">Đổi mật khẩu (không bắt buộc)</p>
+                    <p class="text-xs text-muted mb-3">Sau khi lưu, hệ thống gửi mã xác thực 6 chữ số tới email hoặc số điện thoại của bạn. Mật khẩu chỉ đổi sau khi nhập đúng mã.</p>
                     <div class="grid gap-4 sm:grid-cols-3">
                         <div>
                             <label for="current_password" class="block text-xs font-bold text-muted mb-1.5">Mật khẩu hiện tại</label>

@@ -72,11 +72,7 @@ class AuthController extends Controller
 
                 $warningMsg = $sentSuccessfully
                     ? 'Tài khoản chưa kích hoạt. Vui lòng nhập mã xác thực vừa được gửi.'
-                    : 'Tài khoản chưa kích hoạt. Hệ thống chưa gửi được mã xác thực, vui lòng bấm "Gửi lại mã" hoặc liên hệ hỗ trợ.';
-
-                if (OtpSender::canRevealCode()) {
-                    $warningMsg .= " (Môi trường local - mã của bạn là {$code})";
-                }
+                    : 'Tài khoản chưa kích hoạt. '.($this->otp->lastError ?: 'Hệ thống chưa gửi được mã xác thực, vui lòng bấm "Gửi lại mã".');
 
                 return redirect()->route('auth.verify')->with('warning', $warningMsg);
             }
@@ -213,11 +209,7 @@ class AuthController extends Controller
                 ? "Mã xác thực 6 chữ số đã được gửi về email {$email}. Vui lòng nhập mã để hoàn tất đăng ký."
                 : "Mã OTP 6 chữ số đã được gửi về số điện thoại {$phone}. Vui lòng nhập mã để hoàn tất đăng ký.";
         } else {
-            $infoMsg = 'Tài khoản đã được tạo nhưng hệ thống chưa gửi được mã xác thực. Vui lòng bấm "Gửi lại mã xác thực".';
-        }
-
-        if (OtpSender::canRevealCode()) {
-            $infoMsg .= " (Môi trường local - mã của bạn là {$code})";
+            $infoMsg = 'Tài khoản đã được tạo nhưng hệ thống chưa gửi được mã xác thực. '.($this->otp->lastError ?: 'Vui lòng bấm "Gửi lại mã xác thực".');
         }
 
         return redirect()->route('auth.verify')->with('info', $infoMsg);
@@ -329,11 +321,7 @@ class AuthController extends Controller
 
         $resendSuccessMsg = $sentSuccessfully
             ? 'Mã xác thực mới đã được gửi!'
-            : 'Hệ thống chưa gửi được mã xác thực. Vui lòng thử lại sau hoặc liên hệ hỗ trợ.';
-
-        if (OtpSender::canRevealCode()) {
-            $resendSuccessMsg .= " (Môi trường local - mã của bạn là {$newCode})";
-        }
+            : ($this->otp->lastError ?: 'Hệ thống chưa gửi được mã xác thực. Vui lòng thử lại sau.');
 
         return back()->with('success', $resendSuccessMsg);
     }

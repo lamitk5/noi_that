@@ -75,6 +75,9 @@ esac
 # Create the admin account when it is missing. Does not wipe products, orders, or reviews.
 su-exec www-data php artisan db:seed --class=AdminUserSeeder --force --no-interaction || true
 
+# Sample reviews only when the reviews table is empty. Never deletes products.
+su-exec www-data php artisan db:seed --class=StorefrontReviewSeeder --force --no-interaction || true
+
 case "${RUN_SEEDERS:-false}" in
     true) su-exec www-data php artisan db:seed --force --no-interaction ;;
     false) ;;

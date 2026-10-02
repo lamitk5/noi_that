@@ -76,8 +76,10 @@ class PasswordResetController extends Controller
         $info = self::GENERIC_SENT_MESSAGE;
         if ($user) {
             $code = $this->issueCode($user);
-            if ($code !== null && OtpSender::canRevealCode()) {
-                $info .= " (Môi trường local - mã của bạn là {$code})";
+            if ($code === false) {
+                return back()->withInput()->withErrors([
+                    'account' => $this->otp->lastError ?: 'Không gửi được mã xác thực. Vui lòng thử lại sau.',
+                ]);
             }
         }
 
@@ -105,8 +107,10 @@ class PasswordResetController extends Controller
             if ($code === null) {
                 return back()->withErrors(['code' => 'Vui lòng đợi '.self::RESEND_COOLDOWN_SECONDS.' giây trước khi yêu cầu mã mới.']);
             }
-            if (OtpSender::canRevealCode()) {
-                $info .= " (Môi trường local - mã của bạn là {$code})";
+            if ($code === false) {
+                return back()->withErrors([
+                    'code' => $this->otp->lastError ?: 'Không gửi được mã xác thực. Vui lòng thử lại sau.',
+                ]);
             }
         }
 
@@ -227,9 +231,9 @@ class PasswordResetController extends Controller
     }
 
     /**
-     * Returns the plain code, or null when still inside the resend cooldown.
+     * Returns the plain code, null during the resend cooldown, or false when delivery failed.
      */
-    protected function issueCode(User $user): ?string
+    protected function issueCode(User $user): string|false|null
     {
         $key = $this->tokenKey($user->id);
         $existing = DB::table('password_reset_tokens')->where('email', $key)->first();
@@ -238,17 +242,23 @@ class PasswordResetController extends Controller
         }
 
         $code = OtpSender::generateCode();
+        $sent = $user->email
+            ? $this->otp->sendEmail($user->email, $code, 'reset')
+            : ($user->phone ? $this->otp->sendSms($user->phone, $code) : false);
+
+        if (! $sent) {
+            if (! $this->otp->lastError) {
+                $this->otp->lastError = 'Tài khoản chưa có email hoặc số điện thoại để nhận mã xác thực.';
+            }
+
+            return false;
+        }
+
         DB::table('password_reset_tokens')->updateOrInsert(
             ['email' => $key],
             ['token' => Hash::make($code), 'created_at' => now()]
         );
         Cache::forget('pwreset-attempts:'.$user->id);
-
-        if ($user->email) {
-            $this->otp->sendEmail($user->email, $code, 'reset');
-        } elseif ($user->phone) {
-            $this->otp->sendSms($user->phone, $code);
-        }
 
         return $code;
     }

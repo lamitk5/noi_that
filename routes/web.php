@@ -138,6 +138,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/tai-khoan', [CustomerOrderController::class, 'index'])->name('account.index');
     Route::get('/ho-so', [\App\Http\Controllers\ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/ho-so', [\App\Http\Controllers\ProfileController::class, 'update'])->name('profile.update');
+    Route::get('/ho-so/xac-thuc-mat-khau', [\App\Http\Controllers\ProfileController::class, 'showPasswordVerify'])->name('profile.password.verify');
+    Route::post('/ho-so/xac-thuc-mat-khau', [\App\Http\Controllers\ProfileController::class, 'verifyPasswordChange'])->name('profile.password.verify.submit');
+    Route::post('/ho-so/xac-thuc-mat-khau/gui-lai', [\App\Http\Controllers\ProfileController::class, 'resendPasswordCode'])->name('profile.password.resend');
     Route::get('/tai-khoan/chinh-sua', [\App\Http\Controllers\ProfileController::class, 'edit'])->name('account.edit');
     Route::match(['put', 'patch'], '/tai-khoan/chinh-sua', [\App\Http\Controllers\ProfileController::class, 'update'])->name('account.update');
 });
