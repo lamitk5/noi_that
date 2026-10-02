@@ -72,12 +72,6 @@ case "${RUN_MIGRATIONS:-true}" in
     *) echo "RUN_MIGRATIONS must be true or false" >&2; exit 1 ;;
 esac
 
-# Create the admin account when it is missing. Does not wipe products, orders, or reviews.
-su-exec www-data php artisan db:seed --class=AdminUserSeeder --force --no-interaction || true
-
-# Sample reviews only when the reviews table is empty. Never deletes products.
-su-exec www-data php artisan db:seed --class=StorefrontReviewSeeder --force --no-interaction || true
-
 case "${RUN_SEEDERS:-false}" in
     true) su-exec www-data php artisan db:seed --force --no-interaction ;;
     false) ;;
@@ -106,6 +100,12 @@ php-fpm -F &
 server_pids+=("$!")
 nginx -g 'daemon off;' &
 server_pids+=("$!")
+
+# The port is open now. Seeding stays out of the health check so a slow Aiven
+# insert cannot make Render mark the deploy as exited.
+echo "Web server is listening; seeding admin user and reviews."
+su-exec www-data php artisan db:seed --class=AdminUserSeeder --force --no-interaction || echo "Admin seed failed; continuing." >&2
+su-exec www-data php artisan db:seed --class=StorefrontReviewSeeder --force --no-interaction || echo "Review seed failed; continuing." >&2
 
 status=0
 wait -n "${server_pids[@]}" || status=$?
