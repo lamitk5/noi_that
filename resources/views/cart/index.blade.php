@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="min-h-[70vh] py-10 sm:py-14 bg-page">
-    <div class="page-shell max-w-6xl">
+    <div class="page-shell">
         <!-- Breadcrumbs -->
         <nav class="flex items-center gap-2 text-xs text-muted mb-6" aria-label="Breadcrumb">
             <a href="{{ route('home') }}" class="hover:text-heading transition-colors">Trang chủ</a>
@@ -18,10 +18,17 @@
             <p class="mt-2 text-sm text-muted">Kiểm tra các sản phẩm nội thất được tuyển chọn trước khi thanh toán.</p>
         </div>
 
-        @if (session('status'))
-            <div class="mb-6 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-4 text-sm font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-3">
-                <svg viewBox="0 0 24 24" class="size-5 shrink-0 text-emerald-500" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
-                <span>{{ session('status') }}</span>
+        @if (session('status') || session('success'))
+            <div class="mb-6 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-4 text-sm font-medium text-emerald-700 dark:text-emerald-400 flex items-center gap-3">
+                <svg viewBox="0 0 24 24" class="size-5 shrink-0 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
+                <span>{{ session('status') ?? session('success') }}</span>
+            </div>
+        @endif
+
+        @if (session('error'))
+            <div class="mb-6 rounded-2xl bg-rose-500/10 border border-rose-500/20 p-4 text-sm font-medium text-rose-700 dark:text-rose-400 flex items-center gap-3">
+                <svg viewBox="0 0 24 24" class="size-5 shrink-0 text-rose-600" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <span>{{ session('error') }}</span>
             </div>
         @endif
 
@@ -48,7 +55,7 @@
                 <div class="mt-8">
                     <a
                         href="{{ route('products.index') }}"
-                        class="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-7 py-3.5 text-sm font-bold text-primary-foreground shadow-sm transition hover:opacity-90"
+                        class="inline-flex items-center justify-center gap-2 rounded-xl bg-primary hover:opacity-90 px-7 py-3.5 text-sm font-bold text-primary-foreground shadow-sm transition"
                     >
                         Tiếp tục mua sắm
                         <span aria-hidden="true">→</span>
@@ -61,24 +68,60 @@
                 <!-- Cart Items List (8 cols) -->
                 <div class="lg:col-span-8 space-y-4">
                     <div class="flex items-center justify-between pb-3 border-b border-ui-border text-xs text-muted">
-                        <span>{{ $items->count() }} mặt hàng (Tổng {{ $items->sum('quantity') }} sản phẩm)</span>
+                        <div class="flex items-center gap-3">
+                            <label class="flex items-center gap-2 cursor-pointer select-none">
+                                <input
+                                    type="checkbox"
+                                    id="select-all-cart-items"
+                                    class="size-4 rounded border-ui-border text-primary focus:ring-primary accent-primary cursor-pointer"
+                                    {{ $selectedCount === $items->count() && $items->isNotEmpty() ? 'checked' : '' }}
+                                >
+                                <span class="font-semibold text-heading text-xs">
+                                    Chọn tất cả (<span id="selected-summary-count">{{ $selectedCount }}</span>/{{ $items->count() }})
+                                </span>
+                            </label>
+                            <span class="text-muted/60 hidden sm:inline">•</span>
+                            <span class="hidden sm:inline">Tổng {{ $items->sum('quantity') }} sản phẩm</span>
+                        </div>
                         <form method="POST" action="{{ route('cart.clear') }}" onsubmit="return confirm('Bạn có chắc chắn muốn xóa toàn bộ giỏ hàng?');">
                             @csrf
                             @method('DELETE')
-                            <button type="submit" class="text-xs text-muted hover:text-red-500 font-semibold transition">
+                            <button type="submit" class="text-xs text-muted hover:text-red-500 font-semibold transition cursor-pointer">
                                 Xóa tất cả
                             </button>
                         </form>
                     </div>
 
                     @foreach ($items as $item)
-                        <div class="rounded-2xl border border-ui-border bg-surface p-4 sm:p-5 shadow-xs flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
+                        @php
+                            $isSelected = in_array((string) $item->key, array_map('strval', $selectedKeys), true);
+                        @endphp
+                        <div
+                            class="cart-item-row rounded-2xl border transition-all duration-200 bg-surface p-4 sm:p-5 shadow-xs flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 {{ $isSelected ? 'border-primary/40 ring-1 ring-primary/20' : 'border-ui-border opacity-75' }}"
+                            data-key="{{ $item->key }}"
+                            data-unit-price="{{ $item->unit_price }}"
+                            data-quantity="{{ $item->quantity }}"
+                            data-line-total="{{ $item->line_total }}"
+                        >
+                            <!-- Checkbox -->
+                            <div class="flex items-center self-start sm:self-center shrink-0">
+                                <label class="flex items-center cursor-pointer p-1 -m-1">
+                                    <input
+                                        type="checkbox"
+                                        name="selected_items[]"
+                                        value="{{ $item->key }}"
+                                        class="cart-item-checkbox size-4 sm:size-5 rounded border-ui-border text-primary focus:ring-primary accent-primary cursor-pointer"
+                                        {{ $isSelected ? 'checked' : '' }}
+                                        aria-label="Chọn mua {{ $item->product->name }}"
+                                    >
+                                </label>
+                            </div>
+
                             <!-- Image -->
                             <div class="size-24 sm:size-28 rounded-xl overflow-hidden bg-surface-alt border border-ui-border shrink-0">
                                 <a href="{{ route('products.show', $item->product->slug) }}">
                                     <img
                                         src="{{ $item->product->primary_image_url }}"
-                                        onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=400&q=80'"
                                         alt="{{ $item->product->name }}"
                                         class="size-full object-cover transition hover:scale-105"
                                     >
@@ -118,7 +161,7 @@
                                 <div class="mt-2 text-xs text-muted font-mono">
                                     Đơn giá: <span class="font-bold text-heading">{{ number_format($item->unit_price, 0, ',', '.') }}₫</span>
                                     @if ($item->variant->stock <= 5)
-                                        <span class="text-amber-500 font-semibold ml-2">(Kho còn {{ $item->variant->stock }})</span>
+                                        <span class="text-amber-600 font-semibold ml-2">(Kho còn {{ $item->variant->stock }})</span>
                                     @endif
                                 </div>
                             </div>
@@ -136,7 +179,7 @@
                                         @method('PATCH')
                                         <button
                                             type="button"
-                                            class="size-8 flex items-center justify-center text-body hover:text-heading disabled:opacity-30 disabled:cursor-not-allowed"
+                                            class="size-8 flex items-center justify-center text-body hover:text-heading disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
                                             onclick="const input = this.nextElementSibling; if(parseInt(input.value) > 1) { input.value = parseInt(input.value) - 1; this.form.submit(); }"
                                             @disabled($item->quantity <= 1)
                                             aria-label="Giảm 1 số lượng"
@@ -155,7 +198,7 @@
                                         >
                                         <button
                                             type="button"
-                                            class="size-8 flex items-center justify-center text-body hover:text-heading disabled:opacity-30 disabled:cursor-not-allowed"
+                                            class="size-8 flex items-center justify-center text-body hover:text-heading disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
                                             onclick="const input = this.previousElementSibling; if(parseInt(input.value) < {{ $item->variant->stock }}) { input.value = parseInt(input.value) + 1; this.form.submit(); }"
                                             @disabled($item->quantity >= $item->variant->stock)
                                             aria-label="Tăng 1 số lượng"
@@ -170,7 +213,7 @@
                                         @method('DELETE')
                                         <button
                                             type="submit"
-                                            class="p-2 text-muted hover:text-red-500 rounded-lg hover:bg-red-500/10 transition"
+                                            class="p-2 text-muted hover:text-red-500 rounded-lg hover:bg-red-500/10 transition cursor-pointer"
                                             title="Xóa khỏi giỏ"
                                             aria-label="Xóa {{ $item->product->name }} khỏi giỏ hàng"
                                         >
@@ -184,85 +227,132 @@
                 </div>
 
                 <!-- Order Summary (4 cols) -->
-                <div class="lg:col-span-4 sticky top-24">
-                    <div class="rounded-3xl border border-ui-border bg-surface p-6 sm:p-8 shadow-sm space-y-6">
-                        <h2 class="font-display text-lg font-semibold text-heading">Tóm tắt đơn hàng</h2>
+                <div class="lg:col-span-4 sticky top-24 space-y-5">
+                    <!-- Coupon Card -->
+                    <div class="rounded-3xl border border-ui-border bg-surface p-5 shadow-xs">
+                        <div class="flex items-center gap-2 mb-3">
+                            <svg viewBox="0 0 24 24" class="size-5 text-primary" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 0 1 0 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 0 1 0-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375Z"/></svg>
+                            <h3 class="font-display text-sm font-bold text-heading">Mã giảm giá / Voucher</h3>
+                        </div>
 
-                        <!-- Coupon Form / Applied Coupon Badge -->
-                        <div class="rounded-2xl border border-ui-border bg-surface-alt p-4 space-y-2.5">
-                            <span class="text-xs font-bold text-heading block">Mã giảm giá / Voucher</span>
-
-                            @if (session('coupon_success'))
-                                <p class="text-xs font-semibold text-emerald-600 dark:text-emerald-400">{{ session('coupon_success') }}</p>
-                            @endif
-
-                            @if (session('coupon_error'))
-                                <p class="text-xs font-semibold text-red-500">{{ session('coupon_error') }}</p>
-                            @endif
-
-                            @if (!empty($appliedCoupon))
-                                <div class="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-                                    <div class="flex items-center gap-2 min-w-0">
-                                        <span class="font-mono font-bold text-xs text-emerald-700 dark:text-emerald-300 uppercase">{{ $appliedCoupon['code'] }}</span>
-                                        <span class="text-[11px] text-muted truncate">(-{{ number_format($discountAmount, 0, ',', '.') }}₫)</span>
+                        @if ($coupon)
+                            <div class="p-3 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-between">
+                                <div class="min-w-0">
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="font-mono text-xs font-bold text-primary bg-surface px-2 py-0.5 rounded border border-ui-border">
+                                            {{ $coupon['code'] }}
+                                        </span>
+                                        <span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                                            -{{ number_format($discountAmount, 0, ',', '.') }}₫
+                                        </span>
                                     </div>
-                                    <form method="POST" action="{{ route('coupon.remove') }}" class="shrink-0">
-                                        @csrf
-                                        <button type="submit" class="text-[11px] font-semibold text-red-500 hover:underline">Hủy</button>
-                                    </form>
+                                    <p class="text-[11px] text-muted truncate mt-1">{{ $coupon['description'] ?? 'Đã áp dụng mã' }}</p>
                                 </div>
-                            @else
-                                <form method="POST" action="{{ route('coupon.apply') }}" class="flex items-center gap-2">
+                                <form method="POST" action="{{ route('cart.coupon.remove') }}">
                                     @csrf
+                                    <button type="submit" class="text-xs text-rose-600 dark:text-rose-400 hover:text-rose-800 font-semibold px-2 py-1 rounded hover:bg-rose-500/10 transition cursor-pointer">
+                                        Gỡ bỏ
+                                    </button>
+                                </form>
+                            </div>
+                        @else
+                            <form method="POST" action="{{ route('cart.coupon.apply') }}" class="space-y-2.5">
+                                @csrf
+                                <div class="flex items-center gap-2">
                                     <input
                                         type="text"
-                                        name="code"
+                                        name="coupon_code"
+                                        id="cart_coupon_input"
+                                        placeholder="Nhập mã giảm giá..."
+                                        class="flex-1 rounded-xl border border-ui-border bg-surface-alt px-3 py-2 text-xs font-semibold uppercase tracking-wider text-heading placeholder:normal-case placeholder:font-normal placeholder:text-muted focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                                         required
-                                        placeholder="Nhập mã (VD: MOCAN10)"
-                                        class="uppercase font-mono flex-1 rounded-xl border border-ui-border bg-surface px-3 py-2 text-xs text-heading placeholder:text-muted focus:border-primary focus:outline-none"
                                     >
                                     <button
                                         type="submit"
-                                        class="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground hover:opacity-90 transition shrink-0"
+                                        class="rounded-xl bg-primary hover:opacity-90 text-primary-foreground font-bold text-xs px-4 py-2 transition shadow-xs cursor-pointer"
                                     >
                                         Áp dụng
                                     </button>
-                                </form>
-                            @endif
-                        </div>
+                                </div>
+                            </form>
+
+                            <!-- Suggested Coupons -->
+                            <div class="pt-3 border-t border-dashed border-ui-border">
+                                <p class="text-[11px] font-semibold text-muted mb-2">Mã ưu đãi gợi ý cho bạn:</p>
+                                <div class="flex flex-wrap gap-1.5">
+                                    @foreach (['MOCAN10' => 'Giảm 10%', 'FREESHIP' => 'FreeShip', 'VIP500' => 'Giảm 500K'] as $cCode => $cLabel)
+                                        <button
+                                            type="button"
+                                            onclick="document.getElementById('cart_coupon_input').value='{{ $cCode }}'"
+                                            class="inline-flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/5 hover:bg-primary/10 px-2 py-1 text-[11px] font-bold text-primary transition cursor-pointer"
+                                        >
+                                            <span class="font-mono">{{ $cCode }}</span>
+                                            <span class="text-[10px] opacity-80">({{ $cLabel }})</span>
+                                        </button>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
+                    </div>
+
+                    <!-- Summary Card -->
+                    <div class="rounded-3xl border border-ui-border bg-surface p-6 sm:p-7 shadow-sm space-y-5">
+                        <h2 class="font-display text-lg font-semibold text-heading">Tóm tắt đơn hàng</h2>
 
                         <div class="space-y-3 text-sm divide-y divide-ui-border">
                             <div class="flex items-center justify-between pb-3">
-                                <span class="text-muted">Tạm tính</span>
-                                <span class="font-bold text-heading">{{ number_format($subtotal, 0, ',', '.') }}₫</span>
+                                <span class="text-muted">Tạm tính (<span id="summary-selected-count">{{ $selectedCount }}</span> sản phẩm)</span>
+                                <span class="font-bold text-heading" id="summary-subtotal">{{ number_format($subtotal, 0, ',', '.') }}₫</span>
                             </div>
-                            @if (!empty($appliedCoupon) && $discountAmount > 0)
-                                <div class="flex items-center justify-between py-3 text-emerald-600 dark:text-emerald-400 font-medium">
-                                    <span>Giảm giá ({{ $appliedCoupon['code'] }})</span>
-                                    <span>-{{ number_format($discountAmount, 0, ',', '.') }}₫</span>
-                                </div>
-                            @endif
+
+                            <div id="summary-discount-row" class="flex items-center justify-between py-3 text-emerald-700 font-semibold {{ $discountAmount > 0 ? '' : 'hidden' }}">
+                                <span class="flex items-center gap-1">
+                                    <span>Giảm giá</span>
+                                    @if ($coupon)
+                                        <span class="font-mono text-xs bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded" id="summary-coupon-badge">({{ $coupon['code'] }})</span>
+                                    @endif
+                                </span>
+                                <span id="summary-discount-amount">-{{ number_format($discountAmount, 0, ',', '.') }}₫</span>
+                            </div>
+
                             <div class="flex items-center justify-between py-3">
                                 <span class="text-muted">Phí vận chuyển</span>
-                                <span class="text-xs font-semibold text-accent">Tính ở bước thanh toán</span>
-                            </div>
-                            <div class="flex items-baseline justify-between pt-3 text-base">
-                                <span class="font-bold text-heading">Tổng tiền tạm tính</span>
-                                <span class="font-display text-2xl font-bold text-heading">
-                                    {{ number_format($totalPrice, 0, ',', '.') }}₫
+                                <span class="text-xs font-semibold text-accent" id="summary-shipping-fee">
+                                    {{ $shippingFee > 0 ? number_format($shippingFee, 0, ',', '.') . '₫' : ($subtotal >= 5000000 ? 'Miễn phí' : 'Tính ở thanh toán') }}
                                 </span>
+                            </div>
+
+                            <div class="flex items-baseline justify-between pt-3 text-base">
+                                <span class="font-bold text-heading">Tổng thanh toán</span>
+                                <div class="text-right">
+                                    <span class="font-display text-2xl font-bold text-heading" id="summary-total">
+                                        {{ number_format($total, 0, ',', '.') }}₫
+                                    </span>
+                                    <p class="text-[11px] text-muted">Đã bao gồm VAT</p>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="space-y-3 pt-2">
-                            <a
-                                href="{{ route('checkout.index') }}"
-                                class="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 text-sm font-bold text-primary-foreground shadow-sm transition hover:opacity-95"
+                        <form id="checkout-selected-form" method="POST" action="{{ route('cart.checkout') }}" class="space-y-3 pt-2">
+                            @csrf
+                            <div id="checkout-hidden-inputs">
+                                @foreach ($selectedKeys as $key)
+                                    <input type="hidden" name="selected_items[]" value="{{ $key }}">
+                                @endforeach
+                            </div>
+                            <button
+                                type="submit"
+                                id="btn-proceed-checkout"
+                                class="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-primary hover:opacity-90 px-6 py-3.5 text-sm font-bold text-primary-foreground shadow-sm transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                {{ $selectedCount === 0 ? 'disabled' : '' }}
                             >
-                                <span>Tiến hành thanh toán</span>
+                                <span id="btn-checkout-label">Tiến hành thanh toán ({{ $selectedCount }})</span>
                                 <span aria-hidden="true">→</span>
-                            </a>
-                        </div>
+                            </button>
+                            <p id="checkout-empty-warning" class="text-xs text-rose-500 text-center font-medium {{ $selectedCount === 0 ? '' : 'hidden' }}">
+                                Vui lòng chọn ít nhất 1 sản phẩm để thanh toán
+                            </p>
+                        </form>
 
                         <div class="pt-4 border-t border-ui-border space-y-2.5 text-xs text-muted">
                             <div class="flex items-center gap-2">
@@ -284,4 +374,207 @@
         @endif
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const selectAllCheckbox = document.getElementById('select-all-cart-items');
+    const itemCheckboxes = document.querySelectorAll('.cart-item-checkbox');
+    const selectedSummaryCount = document.getElementById('selected-summary-count');
+    const summarySelectedCount = document.getElementById('summary-selected-count');
+    const summarySubtotal = document.getElementById('summary-subtotal');
+    const summaryDiscountRow = document.getElementById('summary-discount-row');
+    const summaryDiscountAmount = document.getElementById('summary-discount-amount');
+    const summaryShippingFee = document.getElementById('summary-shipping-fee');
+    const summaryTotal = document.getElementById('summary-total');
+    const btnProceedCheckout = document.getElementById('btn-proceed-checkout');
+    const btnCheckoutLabel = document.getElementById('btn-checkout-label');
+    const checkoutEmptyWarning = document.getElementById('checkout-empty-warning');
+    const hiddenInputsContainer = document.getElementById('checkout-hidden-inputs');
+
+    const config = {
+        selectUrl: "{{ route('cart.select') }}",
+        csrfToken: "{{ csrf_token() }}",
+        coupon: @json($coupon),
+        shippingFee: {{ (float) $shippingFee }},
+        hasCalculatedShipping: {{ ($hasCalculatedShipping ?? false) ? 'true' : 'false' }},
+    };
+
+    let syncTimeout = null;
+
+    function formatVND(amount) {
+        return new Intl.NumberFormat('vi-VN').format(Math.max(0, Math.round(amount))) + '₫';
+    }
+
+    function calculateDiscount(subtotal) {
+        if (!config.coupon) return 0;
+        const c = config.coupon;
+        if (subtotal < (c.min_order || 0)) return 0;
+
+        let discount = 0;
+        if (c.type === 'percent') {
+            discount = subtotal * (parseFloat(c.value) / 100);
+            if (c.max_discount && discount > parseFloat(c.max_discount)) {
+                discount = parseFloat(c.max_discount);
+            }
+        } else if (c.type === 'fixed') {
+            discount = Math.min(subtotal, parseFloat(c.value));
+        } else if (c.type === 'shipping') {
+            const ship = config.shippingFee || 0;
+            discount = Math.min(ship, parseFloat(c.max_discount || 50000));
+        }
+        return discount;
+    }
+
+    function updateCartUI() {
+        const checkedBoxes = Array.from(document.querySelectorAll('.cart-item-checkbox:checked'));
+        const totalCount = itemCheckboxes.length;
+        const selectedCount = checkedBoxes.length;
+
+        // Update Select All Checkbox state
+        if (selectAllCheckbox) {
+            selectAllCheckbox.checked = selectedCount === totalCount && totalCount > 0;
+            selectAllCheckbox.indeterminate = selectedCount > 0 && selectedCount < totalCount;
+        }
+
+        // Update row visual styling
+        itemCheckboxes.forEach(cb => {
+            const row = cb.closest('.cart-item-row');
+            if (row) {
+                if (cb.checked) {
+                    row.classList.add('border-primary/40', 'ring-1', 'ring-primary/20');
+                    row.classList.remove('border-ui-border', 'opacity-75');
+                } else {
+                    row.classList.remove('border-primary/40', 'ring-1', 'ring-primary/20');
+                    row.classList.add('border-ui-border', 'opacity-75');
+                }
+            }
+        });
+
+        // Compute Subtotal
+        let subtotal = 0;
+        const selectedKeys = [];
+        checkedBoxes.forEach(cb => {
+            const row = cb.closest('.cart-item-row');
+            if (row) {
+                const lineTotal = parseFloat(row.dataset.lineTotal || 0);
+                subtotal += lineTotal;
+                selectedKeys.push(cb.value);
+            }
+        });
+
+        // Compute Discount & Shipping & Total
+        const discount = calculateDiscount(subtotal);
+        const shipping = config.hasCalculatedShipping ? config.shippingFee : 0;
+        const total = subtotal === 0 ? 0 : Math.max(0, subtotal - discount + shipping);
+
+        // Update counts
+        if (selectedSummaryCount) selectedSummaryCount.textContent = selectedCount;
+        if (summarySelectedCount) summarySelectedCount.textContent = selectedCount;
+
+        // Update values
+        if (summarySubtotal) summarySubtotal.textContent = formatVND(subtotal);
+
+        if (summaryDiscountRow && summaryDiscountAmount) {
+            if (discount > 0) {
+                summaryDiscountRow.classList.remove('hidden');
+                summaryDiscountAmount.textContent = '-' + formatVND(discount);
+            } else {
+                summaryDiscountRow.classList.add('hidden');
+            }
+        }
+
+        if (summaryShippingFee) {
+            if (config.shippingFee > 0) {
+                summaryShippingFee.textContent = formatVND(config.shippingFee);
+            } else if (subtotal >= 5000000) {
+                summaryShippingFee.textContent = 'Miễn phí';
+            } else {
+                summaryShippingFee.textContent = 'Tính ở thanh toán';
+            }
+        }
+
+        if (summaryTotal) summaryTotal.textContent = formatVND(total);
+
+        // Update Checkout Button & Warnings
+        if (btnProceedCheckout) {
+            btnProceedCheckout.disabled = selectedCount === 0;
+        }
+        if (btnCheckoutLabel) {
+            btnCheckoutLabel.textContent = `Tiến hành thanh toán (${selectedCount})`;
+        }
+        if (checkoutEmptyWarning) {
+            if (selectedCount === 0) {
+                checkoutEmptyWarning.classList.remove('hidden');
+            } else {
+                checkoutEmptyWarning.classList.add('hidden');
+            }
+        }
+
+        // Update hidden inputs for fallback form submit
+        if (hiddenInputsContainer) {
+            hiddenInputsContainer.innerHTML = '';
+            selectedKeys.forEach(k => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'selected_items[]';
+                input.value = k;
+                hiddenInputsContainer.appendChild(input);
+            });
+        }
+
+        // Sync with backend session
+        clearTimeout(syncTimeout);
+        syncTimeout = setTimeout(() => {
+            fetch(config.selectUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': config.csrfToken
+                },
+                body: JSON.stringify({ selected_keys: selectedKeys })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.success) {
+                    if (summarySubtotal) summarySubtotal.textContent = data.formatted_subtotal;
+                    if (summaryTotal) summaryTotal.textContent = data.formatted_total;
+                    if (data.discount_amount > 0 && summaryDiscountAmount) {
+                        summaryDiscountAmount.textContent = '-' + data.formatted_discount;
+                    }
+                }
+            })
+            .catch(() => {});
+        }, 200);
+    }
+
+    // Attach listener to "Select All"
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function () {
+            const isChecked = this.checked;
+            itemCheckboxes.forEach(cb => {
+                cb.checked = isChecked;
+            });
+            updateCartUI();
+        });
+    }
+
+    // Attach listener to each item checkbox
+    itemCheckboxes.forEach(cb => {
+        cb.addEventListener('change', updateCartUI);
+    });
+
+    // Form submit check
+    const checkoutForm = document.getElementById('checkout-selected-form');
+    if (checkoutForm) {
+        checkoutForm.addEventListener('submit', function (e) {
+            const checked = document.querySelectorAll('.cart-item-checkbox:checked');
+            if (checked.length === 0) {
+                e.preventDefault();
+                alert('Vui lòng chọn ít nhất 1 sản phẩm trước khi thanh toán.');
+            }
+        });
+    }
+});
+</script>
 @endsection

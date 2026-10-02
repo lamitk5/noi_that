@@ -12,12 +12,17 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
+            'admin' => \App\Http\Middleware\AdminMiddleware::class,
+            'adminonly' => \App\Http\Middleware\AdminOnlyMiddleware::class,
         ]);
+
+        $middleware->trustProxies(at: '*');
 
         $middleware->validateCsrfTokens(except: [
             'api/payment/momo/ipn',
+            'api/payment/vnpay/ipn',
             'api/shipping/ghn/webhook',
+            'api/shipping/ghn/calculate-fee',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

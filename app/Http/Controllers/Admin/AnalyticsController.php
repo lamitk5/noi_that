@@ -7,15 +7,27 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
+use OpenSpout\Common\Entity\Row;
+use OpenSpout\Common\Entity\Style\CellAlignment;
+use OpenSpout\Common\Entity\Style\Color;
+use OpenSpout\Common\Entity\Style\Style;
+use OpenSpout\Writer\AutoFilter;
+use OpenSpout\Writer\XLSX\Writer;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AnalyticsController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request): View|RedirectResponse
     {
+        if (! Auth::user()?->isAdmin()) {
+            return redirect()->route('admin.chats.index');
+        }
+
         $period = $request->input('period', 'month');
         if (!in_array($period, ['day', 'week', 'month', 'year'])) {
             $period = 'month';
@@ -220,10 +232,14 @@ class AnalyticsController extends Controller
     }
 
     /**
-     * Export analytics and orders report to CSV (Excel compatible with UTF-8 BOM).
+     * Export analytics and orders report to a real Excel file (.xlsx).
      */
-    public function export(Request $request): StreamedResponse
+    public function export(Request $request): StreamedResponse|RedirectResponse
     {
+        if (! Auth::user()?->isAdmin()) {
+            return redirect()->route('admin.chats.index');
+        }
+
         $period = $request->input('period', 'month');
         $now = now();
 
@@ -232,22 +248,26 @@ class AnalyticsController extends Controller
                 $start = $now->copy()->startOfDay();
                 $end = $now->copy()->endOfDay();
                 $periodName = 'ngay';
+                $periodLabel = 'HÔM NAY (NGÀY)';
                 break;
             case 'week':
                 $start = $now->copy()->startOfWeek();
                 $end = $now->copy()->endOfWeek();
                 $periodName = 'tuan';
+                $periodLabel = 'TUẦN NÀY';
                 break;
             case 'year':
                 $start = $now->copy()->startOfYear();
                 $end = $now->copy()->endOfYear();
                 $periodName = 'nam';
+                $periodLabel = 'NĂM NÀY';
                 break;
             case 'month':
             default:
                 $start = $now->copy()->startOfMonth();
                 $end = $now->copy()->endOfMonth();
                 $periodName = 'thang';
+                $periodLabel = 'THÁNG NÀY';
                 break;
         }
 
@@ -257,7 +277,7 @@ class AnalyticsController extends Controller
             ->orderByDesc('id')
             ->get();
 
-        $filename = "bao-cao-doanh-thu-{$periodName}-" . date('Ymd_His') . ".csv";
+        $filename = "bao-cao-doanh-thu-{$periodName}-" . date('Ymd_His') . ".xlsx";
 
         $statusLabels = [
             'pending' => 'Chờ xử lý',
@@ -275,73 +295,127 @@ class AnalyticsController extends Controller
             'bank_transfer' => 'Chuyển khoản',
         ];
 
-        $headers = [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
-            'Pragma' => 'no-cache',
-            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
-            'Expires' => '0',
+        // Cell styles
+        $titleStyle = (new Style())->setFontBold()->setFontSize(14);
+        $sectionStyle = (new Style())->setFontBold()->setBackgroundColor('EDE4D9');
+        $labelStyle = (new Style())->setFontBold();
+        $headerStyle = (new Style())
+            ->setFontBold()
+            ->setFontColor(Color::WHITE)
+            ->setBackgroundColor('263A2F')
+            ->setCellAlignment(CellAlignment::CENTER)
+            ->setShouldWrapText(true);
+        $moneyStyle = (new Style())->setFormat('#,##0');
+        $centerStyle = (new Style())->setCellAlignment(CellAlignment::CENTER);
+
+        $summary = [
+            'Tổng số đơn hàng' => $orders->count(),
+            'Đơn thành công' => $orders->where('order_status', 'completed')->count(),
+            'Đơn chờ xử lý' => $orders->where('order_status', 'pending')->count(),
+            'Đơn đã hủy' => $orders->whereIn('order_status', ['canceled', 'cancelled'])->count(),
+            'Tổng doanh thu hợp lệ (VNĐ)' => (float) $orders->whereNotIn('order_status', ['canceled', 'cancelled'])->sum('total_price'),
         ];
 
-        return response()->stream(function () use ($orders, $statusLabels, $paymentLabels, $start, $end, $periodName) {
-            $handle = fopen('php://output', 'w');
-            // Write UTF-8 BOM for Excel compatibility
-            fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
+        $tableHeaders = [
+            'STT',
+            'Mã đơn hàng',
+            'Ngày đặt',
+            'Khách hàng',
+            'Số điện thoại',
+            'Email',
+            'Địa chỉ giao hàng',
+            'Phương thức thanh toán',
+            'Trạng thái thanh toán',
+            'Trạng thái đơn hàng',
+            'Số sản phẩm',
+            'Phí vận chuyển (VNĐ)',
+            'Giảm giá (VNĐ)',
+            'Tổng thanh toán (VNĐ)',
+        ];
 
-            // Report Header Information
-            fputcsv($handle, ['BÁO CÁO DOANH THU & ĐƠN HÀNG - NỘI THẤT MỘC AN']);
-            fputcsv($handle, ['Kỳ báo cáo:', strtoupper($periodName), 'Từ ngày:', $start->format('d/m/Y H:i'), 'Đến ngày:', $end->format('d/m/Y H:i')]);
-            fputcsv($handle, ['Thời điểm xuất:', date('d/m/Y H:i:s')]);
-            fputcsv($handle, []);
+        $tmpPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . uniqid('mocan_report_', true) . '.xlsx';
 
-            // Summary row
-            $totalRev = $orders->whereNotIn('order_status', ['canceled', 'cancelled'])->sum('total_price');
-            fputcsv($handle, ['TỔNG HỢP']);
-            fputcsv($handle, ['Tổng số đơn hàng:', $orders->count()]);
-            fputcsv($handle, ['Đơn thành công:', $orders->where('order_status', 'completed')->count()]);
-            fputcsv($handle, ['Đơn chờ xử lý:', $orders->where('order_status', 'pending')->count()]);
-            fputcsv($handle, ['Đơn đã hủy:', $orders->whereIn('order_status', ['canceled', 'cancelled'])->count()]);
-            fputcsv($handle, ['Tổng doanh thu hợp lệ (VNĐ):', number_format($totalRev, 0, ',', '.') . ' đ']);
-            fputcsv($handle, []);
+        $writer = new Writer();
+        $writer->setCreator('Mộc An Admin');
+        $writer->openToFile($tmpPath);
 
-            // Data Table Headers
-            fputcsv($handle, [
-                'STT',
-                'Mã đơn hàng',
-                'Ngày đặt',
-                'Khách hàng',
-                'Số điện thoại',
-                'Email',
-                'Địa chỉ giao hàng',
-                'Phương thức thanh toán',
-                'Trạng thái thanh toán',
-                'Trạng thái đơn hàng',
-                'Số sản phẩm',
-                'Phí vận chuyển (VNĐ)',
-                'Giảm giá (VNĐ)',
-                'Tổng thanh toán (VNĐ)',
-            ]);
+        $sheet = $writer->getCurrentSheet();
+        $sheet->setName('Báo cáo doanh thu');
 
-            foreach ($orders as $index => $order) {
-                fputcsv($handle, [
-                    $index + 1,
-                    $order->order_code,
-                    $order->created_at ? $order->created_at->format('d/m/Y H:i') : '',
-                    $order->customer_name,
-                    "'" . $order->customer_phone,
-                    $order->customer_email,
-                    $order->shipping_address,
-                    $paymentLabels[$order->payment_method] ?? strtoupper($order->payment_method),
-                    $order->payment_status === 'paid' ? 'Đã thanh toán' : 'Chưa thanh toán',
-                    $statusLabels[$order->order_status] ?? ucfirst($order->order_status),
-                    $order->items->sum('quantity'),
-                    (float) $order->shipping_fee,
-                    (float) $order->discount_amount,
-                    (float) $order->total_price,
-                ]);
+        // Cột rộng vừa đủ để Excel không hiển thị "####"
+        $widths = [6, 22, 18, 26, 16, 32, 42, 26, 18, 18, 12, 18, 16, 20];
+        foreach ($widths as $index => $width) {
+            $sheet->setColumnWidth($width, $index + 1);
+        }
+
+        $writer->addRow(Row::fromValues(['BÁO CÁO DOANH THU & ĐƠN HÀNG - NỘI THẤT MỘC AN'], $titleStyle));
+        $writer->addRow(Row::fromValues([
+            'Kỳ báo cáo:', $periodLabel,
+            'Từ ngày:', $start->format('d/m/Y H:i'),
+            'Đến ngày:', $end->format('d/m/Y H:i'),
+        ], $labelStyle));
+        $writer->addRow(Row::fromValues([
+            'Thời điểm xuất:', $now->format('d/m/Y H:i:s'),
+            'Người xuất:', Auth::user()?->name,
+        ]));
+        $writer->addRow(Row::fromValues([]));
+
+        $writer->addRow(Row::fromValues(['TỔNG HỢP'], $sectionStyle));
+        foreach ($summary as $label => $value) {
+            $writer->addRow(Row::fromValuesWithStyles(
+                [$label, $value],
+                null,
+                [1 => $label === 'Tổng doanh thu hợp lệ (VNĐ)' || is_int($value) ? $moneyStyle : null]
+            ));
+        }
+        $writer->addRow(Row::fromValues([]));
+
+        $headerRowNumber = 12; // 11 dòng trên + 1
+        $writer->addRow(Row::fromValues($tableHeaders, $headerStyle));
+
+        foreach ($orders as $index => $order) {
+            $writer->addRow(Row::fromValuesWithStyles([
+                $index + 1,
+                $order->order_code,
+                $order->created_at ? $order->created_at->format('d/m/Y H:i') : '',
+                $order->customer_name,
+                $order->customer_phone,
+                $order->customer_email,
+                $order->shipping_address,
+                $paymentLabels[$order->payment_method] ?? strtoupper((string) $order->payment_method),
+                $order->payment_status === 'paid' ? 'Đã thanh toán' : 'Chưa thanh toán',
+                $statusLabels[$order->order_status] ?? ucfirst((string) $order->order_status),
+                (int) $order->items->sum('quantity'),
+                (float) $order->shipping_fee,
+                (float) $order->discount_amount,
+                (float) $order->total_price,
+            ], null, [
+                0 => $centerStyle,
+                11 => $moneyStyle,
+                12 => $moneyStyle,
+                13 => $moneyStyle,
+            ]));
+        }
+
+        $sheet->setAutoFilter(new AutoFilter(
+            0,
+            $headerRowNumber,
+            count($tableHeaders) - 1,
+            $headerRowNumber + $orders->count()
+        ));
+
+        $writer->close();
+
+        return response()->streamDownload(function () use ($tmpPath) {
+            $handle = @fopen($tmpPath, 'rb');
+            if ($handle) {
+                fpassthru($handle);
+                fclose($handle);
             }
-
-            fclose($handle);
-        }, 200, $headers);
+            @unlink($tmpPath);
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Cache-Control' => 'no-cache, no-store, must-revalidate',
+        ]);
     }
 }

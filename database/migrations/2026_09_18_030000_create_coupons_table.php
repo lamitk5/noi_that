@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->string('code')->unique();
             $table->string('name')->nullable();
-            $table->string('type')->default('percent'); // 'percent' or 'fixed'
+            $table->string('type')->default('percent');
             $table->decimal('value', 12, 2);
             $table->decimal('min_order_amount', 12, 2)->nullable();
             $table->decimal('max_discount_amount', 12, 2)->nullable();
@@ -23,19 +23,10 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->timestamps();
         });
-
-        Schema::table('orders', function (Blueprint $table) {
-            $table->string('coupon_code')->nullable();
-            $table->decimal('discount_amount', 12, 2)->default(0);
-        });
     }
 
     public function down(): void
     {
-        Schema::table('orders', function (Blueprint $table) {
-            $table->dropColumn(['coupon_code', 'discount_amount']);
-        });
-
         Schema::dropIfExists('coupons');
     }
 };

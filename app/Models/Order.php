@@ -3,61 +3,90 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class Order extends Model
 {
     use HasFactory;
 
+    public const STATUS_PENDING = 'pending';
+    public const STATUS_CONFIRMED = 'confirmed';
+    public const STATUS_SHIPPING = 'shipping';
+    public const STATUS_COMPLETED = 'completed';
+    public const STATUS_CANCELLED = 'cancelled';
+
+    public const PAYMENT_PENDING = 'pending';
+    public const PAYMENT_PAID = 'paid';
+    public const PAYMENT_FAILED = 'failed';
+
     protected $fillable = [
-        'user_id',
         'order_code',
-        'ghn_order_code',
-        'ghn_status',
-        'ghn_expected_delivery_at',
-        'ghn_log',
+        'order_number',
+        'user_id',
+        'name',
+        'phone',
         'customer_name',
-        'customer_phone',
         'customer_email',
+        'customer_phone',
         'shipping_address',
+        'shipping_fee',
+        'discount_amount',
+        'coupon_code',
+        'total_price',
+        'total_amount',
+        'subtotal',
+        'payment_method',
+        'payment_status',
+        'status',
+        'shipping_status',
+        'order_status',
+        'note',
         'province_id',
         'province_name',
         'district_id',
         'district_name',
         'ward_code',
         'ward_name',
-        'note',
-        'total_price',
-        'shipping_fee',
-        'coupon_code',
-        'discount_amount',
-        'payment_method',
-        'payment_status',
-        'order_status',
+        'ghn_order_code',
+        'ghn_status',
+        'ghn_expected_delivery_at',
+        'ghn_log',
     ];
 
-    protected function casts(): array
+    protected $casts = [
+        'shipping_fee' => 'decimal:2',
+        'discount_amount' => 'decimal:2',
+        'total_price' => 'decimal:2',
+        'ghn_expected_delivery_at' => 'datetime',
+        'ghn_log' => 'array',
+    ];
+
+    protected $appends = [
+        'order_status_label',
+        'payment_status_label',
+        'ghn_status_label',
+        'ghn_tracking_url',
+    ];
+
+    protected static function booted(): void
     {
-        return [
-            'total_price' => 'decimal:2',
-            'shipping_fee' => 'decimal:2',
-            'discount_amount' => 'decimal:2',
-            'ghn_expected_delivery_at' => 'datetime',
-            'ghn_log' => 'array',
-        ];
+        static::creating(function (Order $order) {
+            if (empty($order->order_code)) {
+                $order->order_code = static::generateOrderNumber();
+            }
+            if (!isset($order->total_price) || $order->total_price === null) {
+                $order->total_price = 0;
+            }
+        });
     }
 
-    public const STATUS_PENDING = 'pending';
-    public const STATUS_CONFIRMED = 'confirmed';
-    public const STATUS_SHIPPING = 'shipping';
-    public const STATUS_COMPLETED = 'completed';
-    public const STATUS_CANCELLED = 'canceled';
-
-    public const PAYMENT_PENDING = 'pending';
-    public const PAYMENT_PAID = 'paid';
-    public const PAYMENT_FAILED = 'failed';
+    public static function generateOrderNumber(): string
+    {
+        return 'ORD-' . date('Ymd') . '-' . strtoupper(Str::random(6));
+    }
 
     public function user(): BelongsTo
     {
@@ -74,63 +103,6 @@ class Order extends Model
         return $this->hasMany(PaymentTransaction::class);
     }
 
-    public function getOrderNumberAttribute(): ?string
-    {
-        return $this->order_code;
-    }
-
-    public function setOrderNumberAttribute($value): void
-    {
-        $this->attributes['order_code'] = $value;
-    }
-
-    public function getTotalAmountAttribute(): float
-    {
-        return (float) $this->total_price;
-    }
-
-    public function setTotalAmountAttribute($value): void
-    {
-        $this->attributes['total_price'] = $value;
-    }
-
-    public function getNotesAttribute(): ?string
-    {
-        return $this->note;
-    }
-
-    public function setNotesAttribute($value): void
-    {
-        $this->attributes['note'] = $value;
-    }
-
-    public function getSubtotalAttribute(): float
-    {
-        return (float) ($this->total_price - $this->shipping_fee);
-    }
-
-    public function getOrderStatusLabelAttribute(): string
-    {
-        return match ($this->order_status) {
-            'pending' => 'Chờ xử lý',
-            'confirmed' => 'Đã xác nhận',
-            'shipping' => 'Đang giao hàng',
-            'completed' => 'Hoàn thành',
-            'canceled', 'cancelled' => 'Đã hủy',
-            default => ucfirst($this->order_status),
-        };
-    }
-
-    public function getPaymentStatusLabelAttribute(): string
-    {
-        return match ($this->payment_status) {
-            'pending' => 'Chờ thanh toán',
-            'paid' => 'Đã thanh toán',
-            'failed' => 'Thất bại',
-            default => ucfirst($this->payment_status),
-        };
-    }
-
     public function getGhnTrackingUrlAttribute(): ?string
     {
         return $this->ghn_order_code
@@ -143,25 +115,87 @@ class Order extends Model
         return match ($this->ghn_status) {
             'ready_to_pick' => 'Chờ lấy hàng',
             'picking' => 'Đang lấy hàng',
-            'cancel' => 'Đã hủy',
-            'money_collect_picking' => 'Đang thu tiền người gửi',
             'picked' => 'Đã lấy hàng',
             'storing' => 'Đang ở kho GHN',
             'transporting' => 'Đang trung chuyển',
             'sorting' => 'Đang phân loại',
             'delivering' => 'Đang giao hàng',
-            'money_collect_delivering' => 'Đang thu tiền người nhận',
-            'delivered' => 'Đã giao hàng thành công',
+            'delivered' => 'Đã giao hàng',
+            'return' => 'Đang hoàn hàng',
+            'return_transporting' => 'Đang chuyển hoàn',
+            'return_sorting' => 'Phân loại hoàn',
+            'returning' => 'Đang hoàn về shop',
+            'returned' => 'Đã hoàn về shop',
+            'cancel' => 'Đã hủy',
             'delivery_fail' => 'Giao hàng thất bại',
-            'waiting_to_return' => 'Chờ chuyển hoàn',
-            'return' => 'Đang chuyển hoàn',
-            'returned' => 'Đã chuyển hoàn',
             default => $this->ghn_status ?: 'Chưa tạo đơn',
         };
     }
 
-    public static function generateOrderNumber(): string
+    /**
+     * Compatibility aliases used by feature/lam views/controllers.
+     */
+    public function getOrderNumberAttribute(): string
     {
-        return 'ORD-' . date('Ymd') . '-' . strtoupper(\Illuminate\Support\Str::random(6));
+        return (string) ($this->order_code ?? $this->getRawOriginal('order_number'));
+    }
+
+    public function setOrderNumberAttribute(string $value): void
+    {
+        $this->attributes['order_code'] = $value;
+    }
+
+    public function getNotesAttribute(): ?string
+    {
+        return $this->note;
+    }
+
+    public function setNotesAttribute(?string $value): void
+    {
+        $this->attributes['note'] = $value;
+    }
+
+    public function getTotalAmountAttribute(): float
+    {
+        return (float) ($this->total_price ?? 0);
+    }
+
+    public function setTotalAmountAttribute($value): void
+    {
+        $this->attributes['total_price'] = $value;
+    }
+
+    public function getSubtotalAttribute(): float
+    {
+        return max(0, (float) ($this->total_price ?? 0) - (float) ($this->shipping_fee ?? 0) + (float) ($this->discount_amount ?? 0));
+    }
+
+    public function setSubtotalAttribute($value): void
+    {
+        if (!isset($this->attributes['total_price']) || $this->attributes['total_price'] === null) {
+            $this->attributes['total_price'] = $value;
+        }
+    }
+
+    public function getOrderStatusLabelAttribute(): string
+    {
+        return match ($this->order_status) {
+            self::STATUS_PENDING => 'Chờ xử lý',
+            self::STATUS_CONFIRMED => 'Đã xác nhận',
+            self::STATUS_SHIPPING => 'Đang giao hàng',
+            self::STATUS_COMPLETED => 'Hoàn thành',
+            self::STATUS_CANCELLED, 'canceled' => 'Đã hủy',
+            default => 'Không xác định',
+        };
+    }
+
+    public function getPaymentStatusLabelAttribute(): string
+    {
+        return match ($this->payment_status) {
+            self::PAYMENT_PENDING => 'Chờ thanh toán',
+            self::PAYMENT_PAID => 'Đã thanh toán',
+            self::PAYMENT_FAILED => 'Thanh toán thất bại',
+            default => 'Chưa rõ',
+        };
     }
 }

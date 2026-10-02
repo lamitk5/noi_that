@@ -12,25 +12,24 @@ class PaymentTransaction extends Model
 
     protected $fillable = [
         'order_id',
+        'gateway',
         'provider',
         'provider_reference',
         'request_id',
         'provider_transaction_id',
         'amount',
         'status',
+        'message',
         'response_code',
         'paid_at',
         'failed_at',
     ];
 
-    protected function casts(): array
-    {
-        return [
-            'amount' => 'decimal:2',
-            'paid_at' => 'datetime',
-            'failed_at' => 'datetime',
-        ];
-    }
+    protected $casts = [
+        'amount' => 'decimal:2',
+        'paid_at' => 'datetime',
+        'failed_at' => 'datetime',
+    ];
 
     public function order(): BelongsTo
     {

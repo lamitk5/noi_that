@@ -7,13 +7,16 @@
 <div class="space-y-6 max-w-5xl">
     <div class="flex items-center justify-between">
         <a href="{{ route('admin.customers.index') }}" class="text-xs font-semibold text-primary hover:underline">&larr; Quay lại danh sách</a>
-        <form action="{{ route('admin.customers.toggle', $customer) }}" method="POST">
-            @csrf
-            @method('PATCH')
-            <button type="submit" class="rounded-xl px-4 py-2 text-xs font-bold transition {{ $customer->isActive() ? 'bg-rose-500/10 text-rose-600 hover:bg-rose-500/20' : 'bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20' }}">
-                {{ $customer->isActive() ? 'Khóa tài khoản' : 'Mở khóa tài khoản' }}
-            </button>
-        </form>
+        <div class="flex items-center gap-2">
+            <a href="{{ route('admin.customers.edit', $customer) }}" class="rounded-xl px-4 py-2 text-xs font-bold bg-primary/10 text-primary hover:bg-primary/20 transition">Sửa thông tin</a>
+            <form action="{{ route('admin.customers.toggle', $customer) }}" method="POST">
+                @csrf
+                @method('PATCH')
+                <button type="submit" class="rounded-xl px-4 py-2 text-xs font-bold transition {{ $customer->isActive() ? 'bg-rose-500/10 text-rose-600 hover:bg-rose-500/20' : 'bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20' }}">
+                    {{ $customer->isActive() ? 'Khóa tài khoản' : 'Mở khóa tài khoản' }}
+                </button>
+            </form>
+        </div>
     </div>
 
     <div class="grid gap-4 sm:grid-cols-3">

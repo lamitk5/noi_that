@@ -2,18 +2,6 @@
 
 return [
 
-    /*
-    |--------------------------------------------------------------------------
-    | Third Party Services
-    |--------------------------------------------------------------------------
-    |
-    | This file is for storing the credentials for third party services such
-    | as Mailgun, Postmark, AWS and more. This file provides the de facto
-    | location for this type of information, allowing packages to have
-    | a conventional file to locate the various service credentials.
-    |
-    */
-
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),
     ],
@@ -36,22 +24,25 @@ return [
     ],
 
     'vnpay' => [
-        'url' => env('VNPAY_PAYMENT_URL', 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html'),
-        'tmn_code' => env('VNPAY_TMN_CODE', 'CGXZLS0Z'),
-        'hash_secret' => env('VNPAY_HASH_SECRET', 'XNBCJFAKAZQSGTARRLGCHVZWCIOIGSHN'),
+        'url'         => env('VNPAY_PAYMENT_URL', 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html'),
+        'tmn_code'    => env('VNPAY_TMN_CODE'),
+        'hash_secret' => env('VNPAY_HASH_SECRET'),
+        'mock'        => env('VNPAY_MOCK', false),
     ],
 
     'momo' => [
-        'url' => env('MOMO_PAYMENT_URL', 'https://test-payment.momo.vn/v2/gateway/api/create'),
-        'partner_code' => env('MOMO_PARTNER_CODE', 'MOMO'),
-        'access_key' => env('MOMO_ACCESS_KEY', 'F8BBA842ECF85'),
-        'secret_key' => env('MOMO_SECRET_KEY', 'K951B6PE1wa80fS6lGXDOjUhtgYXlyQ3'),
+        'url'          => env('MOMO_PAYMENT_URL', 'https://test-payment.momo.vn/v2/gateway/api/create'),
+        'partner_code' => env('MOMO_PARTNER_CODE'),
+        'access_key'   => env('MOMO_ACCESS_KEY'),
+        'secret_key'   => env('MOMO_SECRET_KEY'),
+        'request_type' => env('MOMO_REQUEST_TYPE', 'payWithATM'),
+        'mock'         => env('MOMO_MOCK', false),
     ],
 
     'ghn' => [
         'url' => env('GHN_API_URL', 'https://dev-online-gateway.ghn.vn/shiip/public-api/'),
-        'token' => env('GHN_TOKEN', '8440538a-989d-11ee-a6e6-e60958111f48'),
-        'shop_id' => (int) env('GHN_SHOP_ID', 190566),
+        'token' => env('GHN_TOKEN', 'd3555875-a814-11f1-a973-aee5264794df'),
+        'shop_id' => (int) env('GHN_SHOP_ID', 216783),
         'from_district_id' => (int) env('GHN_FROM_DISTRICT_ID', 1442),
         'from_ward_code' => (string) env('GHN_FROM_WARD_CODE', '20101'),
         'auto_create_order' => (bool) env('GHN_AUTO_CREATE_ORDER', true),
@@ -62,12 +53,6 @@ return [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
         'redirect' => env('GOOGLE_REDIRECT_URI', '/auth/google/callback'),
-    ],
-
-    'github' => [
-        'client_id' => env('GITHUB_CLIENT_ID'),
-        'client_secret' => env('GITHUB_CLIENT_SECRET'),
-        'redirect' => env('GITHUB_REDIRECT_URI', '/auth/github/callback'),
     ],
 
 ];

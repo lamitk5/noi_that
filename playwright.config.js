@@ -1,27 +1,23 @@
-import { defineConfig, devices } from '@playwright/test';
+import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests/e2e',
-  timeout: 45000,
-  expect: {
-    timeout: 10000,
-  },
+  timeout: 30000,
   fullyParallel: true,
+  forbidOnly: !!process.env.CI,
   retries: 0,
-  workers: 2,
+  workers: 8,
   reporter: [
-    ['list'],
-    ['json', { outputFile: 'playwright-report/test-results-300.json' }],
+    ['line'],
+    ['json', { outputFile: 'test-results/report.json' }]
   ],
   use: {
     baseURL: 'http://127.0.0.1:8000',
+    screenshot: 'off',
+    video: 'off',
     trace: 'off',
-    screenshot: 'only-on-failure',
-  },
-  projects: [
-    {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+    extraHTTPHeaders: {
+      'Accept': 'application/json, text/html, */*',
     },
-  ],
+  },
 });

@@ -4,108 +4,188 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\CheckoutRequest;
 use App\Models\Order;
+use App\Models\Product;
 use App\Services\CartService;
-use App\Services\CheckoutService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
-use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class CheckoutController extends Controller
 {
-    public function __construct(
-        protected CartService $cartService,
-        protected CheckoutService $checkoutService,
-        protected \App\Services\Shipping\GhnService $ghnService
-    ) {}
+    public function __construct(protected CartService $cartService) {}
 
-    /**
-     * Display the checkout page.
-     */
-    public function index(Request $request): View|RedirectResponse
+    public function index(Request $request): View|RedirectResponse|JsonResponse
     {
-        $items = $this->cartService->getItems();
+        $isBuyNow = $request->boolean('buy_now') || session('is_buy_now', false);
+        $this->cartService->setBuyNowMode($isBuyNow);
 
-        if ($items->isEmpty()) {
-            return redirect()
-                ->route('cart.index')
-                ->with('error', 'Giỏ hàng của bạn đang trống.');
-        }
+        $cart = $this->cartService->getSelectedCart();
 
-        // Generate idempotency token for double submit protection
-        $token = Str::random(40);
-        session()->put('checkout_token', $token);
-
-        $subtotal = $this->cartService->subtotal();
-        $shippingFee = (float) session()->get('shipping_fee', config('services.ghn.default_fee', 30000));
-
-        $appliedCoupon = session()->get('applied_coupon');
-        $discountAmount = 0.0;
-        if ($appliedCoupon && ! empty($appliedCoupon['code'])) {
-            $coupon = \App\Models\Coupon::where('code', $appliedCoupon['code'])->first();
-            if ($coupon && $coupon->isValidFor($subtotal)) {
-                $discountAmount = $coupon->calculateDiscount($subtotal);
-            } else {
-                session()->forget('applied_coupon');
-                $appliedCoupon = null;
+        if (empty($cart)) {
+            if ($isBuyNow) {
+                $this->cartService->setBuyNowMode(false);
+                return redirect()->route('products.index')
+                    ->with('error', 'Chưa có sản phẩm để mua nhanh.');
             }
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Bạn chưa chọn sản phẩm nào để thanh toán.',
+                ], 400);
+            }
+
+            return redirect()->route('cart.index')
+                ->with('error', 'Vui lòng chọn ít nhất 1 sản phẩm trước khi thanh toán.');
         }
 
-        $totalPrice = max(0, ($subtotal - $discountAmount) + $shippingFee);
-        $provinces = $this->ghnService->getProvinces();
+        if (! $request->has('ward_code') && ! old('ward_code')) {
+            session()->forget(['shipping_fee', 'shipping_destination']);
+        }
 
-        return view('checkout.index', [
-            'items' => $items,
-            'subtotal' => $subtotal,
-            'shippingFee' => $shippingFee,
-            'appliedCoupon' => $appliedCoupon,
-            'discountAmount' => $discountAmount,
-            'totalPrice' => $totalPrice,
-            'user' => $request->user(),
-            'checkoutToken' => $token,
-            'provinces' => $provinces,
-        ]);
+        $items = $this->cartService->getSelectedItems();
+        $subtotal = $this->cartService->getSelectedSubtotal();
+        $hasCalculatedShipping = $this->cartService->hasCalculatedShipping();
+        $shippingFee = $this->cartService->getShippingFee();
+        $coupon = $this->cartService->getCoupon();
+        $discountAmount = $this->cartService->getDiscountAmount();
+        $availableCoupons = $this->cartService->getAvailableCoupons();
+        $total = $this->cartService->getTotal();
+        $totalPrice = $total;
+        $user = Auth::user();
+        $checkoutToken = (string) Str::random(40);
+        session(['checkout_token' => $checkoutToken]);
+
+        $data = compact('cart', 'items', 'subtotal', 'hasCalculatedShipping', 'shippingFee', 'coupon', 'discountAmount', 'availableCoupons', 'total', 'totalPrice', 'user', 'checkoutToken', 'isBuyNow');
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'data' => $data]);
+        }
+
+        return view('checkout.index', $data);
     }
 
-    /**
-     * Process checkout and create order.
-     */
-    public function store(CheckoutRequest $request): RedirectResponse
+    public function process(CheckoutRequest $request): RedirectResponse|JsonResponse
     {
-        $cart = session()->get('cart', []);
+        $isBuyNow = $request->boolean('is_buy_now') || session('is_buy_now', false);
+        $this->cartService->setBuyNowMode($isBuyNow);
+
+        $cart = $this->cartService->getSelectedCart();
+
         if (empty($cart)) {
-            return redirect()
-                ->route('cart.index')
-                ->with('error', 'Giỏ hàng của bạn đang trống.');
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Đơn hàng không có sản phẩm nào được chọn.',
+                ], 400);
+            }
+
+            return redirect()->route($isBuyNow ? 'products.index' : 'cart.index')
+                ->with('error', 'Vui lòng chọn ít nhất 1 sản phẩm trước khi thanh toán.');
         }
 
-        // Validate double submission token
-        $sessionToken = session()->get('checkout_token');
-        if (! $sessionToken || $sessionToken !== $request->input('checkout_token')) {
-            return redirect()
-                ->route('cart.index')
-                ->with('error', 'Yêu cầu thanh toán không hợp lệ hoặc đã được xử lý.');
-        }
+        $paymentMethod = $request->input('payment_method');
 
         try {
-            $order = $this->checkoutService->checkout(
-                $request->user(),
-                $request->validated()
-            );
+            $order = DB::transaction(function () use ($request, $cart, $paymentMethod, $isBuyNow) {
+                $orderItemsData = [];
+                $calculatedSubtotal = 0.0;
 
-            // Invalidate token after order created
-            session()->forget('checkout_token');
+                foreach ($cart as $item) {
+                    $variant = \App\Models\ProductVariant::lockForUpdate()->find($item['variant_id'] ?? 0);
 
-            // Send Order Confirmation Email
-            try {
-                if (! empty($order->customer_email)) {
-                    $order->loadMissing('items');
-                    \Illuminate\Support\Facades\Mail::to($order->customer_email)
-                        ->send(new \App\Mail\OrderConfirmationMail($order));
+                    if (! $variant) {
+                        throw new \Exception('Biến thể sản phẩm không còn khả dụng.');
+                    }
+
+                    $product = Product::find($variant->product_id);
+                    if (! $product || ! $product->is_active) {
+                        throw new \Exception("Sản phẩm \"{$item['name']}\" hiện không khả dụng.");
+                    }
+
+                    if ($variant->stock < $item['quantity']) {
+                        throw new \Exception("Biến thể \"{$variant->display_label}\" chỉ còn lại {$variant->stock} món trong kho.");
+                    }
+
+                    $unitPrice = (float) $variant->price;
+                    $variant->decrement('stock', $item['quantity']);
+                    $calculatedSubtotal += $unitPrice * $item['quantity'];
+
+                    $orderItemsData[] = [
+                        'product_variant_id' => $variant->id,
+                        'product_name' => $product->name,
+                        'variant_info' => $variant->display_label,
+                        'quantity' => $item['quantity'],
+                        'price' => $unitPrice,
+                    ];
                 }
-            } catch (\Throwable $mailEx) {
-                \Illuminate\Support\Facades\Log::warning('Could not send order confirmation email: ' . $mailEx->getMessage());
+
+                $shippingFee = (float) session('shipping_fee', (float) config('services.ghn.default_fee', 30000.0));
+                $coupon = $this->cartService->getCoupon();
+                $discountAmount = $this->cartService->getDiscountAmount();
+                $totalAmount = max(0.0, $calculatedSubtotal + $shippingFee - $discountAmount);
+
+                $order = Order::create([
+                    'order_code' => Order::generateOrderNumber(),
+                    'user_id' => Auth::id(),
+                    'customer_name' => $request->input('customer_name'),
+                    'customer_email' => $request->input('customer_email'),
+                    'customer_phone' => $request->input('customer_phone'),
+                    'shipping_address' => $request->input('shipping_address'),
+                    'shipping_fee' => $shippingFee,
+                    'discount_amount' => $discountAmount,
+                    'coupon_code' => $coupon ? $coupon['code'] : null,
+                    'total_price' => $totalAmount,
+                    'payment_method' => $paymentMethod,
+                    'payment_status' => Order::PAYMENT_PENDING,
+                    'order_status' => Order::STATUS_PENDING,
+                    'note' => $request->input('note') ?? $request->input('notes'),
+                    'province_id' => $request->input('province_id'),
+                    'province_name' => $request->input('province_name'),
+                    'district_id' => $request->input('district_id'),
+                    'district_name' => $request->input('district_name'),
+                    'ward_code' => $request->input('ward_code'),
+                    'ward_name' => $request->input('ward_name'),
+                ]);
+
+                foreach ($orderItemsData as $itemData) {
+                    $order->items()->create($itemData);
+                }
+
+                if ($isBuyNow) {
+                    $this->cartService->clearBuyNow();
+                } else {
+                    $this->cartService->removeSelected();
+                }
+
+                session()->forget(['shipping_fee', 'shipping_destination', 'checkout_token']);
+
+                if (config('services.ghn.auto_create_order', true)) {
+                    try {
+                        app(\App\Services\Shipping\GhnService::class)->createShippingOrder($order);
+                    } catch (\Throwable $ghnEx) {
+                        \Illuminate\Support\Facades\Log::warning('Automatic GHN shipping order creation failed: '.$ghnEx->getMessage());
+                    }
+                }
+
+                return $order;
+            });
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Đặt hàng thành công!',
+                    'order' => $order->load('items'),
+                    'payment_url' => match ($order->payment_method) {
+                        'vnpay' => route('payments.vnpay.create', $order->order_code),
+                        'momo' => route('payments.momo.create', $order->order_code),
+                        default => route('checkout.success', $order->order_code),
+                    },
+                ], 201);
             }
 
             if ($order->payment_method === 'vnpay') {
@@ -116,34 +196,30 @@ class CheckoutController extends Controller
                 return redirect()->route('payments.momo.create', $order->order_code);
             }
 
-            return redirect()
-                ->route('checkout.success', $order->order_code)
-                ->with('success', 'Đặt hàng thành công! Cảm ơn bạn đã tin tưởng Mộc An.');
-        } catch (ValidationException $e) {
-            $firstError = collect($e->errors())->flatten()->first() ?: 'Không thể hoàn tất đơn hàng.';
+            return redirect()->route('checkout.success', ['order_number' => $order->order_code])
+                ->with('success', 'Đặt hàng thành công!');
+        } catch (\Exception $e) {
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                ], 422);
+            }
 
-            return redirect()
-                ->back()
-                ->withInput()
-                ->with('error', $firstError);
+            return redirect()->back()->withInput()->with('error', $e->getMessage());
         }
     }
 
-    /**
-     * Display order success confirmation page.
-     */
-    public function success(Request $request, string $orderCode): View
+    public function success(Request $request, string $orderNumber): View|JsonResponse
     {
-        $order = Order::where('order_code', $orderCode)
-            ->with(['items.variant.product.primaryImage'])
+        $order = Order::where('order_code', $orderNumber)
+            ->with(['items.variant'])
             ->firstOrFail();
 
-        if ($order->user_id !== $request->user()->id) {
-            abort(403, 'Bạn không có quyền xem đơn hàng này.');
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'data' => $order]);
         }
 
-        return view('checkout.success', [
-            'order' => $order,
-        ]);
+        return view('checkout.success', compact('order'));
     }
 }

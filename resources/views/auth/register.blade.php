@@ -1,130 +1,148 @@
 @extends('layouts.app')
 
-@section('title', 'Đăng ký tài khoản | Mộc An')
+@section('title', 'Đăng Ký Tài Khoản | Mộc An')
 
 @section('content')
-<div class="min-h-[70vh] flex items-center justify-center py-16 px-4 sm:px-6 lg:px-8 bg-page">
-    <div class="w-full max-w-md">
-        <div class="bg-surface rounded-3xl p-8 sm:p-10 shadow-xl shadow-black/5 border border-ui-border">
-            <div class="text-center mb-8">
-                <span class="inline-block text-[11px] font-bold uppercase tracking-[0.2em] text-accent mb-2">Thành viên mới</span>
-                <h1 class="font-display text-3xl font-semibold text-heading">Tạo tài khoản</h1>
-                <p class="mt-2 text-sm text-muted">Gia nhập Mộc An để lưu giữ và theo dõi các đơn hàng nội thất ấm áp cho tổ ấm của bạn.</p>
+<div class="max-w-md mx-auto px-4 py-12 sm:py-16">
+    <div class="bg-surface rounded-2xl border border-ui-border shadow-lg p-6 sm:p-8 transition-colors">
+        <h1 class="text-2xl sm:text-3xl font-bold font-display text-heading text-center mb-2">Đăng Ký Tài Khoản</h1>
+        <p class="text-xs text-muted text-center mb-6">Trở thành thành viên để nhận các ưu đãi nội thất hấp dẫn</p>
+
+        @if(session('info'))
+            <div class="mb-4 p-3 bg-blue-500/10 border border-blue-500/30 text-blue-600 dark:text-blue-400 text-xs rounded-xl">
+                {{ session('info') }}
             </div>
+        @endif
 
-            <form method="POST" action="{{ route('register.store') }}" class="space-y-5">
-                @csrf
-
-                <div>
-                    <label for="name" class="block text-xs font-bold uppercase tracking-wider text-body mb-1.5">Họ và tên</label>
-                    <input
-                        id="name"
-                        type="text"
-                        name="name"
-                        value="{{ old('name') }}"
-                        required
-                        autofocus
-                        class="w-full rounded-xl border border-ui-border bg-surface-alt px-4 py-3 text-sm text-body placeholder:text-muted transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 @error('name') border-red-400 ring-2 ring-red-200 @enderror"
-                        placeholder="Nguyễn Văn A"
-                    >
-                    @error('name')
-                        <p class="mt-1.5 text-xs font-medium text-red-500">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <div>
-                    <label for="email" class="block text-xs font-bold uppercase tracking-wider text-body mb-1.5">Địa chỉ Email</label>
-                    <input
-                        id="email"
-                        type="email"
-                        name="email"
-                        value="{{ old('email') }}"
-                        required
-                        class="w-full rounded-xl border border-ui-border bg-surface-alt px-4 py-3 text-sm text-body placeholder:text-muted transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 @error('email') border-red-400 ring-2 ring-red-200 @enderror"
-                        placeholder="email@example.com"
-                    >
-                    @error('email')
-                        <p class="mt-1.5 text-xs font-medium text-red-500">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <div>
-                    <label for="password" class="block text-xs font-bold uppercase tracking-wider text-body mb-1.5">Mật khẩu</label>
-                    <input
-                        id="password"
-                        type="password"
-                        name="password"
-                        required
-                        autocomplete="new-password"
-                        class="w-full rounded-xl border border-ui-border bg-surface-alt px-4 py-3 text-sm text-body placeholder:text-muted transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 @error('password') border-red-400 ring-2 ring-red-200 @enderror"
-                        placeholder="Tối thiểu 8 ký tự"
-                    >
-                    @error('password')
-                        <p class="mt-1.5 text-xs font-medium text-red-500">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <div>
-                    <label for="password_confirmation" class="block text-xs font-bold uppercase tracking-wider text-body mb-1.5">Xác nhận mật khẩu</label>
-                    <input
-                        id="password_confirmation"
-                        type="password"
-                        name="password_confirmation"
-                        required
-                        autocomplete="new-password"
-                        class="w-full rounded-xl border border-ui-border bg-surface-alt px-4 py-3 text-sm text-body placeholder:text-muted transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                        placeholder="Nhập lại mật khẩu"
-                    >
-                </div>
-
-                <div class="pt-2">
-                    <button
-                        type="submit"
-                        class="w-full rounded-full bg-primary py-3.5 px-6 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/20 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                    >
-                        Đăng ký tài khoản
-                    </button>
-                </div>
-            </form>
-
-            <div class="relative my-6">
-                <div class="absolute inset-0 flex items-center">
-                    <div class="w-full border-t border-ui-border"></div>
-                </div>
-                <div class="relative flex justify-center text-xs uppercase">
-                    <span class="bg-surface px-3 text-muted font-bold tracking-wider">Hoặc đăng ký nhanh với</span>
-                </div>
+        @if(session('warning'))
+            <div class="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs rounded-xl">
+                {{ session('warning') }}
             </div>
+        @endif
 
-            <div class="grid grid-cols-2 gap-3">
-                <a
-                    href="{{ route('auth.social.redirect', 'google') }}"
-                    class="flex items-center justify-center gap-2.5 rounded-xl border border-ui-border bg-surface-alt py-2.5 px-4 text-xs font-bold text-heading transition-all hover:bg-surface hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+        @if(session('error'))
+            <div class="mb-4 p-3 bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs rounded-xl">
+                {{ session('error') }}
+            </div>
+        @endif
+
+        <form action="{{ route('register') }}" method="POST" class="space-y-4">
+            @csrf
+            <!-- 1. Username -->
+            <div>
+                <label for="username" class="block text-xs font-semibold uppercase tracking-wider text-heading mb-1.5">
+                    1. Tên đăng nhập (Username) <span class="text-rose-500">*</span>
+                </label>
+                <input
+                    type="text"
+                    id="username"
+                    name="username"
+                    value="{{ old('username') }}"
+                    required
+                    autocomplete="username"
+                    placeholder="Ví dụ: nguyenvanan"
+                    class="w-full text-sm rounded-xl border border-ui-border bg-surface-alt px-3.5 py-2.5 text-heading placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition @error('username') border-rose-500 @enderror"
                 >
-                    <svg class="size-4" viewBox="0 0 24 24">
-                        <path fill="#EA4335" d="M12 5c1.54 0 2.93.56 4.02 1.48l3.01-3.01C17.21 1.76 14.81 1 12 1 7.37 1 3.48 3.66 1.63 7.51l3.66 2.84C6.17 7.35 8.84 5 12 5z"/>
-                        <path fill="#4285F4" d="M23.49 12.27c0-.8-.07-1.57-.2-2.27H12v4.55h6.45c-.28 1.47-1.11 2.72-2.36 3.56l3.66 2.84c2.14-1.97 3.74-4.88 3.74-8.68z"/>
-                        <path fill="#FBBC05" d="M5.29 14.65c-.23-.69-.36-1.43-.36-2.2s.13-1.51.36-2.2L1.63 7.51C.59 9.58 0 11.96 0 14.5s.59 4.92 1.63 6.99l3.66-2.84z"/>
-                        <path fill="#34A853" d="M12 23c3.24 0 5.95-1.07 7.93-2.91l-3.66-2.84c-1.07.72-2.45 1.15-4.27 1.15-3.16 0-5.83-2.35-6.71-5.35L1.63 15.89C3.48 19.74 7.37 23 12 23z"/>
-                    </svg>
-                    <span>Google</span>
-                </a>
+                @error('username') <span class="text-xs text-rose-500 block mt-1.5">{{ $message }}</span> @enderror
+            </div>
 
-                <a
-                    href="{{ route('auth.social.redirect', 'github') }}"
-                    class="flex items-center justify-center gap-2.5 rounded-xl border border-ui-border bg-surface-alt py-2.5 px-4 text-xs font-bold text-heading transition-all hover:bg-surface hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+            <!-- 2. Name -->
+            <div>
+                <label for="name" class="block text-xs font-semibold uppercase tracking-wider text-heading mb-1.5">
+                    2. Họ và tên <span class="text-rose-500">*</span>
+                </label>
+                <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    value="{{ old('name') }}"
+                    required
+                    autocomplete="name"
+                    placeholder="Ví dụ: Nguyễn Văn An"
+                    class="w-full text-sm rounded-xl border border-ui-border bg-surface-alt px-3.5 py-2.5 text-heading placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition @error('name') border-rose-500 @enderror"
                 >
-                    <svg class="size-4 text-heading fill-current" viewBox="0 0 24 24">
-                        <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
-                    </svg>
-                    <span>GitHub</span>
-                </a>
+                @error('name') <span class="text-xs text-rose-500 block mt-1.5">{{ $message }}</span> @enderror
             </div>
 
-            <div class="mt-8 border-t border-ui-border pt-6 text-center text-sm text-muted">
-                <span>Đã có tài khoản?</span>
-                <a href="{{ route('login') }}" class="ml-1 font-bold text-primary hover:underline">Đăng nhập</a>
+            <!-- 3. Email or Phone -->
+            <div>
+                <label for="email_or_phone" class="block text-xs font-semibold uppercase tracking-wider text-heading mb-1.5">
+                    3. Email hoặc Số điện thoại <span class="text-rose-500">*</span>
+                </label>
+                <input
+                    type="text"
+                    id="email_or_phone"
+                    name="email_or_phone"
+                    value="{{ old('email_or_phone') }}"
+                    required
+                    placeholder="email@domain.com hoặc 0912345678"
+                    class="w-full text-sm rounded-xl border border-ui-border bg-surface-alt px-3.5 py-2.5 text-heading placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition @error('email_or_phone') border-rose-500 @enderror"
+                >
+                @error('email_or_phone') <span class="text-xs text-rose-500 block mt-1.5">{{ $message }}</span> @enderror
             </div>
+
+            <!-- 4. Password -->
+            <div>
+                <label for="password" class="block text-xs font-semibold uppercase tracking-wider text-heading mb-1.5">
+                    4. Mật khẩu <span class="text-rose-500">*</span>
+                </label>
+                <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    required
+                    autocomplete="new-password"
+                    placeholder="Tối thiểu 6 ký tự"
+                    class="w-full text-sm rounded-xl border border-ui-border bg-surface-alt px-3.5 py-2.5 text-heading placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition @error('password') border-rose-500 @enderror"
+                >
+                @error('password') <span class="text-xs text-rose-500 block mt-1.5">{{ $message }}</span> @enderror
+            </div>
+
+            <!-- 5. Password Confirmation -->
+            <div>
+                <label for="password_confirmation" class="block text-xs font-semibold uppercase tracking-wider text-heading mb-1.5">
+                    5. Nhập lại mật khẩu <span class="text-rose-500">*</span>
+                </label>
+                <input
+                    type="password"
+                    id="password_confirmation"
+                    name="password_confirmation"
+                    required
+                    autocomplete="new-password"
+                    placeholder="Nhập lại chính xác mật khẩu"
+                    class="w-full text-sm rounded-xl border border-ui-border bg-surface-alt px-3.5 py-2.5 text-heading placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition"
+                >
+            </div>
+
+            <button type="submit" class="w-full bg-primary hover:opacity-90 text-primary-foreground font-bold py-3 rounded-xl transition mt-2 shadow-sm text-sm">
+                Đăng Ký
+            </button>
+        </form>
+
+        <div class="relative my-6">
+            <div class="absolute inset-0 flex items-center">
+                <div class="w-full border-t border-ui-border"></div>
+            </div>
+            <div class="relative flex justify-center text-[11px] uppercase tracking-wider">
+                <span class="bg-surface px-3 text-muted font-medium">Hoặc tiếp tục với</span>
+            </div>
+        </div>
+
+        <a
+            href="{{ route('auth.social.redirect', 'google') }}"
+            class="w-full flex items-center justify-center gap-3 py-2.5 px-4 border border-ui-border rounded-xl text-sm font-semibold text-heading bg-surface hover:bg-surface-alt transition shadow-xs"
+        >
+            <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
+                <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"/>
+                <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.98 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
+                <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+            </svg>
+            <span>Đăng ký với Google</span>
+        </a>
+
+        <div class="mt-6 pt-4 border-t border-ui-border text-center text-xs text-muted">
+            Đã có tài khoản? <a href="{{ route('login') }}" class="text-primary font-bold hover:underline">Đăng nhập</a>
         </div>
     </div>
 </div>

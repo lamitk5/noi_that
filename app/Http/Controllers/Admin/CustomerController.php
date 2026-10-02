@@ -7,6 +7,8 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class CustomerController extends Controller
@@ -56,6 +58,77 @@ class CustomerController extends Controller
             ->sum('total_price');
 
         return view('admin.customers.show', compact('customer', 'ordersCount', 'totalSpent'));
+    }
+
+    /**
+     * Edit form for customer info.
+     */
+    public function edit(User $customer): View
+    {
+        abort_if($customer->role === 'admin', 404);
+
+        return view('admin.customers.edit', compact('customer'));
+    }
+
+    /**
+     * Update customer info. Email is checked against the DB for duplicates.
+     */
+    public function update(Request $request, User $customer): RedirectResponse|JsonResponse
+    {
+        abort_if($customer->role === 'admin', 404);
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => [
+                'required', 'string', 'email', 'max:255',
+                Rule::unique('users', 'email')->ignore($customer->id),
+            ],
+            'phone' => [
+                'nullable', 'string', 'max:20',
+                Rule::unique('users', 'phone')->ignore($customer->id),
+            ],
+            'username' => [
+                'nullable', 'string', 'min:3', 'max:50', 'alpha_dash',
+                Rule::unique('users', 'username')->ignore($customer->id),
+            ],
+            'address' => ['nullable', 'string', 'max:255'],
+            'password' => ['nullable', 'string', 'min:6'],
+            'is_active' => ['sometimes', 'boolean'],
+        ], [
+            'name.required' => 'Vui lòng nhập họ tên khách hàng.',
+            'email.required' => 'Vui lòng nhập email.',
+            'email.email' => 'Email không hợp lệ.',
+            'email.unique' => 'Email đã tồn tại trong hệ thống, vui lòng dùng email khác.',
+            'phone.unique' => 'Số điện thoại đã tồn tại trong hệ thống, vui lòng dùng số khác.',
+            'username.unique' => 'Tên đăng nhập đã tồn tại trong hệ thống.',
+            'password.min' => 'Mật khẩu phải có ít nhất 6 ký tự.',
+        ]);
+
+        $customer->name = $validated['name'];
+        $customer->email = strtolower($validated['email']);
+        $customer->phone = $validated['phone'] ?? null;
+        $customer->address = $validated['address'] ?? null;
+
+        if (! empty($validated['username'])) {
+            $customer->username = strtolower($validated['username']);
+        }
+
+        if (! empty($validated['password'])) {
+            $customer->password = Hash::make($validated['password']);
+        }
+
+        if ($request->has('is_active') && ! $customer->isAdmin()) {
+            $customer->is_active = $request->boolean('is_active');
+        }
+
+        $customer->save();
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'Đã cập nhật thông tin khách hàng.']);
+        }
+
+        return redirect()->route('admin.customers.show', $customer)
+            ->with('success', 'Đã cập nhật thông tin khách hàng.');
     }
 
     public function toggle(User $customer): RedirectResponse|JsonResponse

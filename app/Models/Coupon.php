@@ -39,30 +39,30 @@ class Coupon extends Model
     public function isValidFor(float $subtotal, ?string &$error = null): bool
     {
         if (! $this->is_active) {
-            $error = 'Mã giảm giá này hiện không khả dụng hoặc đã bị tạm ngưng.';
+            $error = 'M├ú giß║úm gi├í n├áy hiß╗çn kh├┤ng khß║ú dß╗Ñng hoß║╖c ─æ├ú bß╗ï tß║ím ng╞░ng.';
             return false;
         }
 
         $now = Carbon::now();
 
         if ($this->starts_at && $now->lt($this->starts_at)) {
-            $error = 'Mã giảm giá chưa đến thời gian áp dụng.';
+            $error = 'M├ú giß║úm gi├í ch╞░a ─æß║┐n thß╗¥i gian ├íp dß╗Ñng.';
             return false;
         }
 
         if ($this->expires_at && $now->gt($this->expires_at)) {
-            $error = 'Mã giảm giá đã hết hạn sử dụng.';
+            $error = 'M├ú giß║úm gi├í ─æ├ú hß║┐t hß║ín sß╗¡ dß╗Ñng.';
             return false;
         }
 
         if ($this->usage_limit !== null && $this->used_count >= $this->usage_limit) {
-            $error = 'Mã giảm giá đã hết lượt sử dụng.';
+            $error = 'M├ú giß║úm gi├í ─æ├ú hß║┐t l╞░ß╗út sß╗¡ dß╗Ñng.';
             return false;
         }
 
         if ($this->min_order_amount !== null && $subtotal < (float) $this->min_order_amount) {
-            $formattedMin = number_format((float) $this->min_order_amount, 0, ',', '.') . '₫';
-            $error = "Mã này chỉ áp dụng cho đơn hàng từ {$formattedMin}.";
+            $formattedMin = number_format((float) $this->min_order_amount, 0, ',', '.') . 'Γé½';
+            $error = "M├ú n├áy chß╗ë ├íp dß╗Ñng cho ─æ╞ín h├áng tß╗½ {$formattedMin}.";
             return false;
         }
 

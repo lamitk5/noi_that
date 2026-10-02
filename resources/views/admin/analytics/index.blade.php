@@ -5,8 +5,16 @@
 
 @section('content')
 <div class="space-y-6">
+    <!-- Tiêu đề chỉ hiển thị khi in / lưu PDF -->
+    <div class="hidden print:block border-b border-ui-border pb-3 mb-2">
+        <h1 class="text-lg font-bold text-heading">BÁO CÁO & PHÂN TÍCH — MỘC AN</h1>
+        <p class="text-xs text-muted mt-1">
+            Kỳ báo cáo: <strong>{{ $periodLabel }}</strong> · In lúc: {{ now()->format('d/m/Y H:i') }} · Người in: {{ auth()->user()?->name }}
+        </p>
+    </div>
+
     <!-- Top Filter Bar & Export Actions -->
-    <div class="rounded-2xl border border-ui-border bg-surface p-4 sm:p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div class="no-print rounded-2xl border border-ui-border bg-surface p-4 sm:p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <!-- Time Period Selector -->
         <div class="flex flex-wrap items-center gap-2">
             <span class="text-xs font-bold text-muted uppercase tracking-wider mr-1">Khoảng thời gian:</span>
@@ -46,7 +54,7 @@
                 title="Tải file Excel / CSV danh sách đơn hàng"
             >
                 <svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                <span>Xuất Báo Cáo (Excel/CSV)</span>
+                <span>Xuất Báo Cáo (Excel .xlsx)</span>
             </a>
             <button
                 onclick="window.print()"
@@ -235,9 +243,11 @@
                                     {{ number_format($order->total_price, 0, ',', '.') }}₫
                                 </td>
                                 <td class="py-3 text-right">
-                                    <a href="{{ route('orders.invoice', $order->order_code) }}" target="_blank" class="text-primary hover:underline font-semibold" title="Xem hóa đơn PDF">
-                                        In PDF ↗
-                                    </a>
+                                    @if(Route::has('orders.invoice'))
+                                        <a href="{{ route('orders.invoice', $order->order_code) }}" target="_blank" class="text-primary hover:underline font-semibold" title="Xem hóa đơn PDF">
+                                            In PDF ↗
+                                        </a>
+                                    @endif
                                 </td>
                             </tr>
                         @empty

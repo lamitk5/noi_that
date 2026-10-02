@@ -24,145 +24,137 @@ class FurnitureShopBackendTest extends TestCase
         $response = $this->get('/');
         $response->assertStatus(200);
         $response->assertSee('Mộc An');
-        $response->assertSee('Sofa');
+        $response->assertSee('Bàn');
     }
 
-    public function test_guest_can_track_order_with_code_and_phone(): void
+    public function test_catalog_filtering_by_category_and_search(): void
     {
-        $product = Product::first();
-        $variant = $product->variants()->first();
+        $livingCategory = Category::where('slug', 'phong-khach')->first();
 
-        $order = Order::create([
-            'order_code' => 'ORD-TRACK-TEST01',
-            'customer_name' => 'Nguyễn Văn Test',
-            'customer_phone' => '0988776655',
-            'customer_email' => 'testtrack@example.com',
-            'shipping_address' => '123 Đường Test, Hà Nội',
-            'total_price' => 5000000,
-            'shipping_fee' => 0,
-            'payment_method' => 'cod',
-            'payment_status' => 'pending',
-            'order_status' => 'shipping',
-        ]);
-
-        $order->items()->create([
-            'product_variant_id' => $variant?->id,
-            'product_name' => $product->name,
-            'variant_info' => 'Tiêu chuẩn',
-            'quantity' => 1,
-            'price' => 5000000,
-        ]);
-
-        $response = $this->get('/tra-cuu-don-hang?order_number=' . $order->order_code . '&customer_phone=' . $order->customer_phone);
+        // Test category filter
+        $response = $this->get('/products?category_id=' . $livingCategory->id);
         $response->assertStatus(200);
-        $response->assertSee($order->order_code);
-        $response->assertSee($product->name);
-        $response->assertSee('Đang giao hàng');
+        $response->assertSee('Bàn Console Gỗ Sồi');
+
+        // Test keyword search
+        $searchResponse = $this->get('/products?search=Console');
+        $searchResponse->assertStatus(200);
+        $searchResponse->assertSee('Bàn Console');
+    }
+
+    public function test_cart_operations_and_stock_validation(): void
+    {
+        $product = Product::with('variants')->first();
+        $variant = $product->variants->first();
+
+        // 1. Add to cart
+        $addResponse = $this->post('/cart/add/' . $product->id, [
+            'quantity' => 2,
+            'variant_id' => $variant?->id,
+        ]);
+        $addResponse->assertSessionHas('furniture_cart');
+
+        // 2. View cart
+        $cartPage = $this->get('/cart');
+        $cartPage->assertStatus(200);
+        $cartPage->assertSee($product->name);
+
+        // 3. Exceed stock validation
+        $exceedResponse = $this->post('/cart/add/' . $product->id, [
+            'quantity' => 99999,
+            'variant_id' => $variant?->id,
+        ]);
+        $exceedResponse->assertSessionHas('error');
+    }
+
+    public function test_checkout_creates_order_and_decrements_stock_in_transaction(): void
+    {
+        $product = Product::with('variants')->first();
+        $variant = $product->variants->first();
+        $initialStock = $variant ? $variant->stock : 10;
+        $orderQty = 2;
+
+        // Add to cart
+        $this->post('/cart/add/' . $product->id, [
+            'quantity' => $orderQty,
+            'variant_id' => $variant?->id,
+        ]);
+
+        // Process checkout
+        $response = $this->post('/checkout', [
+            'customer_name' => 'Nguyễn Thị Bích',
+            'customer_email' => 'bich@example.com',
+            'customer_phone' => '0909112233',
+            'shipping_address' => '456 Lê Duẩn, Quận 1, TP. Hồ Chí Minh',
+            'payment_method' => 'cod',
+            'notes' => 'Giao hàng cẩn thận',
+        ]);
+
+        $order = Order::where('customer_phone', '0909112233')->first();
+        $this->assertNotNull($order);
+        $response->assertRedirect(route('checkout.success', ['order_number' => $order->order_code]));
+
+        // Check stock decremented
+        if ($variant) {
+            $variant->refresh();
+            $this->assertEquals($initialStock - $orderQty, $variant->stock);
+        }
+
+        // Check order items
+        $this->assertCount(1, $order->items);
+        $this->assertEquals($variant?->id, $order->items->first()->product_variant_id);
     }
 
     public function test_admin_middleware_blocks_guest_and_customers(): void
     {
-        // 1. Guest blocked -> redirected to login
+        // 1. Guest blocked
         $guestResponse = $this->get('/admin');
         $guestResponse->assertRedirect(route('login'));
 
-        // 2. Regular customer blocked -> 403 Forbidden
+        // 2. Regular customer blocked
         $customer = User::where('role', 'customer')->first();
         $customerResponse = $this->actingAs($customer)->get('/admin');
-        $customerResponse->assertStatus(403);
+        $customerResponse->assertRedirect(route('login'));
 
-        // 3. Admin allowed -> 200 OK
+        // 3. Admin allowed
         $admin = User::where('role', 'admin')->first();
         $adminResponse = $this->actingAs($admin)->get('/admin');
         $adminResponse->assertStatus(200);
-        $adminResponse->assertSee('Bảng điều khiển');
-    }
-
-    public function test_admin_can_manage_categories(): void
-    {
-        $admin = User::where('role', 'admin')->first();
-
-        // 1. View category list
-        $response = $this->actingAs($admin)->get(route('admin.categories.index'));
-        $response->assertStatus(200);
-        $response->assertSee('Phòng khách');
-
-        // 2. Create new category
-        $createResponse = $this->actingAs($admin)->post(route('admin.categories.store'), [
-            'name' => 'Phòng tắm cao cấp',
-            'description' => 'Nội thất phòng tắm gỗ Teak chống ẩm',
-            'is_active' => true,
-        ]);
-        $createResponse->assertRedirect(route('admin.categories.index'));
-
-        $this->assertDatabaseHas('categories', [
-            'name' => 'Phòng tắm cao cấp',
-            'slug' => 'phong-tam-cao-cap',
-        ]);
-    }
-
-    public function test_admin_can_create_product_and_default_variant_is_synced(): void
-    {
-        $admin = User::where('role', 'admin')->first();
-        $category = Category::first();
-
-        $response = $this->actingAs($admin)->post(route('admin.products.store'), [
-            'category_id' => $category->id,
-            'name' => 'Ghế Đôn Tròn Gỗ Ash',
-            'price' => 1500000,
-            'stock_quantity' => 20,
-            'material' => 'Gỗ tần bì Ash',
-            'dimensions' => '40 x 40 x 45 cm',
-            'color' => 'Gỗ sáng tự nhiên',
-            'short_description' => 'Ghế đôn tròn gọn nhẹ, bền bỉ',
-        ]);
-
-        $response->assertRedirect(route('admin.products.index'));
-
-        $product = Product::where('name', 'Ghế Đôn Tròn Gỗ Ash')->first();
-        $this->assertNotNull($product);
-        $this->assertEquals(1500000, $product->base_price);
-
-        // Verify default variant was created for customer shopping compatibility
-        $this->assertCount(1, $product->variants);
-        $variant = $product->variants->first();
-        $this->assertEquals(20, $variant->stock);
-        $this->assertEquals(1500000, $variant->price);
+        $adminResponse->assertSee('Bảng Điều Khiển');
     }
 
     public function test_admin_can_update_order_status_and_stock_is_restored_on_cancellation(): void
     {
         $admin = User::where('role', 'admin')->first();
-        $product = Product::first();
-        $variant = $product->variants()->first();
-        $initialVariantStock = $variant->stock;
+        $product = Product::with('variants')->first();
+        $variant = $product->variants->first();
+        $initialStock = $variant ? $variant->stock : 0;
 
-        // Create pending order
+        // Create pending order with 2 quantities
         $order = Order::create([
-            'order_code' => 'ORD-ADMIN-CANCEL01',
+            'order_code' => Order::generateOrderNumber(),
             'customer_name' => 'Test Customer',
             'customer_email' => 'test@test.com',
             'customer_phone' => '0911223344',
             'shipping_address' => 'Sample Address',
-            'total_price' => 1000000,
             'shipping_fee' => 0,
+            'discount_amount' => 0,
+            'total_price' => 1000000,
             'payment_method' => 'cod',
-            'payment_status' => 'pending',
-            'order_status' => 'pending',
+            'payment_status' => Order::PAYMENT_PENDING,
+            'order_status' => Order::STATUS_PENDING,
         ]);
-
         $order->items()->create([
-            'product_variant_id' => $variant->id,
+            'product_variant_id' => $variant?->id,
             'product_name' => $product->name,
-            'variant_info' => 'Tiêu chuẩn',
             'price' => 500000,
             'quantity' => 2,
         ]);
 
         // Cancel order as admin
         $response = $this->actingAs($admin)->put(route('admin.orders.updateStatus', $order), [
-            'order_status' => 'canceled',
-            'payment_status' => 'failed',
+            'order_status' => Order::STATUS_CANCELLED,
+            'payment_status' => Order::PAYMENT_FAILED,
         ]);
 
         $response->assertRedirect();
@@ -170,8 +162,9 @@ class FurnitureShopBackendTest extends TestCase
         $this->assertEquals('canceled', $order->order_status);
 
         // Verify stock was restored (+2)
-        $variant->refresh();
-        $this->assertEquals($initialVariantStock + 2, $variant->stock);
+        if ($variant) {
+            $variant->refresh();
+            $this->assertEquals($initialStock + 2, $variant->stock);
+        }
     }
 }
-

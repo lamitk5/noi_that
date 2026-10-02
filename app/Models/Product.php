@@ -2,15 +2,19 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class Product extends Model
 {
     use HasFactory;
+
+    public const LOW_STOCK_THRESHOLD = 5;
 
     protected $fillable = [
         'category_id',
@@ -30,16 +34,34 @@ class Product extends Model
         'views_count',
     ];
 
-    protected function casts(): array
+    protected $casts = [
+        'base_price' => 'decimal:2',
+        'sale_price' => 'decimal:2',
+        'is_featured' => 'boolean',
+        'is_active' => 'boolean',
+        'views_count' => 'integer',
+        'weight' => 'decimal:2',
+    ];
+
+    protected $appends = [
+        'final_price',
+        'is_on_sale',
+        'is_in_stock',
+        'primary_image_url',
+    ];
+
+    protected static function boot()
     {
-        return [
-            'base_price' => 'decimal:2',
-            'sale_price' => 'decimal:2',
-            'is_featured' => 'boolean',
-            'is_active' => 'boolean',
-            'weight' => 'decimal:2',
-            'views_count' => 'integer',
-        ];
+        parent::boot();
+
+        static::creating(function ($product) {
+            if (empty($product->slug)) {
+                $product->slug = Str::slug($product->name) . '-' . Str::random(5);
+            }
+            if (empty($product->sku)) {
+                $product->sku = 'FURN-' . strtoupper(Str::random(8));
+            }
+        });
     }
 
     public function category(): BelongsTo
@@ -62,31 +84,14 @@ class Product extends Model
         return $this->hasMany(ProductVariant::class);
     }
 
-    public function orderItems(): \Illuminate\Database\Eloquent\Relations\HasManyThrough
-    {
-        return $this->hasManyThrough(
-            OrderItem::class,
-            ProductVariant::class,
-            'product_id',
-            'product_variant_id',
-            'id',
-            'id'
-        );
-    }
-
-    public function reviews(): HasMany
-    {
-        return $this->hasMany(Review::class)->latest();
-    }
-
-    public function approvedReviews(): HasMany
-    {
-        return $this->hasMany(Review::class)->where('is_approved', true)->latest();
-    }
-
     public function wishlists(): HasMany
     {
         return $this->hasMany(Wishlist::class);
+    }
+
+    public function orderItems(): HasMany
+    {
+        return $this->hasMany(OrderItem::class, 'product_variant_id');
     }
 
     public function isWishlistedBy(?User $user): bool
@@ -97,28 +102,6 @@ class Product extends Model
 
         return $this->wishlists()->where('user_id', $user->id)->exists();
     }
-
-    public function averageRating(): float
-    {
-        if ($this->relationLoaded('reviews')) {
-            $approved = $this->reviews->where('is_approved', true);
-            return $approved->count() > 0 ? round((float) $approved->avg('rating'), 1) : 5.0;
-        }
-
-        $avg = $this->approvedReviews()->avg('rating');
-        return $avg ? round((float) $avg, 1) : 5.0;
-    }
-
-    public function reviewsCount(): int
-    {
-        if ($this->relationLoaded('reviews')) {
-            return $this->reviews->where('is_approved', true)->count();
-        }
-
-        return $this->approvedReviews()->count();
-    }
-
-    public const LOW_STOCK_THRESHOLD = 5;
 
     public function totalStock(): int
     {
@@ -137,6 +120,7 @@ class Product extends Model
     public function isLowStock(): bool
     {
         $stock = $this->totalStock();
+
         return $stock > 0 && $stock <= self::LOW_STOCK_THRESHOLD;
     }
 
@@ -153,66 +137,39 @@ class Product extends Model
         return 'Còn hàng';
     }
 
-    public function scopeActive($query)
+    public function getFinalPriceAttribute(): float
     {
-        return $query->where('is_active', true);
-    }
-
-    public function scopeFeatured($query)
-    {
-        return $query->where('is_featured', true);
-    }
-
-    public function getPriceAttribute(): float
-    {
-        return (float) $this->base_price;
-    }
-
-    public function setPriceAttribute($value): void
-    {
-        $this->attributes['base_price'] = $value;
+        return (float) ($this->sale_price ?? $this->base_price);
     }
 
     public function getIsOnSaleAttribute(): bool
     {
-        return $this->sale_price !== null
-            && (float) $this->sale_price > 0
-            && (float) $this->sale_price < (float) $this->base_price;
-    }
-
-    public function getFinalPriceAttribute(): float
-    {
-        return $this->is_on_sale ? (float) $this->sale_price : (float) $this->base_price;
-    }
-
-    public function getDiscountPercentAttribute(): int
-    {
-        if (! $this->is_on_sale) {
-            return 0;
-        }
-
-        $base = (float) $this->base_price;
-        if ($base <= 0) {
-            return 0;
-        }
-
-        return (int) round((1 - ((float) $this->sale_price / $base)) * 100);
-    }
-
-    public function getStockQuantityAttribute(): int
-    {
-        return $this->totalStock();
+        return ! is_null($this->sale_price) && $this->sale_price < $this->base_price;
     }
 
     public function getIsInStockAttribute(): bool
     {
-        return !$this->isOutOfStock();
+        return $this->totalStock() > 0;
     }
 
     public function getPrimaryImageUrlAttribute(): string
     {
-        return $this->primaryImage?->url
-            ?? 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=800&q=80';
+        $primary = $this->relationLoaded('primaryImage')
+            ? $this->primaryImage
+            : $this->primaryImage()->first();
+
+        $primary = $primary ?? ($this->relationLoaded('images') ? $this->images->first() : $this->images()->first());
+
+        if ($primary) {
+            return $primary->url;
+        }
+
+        return 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=800&q=80';
+    }
+
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->where('is_active', true);
     }
 
     public function scopeBestSelling($query, int $limit = 4)
@@ -222,13 +179,6 @@ class Product extends Model
                 $q->whereIn('order_status', ['completed', 'confirmed', 'shipping'])
                     ->where('payment_status', '!=', 'failed');
             })
-            ->withSum(['orderItems as total_sold' => function ($q) {
-                $q->whereHas('order', function ($orderQ) {
-                    $orderQ->whereIn('order_status', ['completed', 'confirmed', 'shipping'])
-                        ->where('payment_status', '!=', 'failed');
-                });
-            }], 'quantity')
-            ->orderByDesc('total_sold')
             ->orderByDesc('id')
             ->limit($limit);
     }

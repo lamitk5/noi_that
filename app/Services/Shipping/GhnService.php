@@ -21,17 +21,14 @@ class GhnService
     public function __construct()
     {
         $this->apiUrl = rtrim(config('services.ghn.url', 'https://dev-online-gateway.ghn.vn/shiip/public-api/'), '/') . '/';
-        $this->token = config('services.ghn.token', '8440538a-989d-11ee-a6e6-e60958111f48');
-        $this->shopId = (int) config('services.ghn.shop_id', 190566);
-        $this->fromDistrictId = (int) config('services.ghn.from_district_id', 1442); // Q1 TP.HCM
+        $this->token = config('services.ghn.token');
+        $this->shopId = (int) config('services.ghn.shop_id', 216783);
+        $this->fromDistrictId = (int) config('services.ghn.from_district_id', 1442);
         $this->fromWardCode = (string) config('services.ghn.from_ward_code', '20101');
         $this->defaultFee = (float) config('services.ghn.default_fee', 30000);
         $this->autoCreate = (bool) config('services.ghn.auto_create_order', true);
     }
 
-    /**
-     * Get list of Vietnamese Provinces from GHN (with 24h cache & offline fallback).
-     */
     public function getProvinces(): array
     {
         return Cache::remember('ghn_provinces', 86400, function () {
@@ -60,9 +57,6 @@ class GhnService
         });
     }
 
-    /**
-     * Get list of Districts by Province ID from GHN (with 24h cache).
-     */
     public function getDistricts(int $provinceId): array
     {
         if ($provinceId <= 0) {
@@ -97,9 +91,6 @@ class GhnService
         });
     }
 
-    /**
-     * Get list of Wards by District ID from GHN (with 24h cache).
-     */
     public function getWards(int $districtId): array
     {
         if ($districtId <= 0) {
@@ -134,19 +125,16 @@ class GhnService
         });
     }
 
-    /**
-     * Calculate GHN shipping fee dynamically based on destination and cart weight.
-     */
     public function calculateFee(int $toDistrictId, string $toWardCode, int $weight = 2000, float $insuranceValue = 0): float
     {
-        if ($toDistrictId <= 0 || empty($toWardCode)) {
+        if ($toDistrictId <= 0 || $toWardCode === '') {
             return $this->defaultFee;
         }
 
         try {
             $payload = [
                 'shop_id' => $this->shopId,
-                'service_type_id' => 2, // Standard E-commerce service
+                'service_type_id' => 2,
                 'from_district_id' => $this->fromDistrictId,
                 'to_district_id' => $toDistrictId,
                 'to_ward_code' => (string) $toWardCode,
@@ -171,17 +159,13 @@ class GhnService
             Log::warning('GHN calculateFee error: ' . $e->getMessage());
         }
 
-        // Distance-based heuristic fallback fee if GHN sandbox is unreachable
         if ($toDistrictId === $this->fromDistrictId) {
-            return 22000.0; // Same district
+            return 22000.0;
         }
 
         return $this->defaultFee;
     }
 
-    /**
-     * Create GHN shipping order and attach tracking code to the Order.
-     */
     public function createShippingOrder(Order $order): ?string
     {
         if (!empty($order->ghn_order_code)) {
@@ -208,7 +192,7 @@ class GhnService
 
         if (empty($items)) {
             $items[] = [
-                'name' => 'Sản phẩm nội thất Mộc An',
+                'name' => 'Sản phẩm nội thất',
                 'quantity' => 1,
                 'price' => (int) round((float) $order->total_price),
                 'weight' => 1000,
@@ -220,17 +204,17 @@ class GhnService
         $toWardCode = (string) ($order->ward_code ?: '20311');
 
         $payload = [
-            'payment_type_id' => 1, // 1: Shop pays shipping fee (included in checkout total)
+            'payment_type_id' => 1,
             'note' => $order->note ?: 'Giao hàng giờ hành chính',
             'required_note' => 'CHOXEMHANGKHONGTHU',
             'from_name' => 'Nội Thất Mộc An',
             'from_phone' => '0912345678',
-            'from_address' => 'Số 123 Đường Nguyễn Trãi, Phường Bến Thành',
-            'from_ward_name' => 'Phường Bến Thành',
-            'from_district_name' => 'Quận 1',
-            'from_province_name' => 'Hồ Chí Minh',
+            'from_address' => 'Số 12 Nguyễn Phong Sắc, Phường Dịch Vọng',
+            'from_ward_name' => 'Phường Dịch Vọng',
+            'from_district_name' => 'Quận Cầu Giấy',
+            'from_province_name' => 'Hà Nội',
             'return_phone' => '0912345678',
-            'return_address' => 'Số 123 Đường Nguyễn Trãi, Phường Bến Thành',
+            'return_address' => 'Số 12 Nguyễn Phong Sắc, Phường Dịch Vọng, Quận Cầu Giấy',
             'client_order_code' => $order->order_code,
             'to_name' => $order->customer_name,
             'to_phone' => $order->customer_phone,
@@ -238,7 +222,7 @@ class GhnService
             'to_ward_code' => $toWardCode,
             'to_district_id' => $toDistrictId,
             'cod_amount' => $codAmount,
-            'content' => "Don hang {$order->order_code} - Moc An",
+            'content' => "Don hang {$order->order_code}",
             'weight' => max(500, $totalWeight),
             'length' => 30,
             'width' => 20,
@@ -278,7 +262,6 @@ class GhnService
             Log::error('GHN createShippingOrder exception: ' . $e->getMessage());
         }
 
-        // Sandbox simulated tracking code when GHN dev API is unreachable
         $simulatedCode = 'GHN' . strtoupper(Str::random(8));
         $order->update([
             'ghn_order_code' => $simulatedCode,
@@ -290,9 +273,6 @@ class GhnService
         return $simulatedCode;
     }
 
-    /**
-     * Fallback Provinces if API is unreachable.
-     */
     protected function getFallbackProvinces(): array
     {
         return [
@@ -302,19 +282,16 @@ class GhnService
             ['id' => 204, 'name' => 'Hải Phòng', 'code' => 'HP'],
             ['id' => 205, 'name' => 'Cần Thơ', 'code' => 'CT'],
             ['id' => 206, 'name' => 'Bình Dương', 'code' => 'BD'],
-            ['id' => 207, 'name' => 'Đồng Nai', 'code' => 'DN'],
+            ['id' => 207, 'name' => 'Đồng Nai', 'code' => 'DNA'],
             ['id' => 208, 'name' => 'Khánh Hòa', 'code' => 'KH'],
             ['id' => 209, 'name' => 'Quảng Ninh', 'code' => 'QN'],
             ['id' => 210, 'name' => 'Lâm Đồng', 'code' => 'LD'],
         ];
     }
 
-    /**
-     * Fallback Districts.
-     */
     protected function getFallbackDistricts(int $provinceId): array
     {
-        if ($provinceId === 202) { // HCM
+        if ($provinceId === 202) {
             return [
                 ['id' => 1442, 'name' => 'Quận 1', 'province_id' => 202],
                 ['id' => 1443, 'name' => 'Quận 3', 'province_id' => 202],
@@ -325,7 +302,7 @@ class GhnService
             ];
         }
 
-        if ($provinceId === 201) { // Ha Noi
+        if ($provinceId === 201) {
             return [
                 ['id' => 1482, 'name' => 'Quận Ba Đình', 'province_id' => 201],
                 ['id' => 1484, 'name' => 'Quận Hoàn Kiếm', 'province_id' => 201],
@@ -341,9 +318,6 @@ class GhnService
         ];
     }
 
-    /**
-     * Fallback Wards.
-     */
     protected function getFallbackWards(int $districtId): array
     {
         return [

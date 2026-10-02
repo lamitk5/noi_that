@@ -17,18 +17,15 @@ class OrderTrackingController extends Controller
         $order = null;
         $searched = false;
 
-        $orderCode = $request->input('order_code') ?: $request->input('order_number');
-        $customerPhone = $request->input('customer_phone');
+        $orderCode = $request->input('order_number') ?: $request->input('order_code');
+        $phone = $request->input('customer_phone');
 
-        if (!empty($orderCode) && !empty($customerPhone)) {
+        if (!empty($orderCode) && !empty($phone)) {
             $searched = true;
-            $order = Order::where(function ($q) use ($orderCode) {
-                $q->where('order_code', trim($orderCode))
-                  ->orWhere('id', trim($orderCode));
-            })
-            ->where('customer_phone', trim($customerPhone))
-            ->with(['items.product', 'items.variant'])
-            ->first();
+            $order = Order::where('order_code', trim((string) $orderCode))
+                ->where('customer_phone', trim((string) $phone))
+                ->with(['items.variant'])
+                ->first();
         }
 
         if ($request->wantsJson()) {

@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Mộc An - Nội thất hiện đại cho không gian sống Việt.">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Mộc An | Nội thất hiện đại')</title>
     <script>
         (function() {
@@ -44,15 +45,22 @@
             <nav class="hidden items-center gap-8 lg:flex" aria-label="Điều hướng chính">
                 <a href="{{ route('home') }}" class="nav-link {{ request()->routeIs('home') ? 'is-active' : '' }}">Trang chủ</a>
                 <a href="{{ route('products.index') }}" class="nav-link {{ request()->routeIs('products.*') ? 'is-active' : '' }}">Sản phẩm</a>
-                <a href="{{ route('orders.track') }}" class="nav-link {{ request()->routeIs('orders.track') ? 'is-active' : '' }}">Tra cứu đơn hàng</a>
                 <a href="{{ route('home') }}#bo-suu-tap" class="nav-link">Bộ sưu tập</a>
                 <a href="{{ route('home') }}#ve-chung-toi" class="nav-link">Về Mộc An</a>
+                <a href="{{ route('home') }}#lien-he" class="nav-link">Liên hệ</a>
             </nav>
 
             <div class="flex items-center gap-1 sm:gap-2">
-                <button class="icon-button hidden sm:grid" type="button" aria-label="Tìm kiếm">
-                    <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4" stroke-linecap="round"/></svg>
-                </button>
+                <a
+                    href="{{ route('orders.index') }}"
+                    class="icon-button {{ request()->routeIs('orders.*') ? 'bg-surface-alt text-primary font-bold' : '' }}"
+                    aria-label="Lịch sử đơn hàng"
+                    title="Lịch sử đơn hàng"
+                >
+                    <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007ZM8.625 10.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm7.5 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"/>
+                    </svg>
+                </a>
                 <div
                     class="relative hidden sm:block"
                     x-data="headerSettings"
@@ -114,21 +122,6 @@
                                 @endguest
 
                                 @auth
-                                    <div class="px-2.5 py-1.5 mb-1 flex items-center gap-2 border-b border-ui-border pb-2">
-                                        @if(auth()->user()->avatar)
-                                            <img src="{{ auth()->user()->avatar }}" alt="{{ auth()->user()->name }}" class="size-6 rounded-full object-cover">
-                                        @else
-                                            <div class="size-6 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center">
-                                                {{ mb_strtoupper(mb_substr(auth()->user()->name ?? 'U', 0, 1)) }}
-                                            </div>
-                                        @endif
-                                        <div class="min-w-0">
-                                            <span class="block text-xs font-bold text-heading truncate">{{ auth()->user()->name }}</span>
-                                            @if(auth()->user()->provider)
-                                                <span class="block text-[10px] text-muted capitalize">{{ auth()->user()->provider }}</span>
-                                            @endif
-                                        </div>
-                                    </div>
                                     @if (Route::has('profile.edit'))
                                         <a href="{{ route('profile.edit') }}" class="flex items-center gap-2.5 rounded-lg px-2.5 py-2 hover:bg-surface-alt hover:text-heading transition-colors">
                                             <svg viewBox="0 0 24 24" class="size-4 text-muted" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0" stroke-linecap="round"/></svg>
@@ -158,12 +151,7 @@
                                         </span>
                                     @endif
 
-                                    <a href="{{ route('wishlist.index') }}" class="flex items-center gap-2.5 rounded-lg px-2.5 py-2 hover:bg-surface-alt hover:text-heading transition-colors">
-                                        <svg viewBox="0 0 24 24" class="size-4 text-muted" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.8 5.7a5.5 5.5 0 0 0-7.8 0L12 6.8l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 22l8.8-8.5a5.5 5.5 0 0 0 0-7.8Z"/></svg>
-                                        <span>Sản phẩm yêu thích</span>
-                                    </a>
-
-                                    @if (auth()->user()->isAdmin() && Route::has('admin.dashboard'))
+                                    @if ((auth()->user()->isAdmin() || auth()->user()->isStaff()) && Route::has('admin.dashboard'))
                                         <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-accent font-semibold hover:bg-surface-alt transition-colors">
                                             <svg viewBox="0 0 24 24" class="size-4 text-accent" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" /></svg>
                                             <span>Trang quản trị</span>
@@ -257,11 +245,6 @@
                         </div>
                     </div>
                 </div>
-                @auth
-                    <a href="{{ route('wishlist.index') }}" class="icon-button relative" aria-label="Sản phẩm yêu thích" title="Yêu thích">
-                        <svg viewBox="0 0 24 24" class="size-5 text-muted hover:text-rose-500 transition-colors" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.8 5.7a5.5 5.5 0 0 0-7.8 0L12 6.8l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 22l8.8-8.5a5.5 5.5 0 0 0 0-7.8Z"/></svg>
-                    </a>
-                @endauth
                 <a href="{{ route('cart.index') }}" class="icon-button relative" aria-label="Giỏ hàng">
                     <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 4h2l2 11h10l2-8H6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9" cy="19" r="1"/><circle cx="17" cy="19" r="1"/></svg>
                     <span class="absolute right-0.5 top-0.5 grid size-4 place-items-center rounded-full bg-accent text-[9px] font-bold text-accent-foreground">{{ $cartCount ?? 0 }}</span>
@@ -281,9 +264,10 @@
                     <span>Giỏ hàng</span>
                     <span class="rounded-full bg-accent px-2 py-0.5 text-xs font-semibold text-accent-foreground">{{ $cartCount ?? 0 }}</span>
                 </a>
+                <a href="{{ route('orders.index') }}" class="mobile-nav-link">Lịch sử đơn hàng</a>
                 <a href="{{ route('home') }}#bo-suu-tap" class="mobile-nav-link">Bộ sưu tập</a>
                 <a href="{{ route('home') }}#ve-chung-toi" class="mobile-nav-link">Về Mộc An</a>
-                <a href="#lien-he" class="mobile-nav-link">Liên hệ</a>
+                <a href="{{ route('home') }}#lien-he" class="mobile-nav-link">Liên hệ</a>
             </div>
         </nav>
     </header>
@@ -292,85 +276,183 @@
         @yield('content')
     </main>
 
-    <footer id="lien-he" class="bg-footer text-white">
-        <div class="page-shell grid gap-10 py-14 md:grid-cols-2 lg:grid-cols-4">
-            <div class="lg:pr-8">
-                <div class="font-display text-3xl font-semibold">Mộc An</div>
-                <p class="mt-4 text-sm leading-7 text-white/65">Mang vẻ đẹp tự nhiên, tinh giản và ấm áp vào từng không gian sống Việt.</p>
-            </div>
-            <div>
-                <h3 class="footer-title">Khám phá</h3>
-                <div class="mt-5 flex flex-col gap-3 text-sm text-white/65">
-                    <a href="#san-pham" class="hover:text-white">Sản phẩm mới</a>
-                    <a href="#bo-suu-tap" class="hover:text-white">Bộ sưu tập</a>
-                    <a href="#" class="hover:text-white">Không gian đẹp</a>
+    {{-- Chân trang cửa hàng (Footer) --}}
+    <footer class="border-t border-ui-border bg-surface text-body mt-12 sm:mt-16">
+        <div class="page-shell py-12 lg:py-16">
+            <div class="grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
+                <!-- Mục 1: Thông tin -->
+                <div>
+                    <h3 class="font-display text-base font-bold uppercase tracking-wider text-heading">Thông tin</h3>
+                    <ul class="mt-4 space-y-2.5 text-xs text-muted">
+                        <li><a href="{{ route('home') }}#ve-chung-toi" class="hover:text-primary transition-colors">Về thương hiệu Mộc An</a></li>
+                        <li><a href="{{ route('products.index') }}" class="hover:text-primary transition-colors">Bộ sưu tập nội thất tự nhiên</a></li>
+                        <li><a href="{{ route('home') }}#bo-suu-tap" class="hover:text-primary transition-colors">Hệ thống showroom & nhà xưởng</a></li>
+                        <li><a href="{{ route('home') }}#ve-chung-toi" class="hover:text-primary transition-colors">Tiêu chuẩn vật liệu bền vững</a></li>
+                        <li><a href="{{ route('home') }}#ve-chung-toi" class="hover:text-primary transition-colors">Điều khoản dịch vụ & bảo mật</a></li>
+                    </ul>
+                </div>
+
+                <!-- Mục 2: Hỗ trợ -->
+                <div>
+                    <h3 class="font-display text-base font-bold uppercase tracking-wider text-heading">Hỗ trợ</h3>
+                    <ul class="mt-4 space-y-2.5 text-xs text-muted">
+                        <li><a href="{{ route('home') }}#lien-he" class="hover:text-primary transition-colors">Câu hỏi thường gặp (FAQ)</a></li>
+                        <li><a href="{{ route('home') }}#lien-he" class="hover:text-primary transition-colors">Hướng dẫn đặt hàng & thanh toán</a></li>
+                        <li><a href="{{ route('home') }}#lien-he" class="hover:text-primary transition-colors">Chính sách bảo hành 5 năm</a></li>
+                        <li><a href="{{ route('home') }}#lien-he" class="hover:text-primary transition-colors">Chính sách giao nhận & lắp đặt</a></li>
+                        <li><a href="{{ route('home') }}#lien-he" class="hover:text-primary transition-colors">Chính sách đổi trả & hoàn tiền</a></li>
+                    </ul>
+                </div>
+
+                <!-- Mục 3: Liên hệ hotline -->
+                <div>
+                    <h3 class="font-display text-base font-bold uppercase tracking-wider text-heading">Liên hệ hotline</h3>
+                    <div class="mt-4 space-y-3.5 text-xs text-muted">
+                        <div class="flex items-start gap-3">
+                            <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+                                <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z"/></svg>
+                            </span>
+                            <div>
+                                <a href="tel:19006868" class="font-bold text-heading text-sm hover:text-primary transition-colors">1900 6868 - 0912 345 678</a>
+                                <p class="text-[11px] text-muted mt-0.5">Hotline tư vấn & hỗ trợ đặt hàng (Miễn cước)</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start gap-3">
+                            <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+                                <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75"/></svg>
+                            </span>
+                            <div>
+                                <a href="mailto:hotro@mocan.vn" class="font-medium text-heading hover:text-primary transition-colors">hotro@mocan.vn</a>
+                                <p class="text-[11px] text-muted mt-0.5">Email phản hồi trong 24 giờ</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start gap-3">
+                            <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+                                <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/></svg>
+                            </span>
+                            <div>
+                                <p class="font-medium text-heading">25 Hoàng Đạo Thúy, Cầu Giấy, Hà Nội</p>
+                                <p class="text-[11px] text-muted mt-0.5">Giờ mở cửa: 08:00 - 21:30 hàng ngày</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div>
-                <h3 class="footer-title">Hỗ trợ</h3>
-                <div class="mt-5 flex flex-col gap-3 text-sm text-white/65">
-                    <a href="{{ route('pages.warranty') }}" class="hover:text-white transition-colors">Chính sách bảo hành</a>
-                    <a href="{{ route('pages.return') }}" class="hover:text-white transition-colors">Đổi trả & hoàn tiền</a>
-                    <a href="{{ route('pages.faq') }}" class="hover:text-white transition-colors">Câu hỏi thường gặp</a>
-                    <a href="{{ route('orders.track') }}" class="hover:text-white transition-colors">Tra cứu đơn hàng</a>
+
+            <!-- Mục 4: Bản quyền thuộc về Nhom6 -->
+            <div class="mt-12 pt-6 border-t border-ui-border flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted">
+                <p>© 2026 Bản quyền thuộc về Nhom6.</p>
+                <div class="flex items-center gap-6">
+                    <span>Nội thất hiện đại cho tổ ấm Việt</span>
                 </div>
-            </div>
-            <div>
-                <h3 class="footer-title">Nhận cảm hứng mỗi tuần</h3>
-                <p class="mt-5 text-sm leading-6 text-white/65">Ý tưởng bài trí và ưu đãi mới gửi thẳng đến bạn.</p>
-                <form class="mt-4 flex border-b border-white/30 pb-2" action="#" method="post">
-                    <input class="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/40" type="email" placeholder="Email của bạn">
-                    <button class="text-xs font-bold uppercase tracking-widest text-[#d8b184]" type="submit">Đăng ký</button>
-                </form>
-            </div>
-        </div>
-        <div class="border-t border-white/10">
-            <div class="page-shell flex flex-col gap-2 py-5 text-xs text-white/45 sm:flex-row sm:items-center sm:justify-between">
-                <p>© {{ date('Y') }} Mộc An. All rights reserved.</p>
-                <p>Đồ án Phát triển hệ thống thương mại điện tử</p>
             </div>
         </div>
     </footer>
 
-    <!-- Quick Support Floating Widget -->
-    <div class="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3" x-data="{ open: false }">
+    {{-- Floating chat với nhân viên --}}
+    <div class="fixed bottom-5 right-5 z-50" x-data="chatWidget" data-auth="{{ auth()->check() && !auth()->user()->isAdmin() && !auth()->user()->isStaff() ? '1' : '0' }}">
         <div
             x-show="open"
+            x-cloak
             x-transition:enter="transition ease-out duration-200"
-            x-transition:enter-start="opacity-0 translate-y-3 scale-95"
+            x-transition:enter-start="opacity-0 translate-y-4 scale-95"
             x-transition:enter-end="opacity-100 translate-y-0 scale-100"
             x-transition:leave="transition ease-in duration-150"
             x-transition:leave-start="opacity-100 translate-y-0 scale-100"
-            x-transition:leave-end="opacity-0 translate-y-3 scale-95"
-            class="min-w-[230px] space-y-2 rounded-3xl border border-ui-border bg-surface/95 p-4 shadow-2xl backdrop-blur-md"
-            @click.outside="open = false"
-            x-cloak
+            x-transition:leave-end="opacity-0 translate-y-4 scale-95"
+            class="mb-3 w-[min(360px,calc(100vw-2.5rem))] overflow-hidden rounded-2xl border border-ui-border bg-surface shadow-2xl ring-1 ring-black/5 flex flex-col h-[min(480px,70vh)]"
         >
-            <div class="px-2 pt-1 text-[11px] font-bold uppercase tracking-wider text-muted">Hỗ trợ khách hàng</div>
-            <a href="tel:0901234567" class="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-xs font-semibold text-body transition hover:bg-surface-alt hover:text-heading">
-                <span class="grid size-7 place-items-center rounded-full bg-emerald-500/10 text-sm text-emerald-600">📞</span>
-                <span>Hotline: 0901 234 567</span>
-            </a>
-            <a href="{{ route('pages.faq') }}" class="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-xs font-semibold text-body transition hover:bg-surface-alt hover:text-heading">
-                <span class="grid size-7 place-items-center rounded-full bg-primary/10 text-sm text-primary">❓</span>
-                <span>Câu hỏi thường gặp</span>
-            </a>
-            <a href="{{ route('pages.contact') }}" class="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-xs font-semibold text-body transition hover:bg-surface-alt hover:text-heading">
-                <span class="grid size-7 place-items-center rounded-full bg-amber-500/10 text-sm text-accent">💬</span>
-                <span>Gửi yêu cầu tư vấn</span>
-            </a>
+            <div class="flex items-center justify-between gap-3 px-4 py-3 bg-primary text-primary-foreground">
+                <div class="flex items-center gap-2.5">
+                    <span class="grid size-8 place-items-center rounded-full bg-white/15">
+                        <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z"/></svg>
+                    </span>
+                    <div>
+                        <p class="text-sm font-bold leading-tight">Tư vấn trực tuyến</p>
+                        <p class="text-[11px] opacity-80">Mộc An • Phản hồi trong vài phút</p>
+                    </div>
+                </div>
+                <button type="button" @click="open = false; stopPolling()" aria-label="Đóng khung chat" class="rounded-full p-1.5 hover:bg-white/15 transition">
+                    <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="m6 6 12 12M18 6 6 18"/></svg>
+                </button>
+            </div>
+
+            @guest
+                <div class="flex-1 flex flex-col items-center justify-center gap-3 p-6 text-center">
+                    <svg viewBox="0 0 24 24" class="size-10 text-muted" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9"/></svg>
+                    <p class="text-sm text-body">Đăng nhập để bắt đầu trò chuyện với nhân viên Mộc An.</p>
+                    <div class="flex gap-2">
+                        <a href="{{ route('login') }}" class="rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground hover:opacity-90 transition">Đăng nhập</a>
+                        <a href="{{ route('register') }}" class="rounded-lg border border-ui-border px-4 py-2 text-xs font-semibold text-heading hover:bg-surface-alt transition">Đăng ký</a>
+                    </div>
+                </div>
+            @else
+                @if(auth()->user()->isAdmin() || auth()->user()->isStaff())
+                    <div class="flex-1 flex flex-col items-center justify-center gap-3 p-6 text-center">
+                        <p class="text-sm text-body">Bạn đang dùng tài khoản quản trị/nhân viên.</p>
+                        <a href="{{ route('admin.chats.index') }}" class="rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground hover:opacity-90 transition">Mở trang quản lý trò chuyện</a>
+                    </div>
+                @else
+                    <div x-ref="list" class="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-page/40">
+                        <div x-show="loading" class="text-center text-xs text-muted py-4">Đang kết nối...</div>
+                        <div x-show="!loading && messages.length === 0" class="text-center text-xs text-muted py-4 leading-relaxed">
+                            Xin chào 👋 Hãy để lại câu hỏi, nhân viên Mộc An sẽ hỗ trợ bạn ngay.
+                        </div>
+                        <template x-for="m in messages" :key="m.id">
+                            <div class="flex" :class="m.role === 'user' ? 'justify-end' : 'justify-start'">
+                                <div class="max-w-[80%]">
+                                    <div class="rounded-2xl px-3.5 py-2 text-sm leading-relaxed break-words shadow-sm"
+                                         :class="m.role === 'user'
+                                            ? 'bg-primary text-primary-foreground rounded-tr-sm'
+                                            : 'bg-surface text-body border border-ui-border rounded-tl-sm'"
+                                         x-text="m.content"></div>
+                                    <div class="mt-0.5 px-1 text-[10px] text-muted" :class="m.role === 'user' ? 'text-right' : 'text-left'">
+                                        <span x-text="m.sender"></span> • <span x-text="m.created_at"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+
+                    <div class="border-t border-ui-border p-3">
+                        <p x-show="error" x-cloak class="mb-2 rounded-lg bg-rose-50 px-3 py-2 text-[11px] text-rose-600" x-text="error"></p>
+                        <form @submit.prevent="send" class="flex items-end gap-2">
+                            <textarea
+                                x-model="draft"
+                                @keydown.enter.exact.prevent="send"
+                                rows="1"
+                                placeholder="Nhập tin nhắn..."
+                                class="max-h-24 flex-1 resize-none rounded-xl border border-ui-border bg-page px-3.5 py-2.5 text-sm text-heading placeholder:text-muted focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                            ></textarea>
+                            <button
+                                type="submit"
+                                :disabled="sending || !draft.trim()"
+                                class="grid size-10 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground transition hover:opacity-90 disabled:opacity-40"
+                                aria-label="Gửi tin nhắn"
+                            >
+                                <svg viewBox="0 0 24 24" class="size-4.5" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.126A59.768 59.768 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.876L5.999 12Zm0 0h7.5"/></svg>
+                            </button>
+                        </form>
+                    </div>
+                @endif
+            @endguest
         </div>
+
         <button
             type="button"
-            @click="open = !open"
-            class="grid h-14 w-14 cursor-pointer place-items-center rounded-full bg-primary text-primary-foreground shadow-xl shadow-primary/35 ring-4 ring-white/20 transition-all duration-300 hover:scale-105 hover:shadow-2xl active:scale-95 sm:h-16 sm:w-16"
-            aria-label="Mở bảng hỗ trợ nhanh"
-            title="Hỗ trợ Mộc An"
+            @click="toggle()"
+            class="group relative grid size-14 place-items-center rounded-full bg-primary text-primary-foreground shadow-xl ring-1 ring-black/10 transition hover:scale-105"
+            aria-label="Mở khung chat"
         >
-            <svg viewBox="0 0 24 24" class="size-7 transition-transform duration-300 sm:size-8" :class="open ? 'rotate-90 scale-90' : ''" fill="none" stroke="currentColor" stroke-width="1.8">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a.75.75 0 0 1-.774-.75 4.966 4.966 0 0 1 1.01-2.738C4.162 16.035 3 14.137 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z"/>
-            </svg>
+            <svg x-show="!open" viewBox="0 0 24 24" class="size-6" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z"/></svg>
+            <svg x-show="open" x-cloak viewBox="0 0 24 24" class="size-6" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="m6 6 12 12M18 6 6 18"/></svg>
+            <span x-show="unread > 0" x-cloak class="absolute -top-1 -right-1 flex min-w-5 h-5 px-1 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white shadow-md ring-2 ring-page" x-text="unread > 99 ? '99+' : unread"></span>
+            <span x-show="!unread || unread <= 0" class="absolute -top-1 -right-1 size-3 rounded-full bg-accent ring-2 ring-page"></span>
         </button>
     </div>
+
+    @include('partials.toast')
 </body>
 </html>

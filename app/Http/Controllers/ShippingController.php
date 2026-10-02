@@ -22,37 +22,31 @@ class ShippingController extends Controller
      */
     public function getProvinces(): JsonResponse
     {
-        $provinces = $this->ghnService->getProvinces();
-
         return response()->json([
             'success' => true,
-            'data' => $provinces,
+            'data' => $this->ghnService->getProvinces(),
         ]);
     }
 
     /**
      * Get list of districts by province ID from GHN.
      */
-    public function getDistricts(int $provinceId): JsonResponse
+    public function getDistricts(mixed $provinceId): JsonResponse
     {
-        $districts = $this->ghnService->getDistricts($provinceId);
-
         return response()->json([
             'success' => true,
-            'data' => $districts,
+            'data' => $this->ghnService->getDistricts((int) $provinceId),
         ]);
     }
 
     /**
      * Get list of wards by district ID from GHN.
      */
-    public function getWards(int $districtId): JsonResponse
+    public function getWards(mixed $districtId): JsonResponse
     {
-        $wards = $this->ghnService->getWards($districtId);
-
         return response()->json([
             'success' => true,
-            'data' => $wards,
+            'data' => $this->ghnService->getWards((int) $districtId),
         ]);
     }
 
@@ -63,47 +57,39 @@ class ShippingController extends Controller
     {
         $toDistrictId = (int) $request->input('district_id');
         $toWardCode = (string) $request->input('ward_code');
+        $defaultFee = (float) config('services.ghn.default_fee', 30000);
 
-        if ($toDistrictId <= 0 || empty($toWardCode)) {
+        if ($toDistrictId <= 0 || $toWardCode === '') {
             return response()->json([
                 'success' => false,
-                'shipping_fee' => (float) config('services.ghn.default_fee', 30000),
-                'formatted_fee' => number_format((float) config('services.ghn.default_fee', 30000), 0, ',', '.') . '₫',
+                'shipping_fee' => $defaultFee,
+                'formatted_fee' => number_format($defaultFee, 0, ',', '.') . '₫',
                 'message' => 'Vui lòng chọn đầy đủ Quận/Huyện và Phường/Xã.',
             ]);
         }
 
-        $items = $this->cartService->getItems();
-        $totalWeight = max(500, $items->sum('quantity') * 500);
-        $orderValue = (float) $this->cartService->subtotal();
+        $cart = $this->cartService->getCart();
+        $totalWeight = max(500, array_sum(array_column($cart, 'quantity')) * 500);
+        $orderValue = $this->cartService->getSubtotal();
 
         $fee = $this->ghnService->calculateFee($toDistrictId, $toWardCode, $totalWeight, $orderValue);
 
-        // Store selected shipping info in session
         session()->put('shipping_fee', $fee);
         session()->put('shipping_destination', [
             'district_id' => $toDistrictId,
             'ward_code' => $toWardCode,
         ]);
 
-        $subtotal = $this->cartService->subtotal();
-        $discount = 0.0;
-        $appliedCoupon = session()->get('applied_coupon');
-        if ($appliedCoupon && !empty($appliedCoupon['code'])) {
-            $coupon = \App\Models\Coupon::where('code', $appliedCoupon['code'])->first();
-            if ($coupon && $coupon->isValidFor($subtotal)) {
-                $discount = $coupon->calculateDiscount($subtotal);
-            }
-        }
-
-        $totalPrice = max(0, ($subtotal - $discount) + $fee);
+        $subtotal = $this->cartService->getSubtotal();
+        $discountAmount = $this->cartService->getDiscountAmount();
+        $totalPrice = max(0.0, $subtotal + $fee - $discountAmount);
 
         return response()->json([
             'success' => true,
             'shipping_fee' => $fee,
             'formatted_fee' => number_format($fee, 0, ',', '.') . '₫',
             'subtotal' => $subtotal,
-            'discount' => $discount,
+            'discount_amount' => $discountAmount,
             'total_price' => $totalPrice,
             'formatted_total' => number_format($totalPrice, 0, ',', '.') . '₫',
         ]);
@@ -126,18 +112,12 @@ class ShippingController extends Controller
                 ->first();
 
             if ($order) {
-                $order->update([
-                    'ghn_status' => $status,
-                ]);
+                $order->update(['ghn_status' => $status]);
 
                 if ($status === 'delivered') {
                     $order->update([
                         'order_status' => Order::STATUS_COMPLETED,
                         'payment_status' => Order::PAYMENT_PAID,
-                    ]);
-                } elseif (in_array($status, ['cancel', 'delivery_fail'])) {
-                    $order->update([
-                        'ghn_status' => $status,
                     ]);
                 }
             }

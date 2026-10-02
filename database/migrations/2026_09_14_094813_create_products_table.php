@@ -13,11 +13,18 @@ return new class extends Migration
             $table->foreignId('category_id')->constrained('categories')->cascadeOnDelete();
             $table->string('name');
             $table->string('slug')->unique();
-            $table->string('sku')->unique()->comment('Mã sản phẩm chung');
+            $table->string('sku')->unique();
             $table->text('short_description')->nullable();
             $table->longText('description')->nullable();
-            $table->decimal('base_price', 15, 2)->comment('Giá hiển thị mặc định');
-            $table->boolean('is_active')->default(true)->index();
+            $table->decimal('base_price', 15, 2)->default(0);
+            $table->decimal('sale_price', 15, 2)->nullable();
+            $table->string('material')->nullable();
+            $table->string('dimensions')->nullable();
+            $table->string('color')->nullable();
+            $table->decimal('weight', 8, 2)->nullable();
+            $table->boolean('is_featured')->default(false);
+            $table->boolean('is_active')->default(true);
+            $table->unsignedInteger('views_count')->default(0);
             $table->timestamps();
         });
     }

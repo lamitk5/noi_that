@@ -3,8 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class OrderItem extends Model
 {
@@ -19,13 +19,14 @@ class OrderItem extends Model
         'price',
     ];
 
-    protected function casts(): array
-    {
-        return [
-            'quantity' => 'integer',
-            'price' => 'decimal:2',
-        ];
-    }
+    protected $casts = [
+        'price' => 'decimal:2',
+        'quantity' => 'integer',
+    ];
+
+    protected $appends = [
+        'total',
+    ];
 
     public function order(): BelongsTo
     {
@@ -37,25 +38,8 @@ class OrderItem extends Model
         return $this->belongsTo(ProductVariant::class, 'product_variant_id');
     }
 
-    public function product(): \Illuminate\Database\Eloquent\Relations\HasOneThrough
-    {
-        return $this->hasOneThrough(
-            Product::class,
-            ProductVariant::class,
-            'id',
-            'id',
-            'product_variant_id',
-            'product_id'
-        );
-    }
-
     public function getTotalAttribute(): float
     {
-        return (float) ($this->price * $this->quantity);
-    }
-
-    public function getProductIdAttribute(): ?int
-    {
-        return $this->variant?->product_id;
+        return (float) $this->price * (int) $this->quantity;
     }
 }

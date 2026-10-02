@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -18,7 +19,7 @@ class SocialAuthController extends Controller
      *
      * @var array<string>
      */
-    protected array $supportedProviders = ['google', 'github'];
+    protected array $supportedProviders = ['google'];
 
     public function redirect(string $provider): RedirectResponse
     {
@@ -26,10 +27,20 @@ class SocialAuthController extends Controller
             return redirect()->route('login')->with('error', 'Phương thức đăng nhập không được hỗ trợ.');
         }
 
-        /** @var \Laravel\Socialite\Contracts\Provider $driver */
-        $driver = Socialite::driver($provider);
+        $clientId = config('services.google.client_id');
+        $clientSecret = config('services.google.client_secret');
 
-        return $driver->redirect();
+        if (empty($clientId) || empty($clientSecret) || $clientId === 'mock-google-client-id') {
+            return redirect()->route('login')->with('error', 'Chưa cấu hình GOOGLE_CLIENT_ID và GOOGLE_CLIENT_SECRET trong file .env để kết nối Google OAuth thật.');
+        }
+
+        try {
+            /** @var \Laravel\Socialite\Contracts\Provider $driver */
+            $driver = Socialite::driver($provider);
+            return $driver->redirect();
+        } catch (Throwable $e) {
+            return redirect()->route('login')->with('error', 'Lỗi khởi tạo đăng nhập Google: ' . $e->getMessage());
+        }
     }
 
     public function callback(string $provider): RedirectResponse
@@ -42,15 +53,20 @@ class SocialAuthController extends Controller
             /** @var \Laravel\Socialite\Contracts\Provider $driver */
             $driver = Socialite::driver($provider);
             $socialUser = $driver->user();
+
+            $email = $socialUser->getEmail();
+            $providerId = (string) $socialUser->getId();
+            $name = $socialUser->getName() ?: $socialUser->getNickname() ?: 'Google User';
+            $avatar = $socialUser->getAvatar();
+
+            return $this->authenticateSocialUser($provider, $providerId, $name, $email, $avatar);
         } catch (Throwable $e) {
-            return redirect()->route('login')->with('error', 'Đăng nhập qua ' . ucfirst($provider) . ' không thành công. Vui lòng thử lại.');
+            return redirect()->route('login')->with('error', 'Đăng nhập qua Google không thành công: ' . $e->getMessage());
         }
+    }
 
-        $email = $socialUser->getEmail();
-        $providerId = (string) $socialUser->getId();
-        $name = $socialUser->getName() ?: $socialUser->getNickname() ?: ('Thành viên ' . ucfirst($provider));
-        $avatar = $socialUser->getAvatar();
-
+    protected function authenticateSocialUser(string $provider, string $providerId, string $name, ?string $email, ?string $avatar): RedirectResponse
+    {
         $user = null;
 
         if ($email) {
@@ -66,23 +82,40 @@ class SocialAuthController extends Controller
                 'provider' => $provider,
                 'provider_id' => $providerId,
                 'avatar' => $avatar ?: $user->avatar,
+                'email_verified_at' => $user->email_verified_at ?: now(),
+                'is_active' => true,
             ]);
         } else {
-            $fallbackEmail = $email ?: ($provider . '_' . $providerId . '@social.mocan.vn');
+            $baseUsername = Str::slug($name, '');
+            if (empty($baseUsername)) {
+                $baseUsername = 'google_user';
+            }
+            $username = $baseUsername;
+            $counter = 1;
+            while (User::where('username', $username)->exists()) {
+                $username = $baseUsername . $counter;
+                $counter++;
+            }
+
             $user = User::create([
+                'username' => $username,
                 'name' => $name,
-                'email' => $fallbackEmail,
+                'email' => $email ?: ($username . '@gmail.com'),
                 'password' => Hash::make(Str::random(32)),
                 'role' => 'customer',
                 'provider' => $provider,
                 'provider_id' => $providerId,
                 'avatar' => $avatar,
+                'is_active' => true,
+                'email_verified_at' => now(),
             ]);
         }
 
         Auth::login($user, true);
-        request()->session()->regenerate();
+        if (request()->hasSession()) {
+            request()->session()->regenerate();
+        }
 
-        return redirect()->intended(route('home'))->with('status', 'Đăng nhập thành công qua ' . ucfirst($provider) . '!');
+        return redirect()->intended(route('home'))->with('success', 'Đăng nhập bằng Google thành công! Xin chào ' . $user->name . '.');
     }
 }

@@ -1,24 +1,66 @@
 <?php
 
-use App\Http\Controllers\AccountController;
-use App\Http\Controllers\Auth\AuthenticatedSessionController;
-use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
+use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\FinanceController;
+use App\Http\Controllers\Admin\OrderController as AdminOrderController;
+use App\Http\Controllers\Admin\ProductController as AdminProductController;
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Auth\SocialAuthController;
 use App\Http\Controllers\CartController;
+use App\Http\Controllers\ChatController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\HomeController;
-use App\Http\Controllers\OrderHistoryController;
+use App\Http\Controllers\OrderTrackingController;
 use App\Http\Controllers\Payments\MomoController;
 use App\Http\Controllers\Payments\VnpayController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ShippingController;
+use App\Http\Controllers\WishlistController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
-Route::get('/san-pham', [ProductController::class, 'index'])->name('products.index');
-Route::get('/san-pham/{product:slug}', [ProductController::class, 'show'])->name('products.show');
+Route::get('/products', [ProductController::class, 'index'])->name('products.index');
+Route::get('/products/{slug}', [ProductController::class, 'show'])->name('products.show');
 
-// Giao Hàng Nhanh (GHN) APIs & Webhook
+Route::prefix('cart')->name('cart.')->group(function () {
+    Route::get('/', [CartController::class, 'index'])->name('index');
+    Route::post('/add/{product}', [CartController::class, 'add'])->name('add');
+    Route::post('/store', [CartController::class, 'store'])->name('store');
+    Route::match(['post', 'patch', 'put'], '/update/{cartKey}', [CartController::class, 'update'])->name('update');
+    Route::match(['post', 'delete'], '/remove/{cartKey}', [CartController::class, 'remove'])->name('remove');
+    Route::match(['post', 'delete'], '/destroy/{cartKey}', [CartController::class, 'remove'])->name('destroy');
+    Route::match(['post', 'delete'], '/clear', [CartController::class, 'clear'])->name('clear');
+    Route::post('/select', [CartController::class, 'select'])->name('select');
+    Route::post('/checkout', [CartController::class, 'checkoutSelected'])->name('checkout');
+    Route::post('/coupon/apply', [CartController::class, 'applyCoupon'])->name('coupon.apply');
+    Route::match(['post', 'delete'], '/coupon/remove', [CartController::class, 'removeCoupon'])->name('coupon.remove');
+});
+
+Route::post('/coupon/apply', [CartController::class, 'applyCoupon'])->name('coupon.apply.direct');
+Route::match(['post', 'delete'], '/coupon/remove', [CartController::class, 'removeCoupon'])->name('coupon.remove.direct');
+
+Route::prefix('checkout')->name('checkout.')->group(function () {
+    Route::get('/', [CheckoutController::class, 'index'])->name('index');
+    Route::match(['post', 'put', 'patch'], '/', [CheckoutController::class, 'process'])->name('process');
+    Route::match(['post', 'put', 'patch'], '/store', [CheckoutController::class, 'process'])->name('store');
+    Route::get('/success/{order_number}', [CheckoutController::class, 'success'])->name('success');
+});
+
+Route::prefix('wishlist')->name('wishlist.')->group(function () {
+    Route::get('/', [WishlistController::class, 'index'])->name('index');
+    Route::post('/toggle/{product}', [WishlistController::class, 'toggle'])->name('toggle');
+    Route::delete('/remove/{product}', [WishlistController::class, 'remove'])->name('remove');
+});
+
+// Chat với nhân viên (đăng nhập)
+Route::prefix('api/chat')->name('chat.')->middleware('auth')->group(function () {
+    Route::get('/session', [ChatController::class, 'session'])->name('session');
+    Route::get('/{chatId}/messages', [ChatController::class, 'messages'])->name('messages');
+    Route::post('/{chatId}/message', [ChatController::class, 'send'])->name('send');
+});
+
+// GHN
 Route::get('/api/shipping/ghn/provinces', [ShippingController::class, 'getProvinces'])->name('shipping.ghn.provinces');
 Route::get('/api/shipping/ghn/districts/{provinceId}', [ShippingController::class, 'getDistricts'])->name('shipping.ghn.districts');
 Route::get('/api/shipping/ghn/wards/{districtId}', [ShippingController::class, 'getWards'])->name('shipping.ghn.wards');
@@ -27,7 +69,6 @@ Route::post('/api/shipping/ghn/webhook', [ShippingController::class, 'webhook'])
 
 // Serve product images from storage/picture (master folder, not stored as DB blobs)
 Route::get('/media/picture/{filename}', function (string $filename) {
-    // Decode URI-encoded Vietnamese/spaces; never allow path traversal
     $decoded = rawurldecode($filename);
     $safe = basename(str_replace('\\', '/', $decoded));
     $path = storage_path('picture/'.$safe);
@@ -49,105 +90,98 @@ Route::get('/media/picture/{filename}', function (string $filename) {
     ]);
 })->where('filename', '.*')->name('media.picture');
 
-Route::get('/gio-hang', [CartController::class, 'index'])->name('cart.index');
-Route::post('/gio-hang', [CartController::class, 'store'])->name('cart.store');
-Route::post('/gio-hang/combo', [CartController::class, 'addBundle'])->name('cart.bundle');
-Route::patch('/gio-hang/{variant}', [CartController::class, 'update'])->name('cart.update');
-Route::delete('/gio-hang/{variant}', [CartController::class, 'destroy'])->name('cart.destroy');
-Route::delete('/gio-hang', [CartController::class, 'clear'])->name('cart.clear');
-
-// Coupon Codes
-Route::post('/ma-giam-gia/ap-dung', [\App\Http\Controllers\CouponController::class, 'apply'])->name('coupon.apply');
-Route::post('/ma-giam-gia/huy', [\App\Http\Controllers\CouponController::class, 'remove'])->name('coupon.remove');
-
-// Invoice Printable / PDF
-Route::get('/don-hang/{orderCode}/hoa-don', [\App\Http\Controllers\InvoiceController::class, 'show'])->name('orders.invoice');
-
-// Public Payment Callbacks & IPNs
+// Payment gateways
+// NOTE: return/ipn routes MUST be declared before {orderCode}, otherwise
+// /thanh-toan/vnpay/return is captured as orderCode="return".
 Route::get('/thanh-toan/vnpay/return', [VnpayController::class, 'return'])->name('payments.vnpay.return');
 Route::get('/api/payment/vnpay/ipn', [VnpayController::class, 'ipn'])->name('payments.vnpay.ipn');
 Route::get('/thanh-toan/momo/return', [MomoController::class, 'return'])->name('payments.momo.return');
 Route::post('/api/payment/momo/ipn', [MomoController::class, 'ipn'])->name('payments.momo.ipn');
+Route::match(['get', 'post'], '/thanh-toan/vnpay/{orderCode}', [VnpayController::class, 'create'])->name('payments.vnpay.create');
+Route::match(['get', 'post'], '/thanh-toan/momo/{orderCode}', [MomoController::class, 'create'])->name('payments.momo.create');
+
+// Dev mock payment routes (chỉ hoạt động khi MOMO_MOCK=true / VNPAY_MOCK=true)
+Route::get('/thanh-toan/momo/mock/confirm', [MomoController::class, 'mockConfirm'])->name('payments.momo.mock');
+Route::get('/thanh-toan/vnpay/mock/confirm', [VnpayController::class, 'mockConfirm'])->name('payments.vnpay.mock');
+
+use App\Http\Controllers\Customer\OrderController as CustomerOrderController;
+
+Route::get('/orders/track', [OrderTrackingController::class, 'index'])->name('orders.track');
+
+Route::middleware('auth')->group(function () {
+    Route::get('/orders', [CustomerOrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/{orderCode}', [CustomerOrderController::class, 'show'])->name('orders.show');
+    Route::post('/orders/{orderCode}/cancel', [CustomerOrderController::class, 'cancel'])->name('orders.cancel');
+    Route::post('/orders/{orderCode}/reorder', [CustomerOrderController::class, 'reorder'])->name('orders.reorder');
+    Route::get('/don-hang', [CustomerOrderController::class, 'index'])->name('orders.index.alt');
+    Route::get('/don-hang/{orderCode}', [CustomerOrderController::class, 'show'])->name('orders.show.alt');
+    Route::get('/tai-khoan', [CustomerOrderController::class, 'index'])->name('account.index');
+    Route::get('/ho-so', [\App\Http\Controllers\ProfileController::class, 'edit'])->name('profile.edit');
+    Route::put('/ho-so', [\App\Http\Controllers\ProfileController::class, 'update'])->name('profile.update');
+    Route::get('/tai-khoan/chinh-sua', [\App\Http\Controllers\ProfileController::class, 'edit'])->name('account.edit');
+});
 
 Route::middleware('guest')->group(function () {
-    Route::get('/dang-nhap', [AuthenticatedSessionController::class, 'create'])->name('login');
-    Route::post('/dang-nhap', [AuthenticatedSessionController::class, 'store'])->name('login.store');
+    Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+    Route::post('/login', [AuthController::class, 'login']);
+    Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
+    Route::post('/register', [AuthController::class, 'register']);
 
-    Route::get('/dang-ky', [RegisteredUserController::class, 'create'])->name('register');
-    Route::post('/dang-ky', [RegisteredUserController::class, 'store'])->name('register.store');
-
-    // Social OAuth (Google, GitHub)
     Route::get('/auth/{provider}/redirect', [SocialAuthController::class, 'redirect'])->name('auth.social.redirect');
     Route::get('/auth/{provider}/callback', [SocialAuthController::class, 'callback'])->name('auth.social.callback');
 });
 
-Route::middleware('auth')->group(function () {
-    Route::post('/dang-xuat', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
+Route::get('/xac-thuc', [AuthController::class, 'showVerify'])->name('auth.verify');
+Route::post('/xac-thuc', [AuthController::class, 'verify'])->name('auth.verify.submit');
+Route::post('/xac-thuc/gui-lai', [AuthController::class, 'resendVerify'])->name('auth.verify.resend');
 
-    Route::get('/thanh-toan', [CheckoutController::class, 'index'])->name('checkout.index');
-    Route::post('/thanh-toan', [CheckoutController::class, 'store'])->name('checkout.store');
-    Route::get('/dat-hang-thanh-cong/{order:order_code}', [CheckoutController::class, 'success'])->name('checkout.success');
+Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
 
-    // Payment Initiation / Retry
-    Route::match(['get', 'post'], '/thanh-toan/vnpay/{order:order_code}', [VnpayController::class, 'create'])->name('payments.vnpay.create');
-    Route::match(['get', 'post'], '/thanh-toan/momo/{order:order_code}', [MomoController::class, 'create'])->name('payments.momo.create');
-
-    Route::get('/tai-khoan', [AccountController::class, 'index'])->name('account.index');
-    Route::get('/tai-khoan/chinh-sua', [AccountController::class, 'edit'])->name('account.edit');
-    Route::patch('/tai-khoan', [AccountController::class, 'update'])->name('account.update');
-    Route::get('/tai-khoan/don-hang', [OrderHistoryController::class, 'index'])->name('orders.index');
-    Route::get('/tai-khoan/don-hang/{order:order_code}', [OrderHistoryController::class, 'show'])->name('orders.show');
-
-    // Product Reviews
-    Route::post('/san-pham/{product:slug}/danh-gia', [\App\Http\Controllers\ReviewController::class, 'store'])->name('products.reviews.store');
-
-    // Wishlist
-    Route::get('/tai-khoan/yeu-thich', [\App\Http\Controllers\WishlistController::class, 'index'])->name('wishlist.index');
-    Route::post('/yeu-thich/{product}', [\App\Http\Controllers\WishlistController::class, 'toggle'])->name('wishlist.toggle');
-});
-
-// Guest & Customer Order Tracking
-Route::get('/tra-cuu-don-hang', [\App\Http\Controllers\OrderTrackingController::class, 'index'])->name('orders.track');
-Route::get('/orders/track', [\App\Http\Controllers\OrderTrackingController::class, 'index']);
-
-// Static Information & Policy Pages
-Route::get('/faq', [\App\Http\Controllers\PageController::class, 'faq'])->name('pages.faq');
-Route::get('/chinh-sach-bao-hanh', [\App\Http\Controllers\PageController::class, 'warranty'])->name('pages.warranty');
-Route::get('/chinh-sach-doi-tra', [\App\Http\Controllers\PageController::class, 'returnPolicy'])->name('pages.return');
-Route::get('/lien-he', [\App\Http\Controllers\PageController::class, 'contact'])->name('pages.contact');
-
-// Admin Backoffice
-Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
     Route::get('/', [\App\Http\Controllers\Admin\AnalyticsController::class, 'index'])->name('dashboard');
     Route::get('/dashboard', fn () => redirect()->route('admin.dashboard'));
-    Route::get('/analytics', [\App\Http\Controllers\Admin\AnalyticsController::class, 'index'])->name('analytics.index');
-    Route::get('/analytics/export', [\App\Http\Controllers\Admin\AnalyticsController::class, 'export'])->name('analytics.export');
+    Route::get('/analytics', [\App\Http\Controllers\Admin\AnalyticsController::class, 'index'])->name('analytics.index')->middleware('adminonly');
+    Route::get('/analytics/export', [\App\Http\Controllers\Admin\AnalyticsController::class, 'export'])->name('analytics.export')->middleware('adminonly');
 
-    // Category Management
-    Route::resource('categories', \App\Http\Controllers\Admin\CategoryController::class)->except(['show']);
+    Route::resource('categories', AdminCategoryController::class)->except(['show']);
+    Route::resource('products', AdminProductController::class)->except(['show']);
+    Route::post('/products/images/{image}/primary', [AdminProductController::class, 'setPrimaryImage'])->name('products.images.primary');
+    Route::delete('/products/images/{image}', [AdminProductController::class, 'deleteImage'])->name('products.images.destroy');
 
-    // Product Management & Image Gallery
-    Route::resource('products', \App\Http\Controllers\Admin\ProductController::class)->except(['show']);
-    Route::post('/products/images/{image}/primary', [\App\Http\Controllers\Admin\ProductController::class, 'setPrimaryImage'])->name('products.images.primary');
-    Route::delete('/products/images/{image}', [\App\Http\Controllers\Admin\ProductController::class, 'deleteImage'])->name('products.images.destroy');
-
-    // Order Management
-    Route::get('/orders', [\App\Http\Controllers\Admin\OrderController::class, 'index'])->name('orders.index');
-    Route::get('/orders/{order}', [\App\Http\Controllers\Admin\OrderController::class, 'show'])->name('orders.show');
-    Route::put('/orders/{order}/status', [\App\Http\Controllers\Admin\OrderController::class, 'updateStatus'])->name('orders.updateStatus');
+    Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
+    Route::put('/orders/{order}/status', [AdminOrderController::class, 'updateStatus'])->name('orders.updateStatus');
     Route::post('/orders/{order}/create-ghn', [ShippingController::class, 'adminCreateGhn'])->name('orders.createGhn');
 
-    // Coupon Management
+    // Quản lý Tài chính & Giao dịch thanh toán (Lab 9)
+    Route::get('/finance', [FinanceController::class, 'index'])->name('finance.index');
+    Route::get('/finance/transactions', [FinanceController::class, 'transactions'])->name('finance.transactions');
+    Route::patch('/finance/{order}/status', [FinanceController::class, 'updateStatus'])->name('finance.update-status');
+
     Route::resource('coupons', \App\Http\Controllers\Admin\CouponController::class)->except(['show']);
 
-    // Customers
     Route::get('/customers', [\App\Http\Controllers\Admin\CustomerController::class, 'index'])->name('customers.index');
+    Route::get('/customers/{customer}/edit', [\App\Http\Controllers\Admin\CustomerController::class, 'edit'])->name('customers.edit');
+    Route::put('/customers/{customer}', [\App\Http\Controllers\Admin\CustomerController::class, 'update'])->name('customers.update');
     Route::get('/customers/{customer}', [\App\Http\Controllers\Admin\CustomerController::class, 'show'])->name('customers.show');
     Route::patch('/customers/{customer}/toggle', [\App\Http\Controllers\Admin\CustomerController::class, 'toggle'])->name('customers.toggle');
 
-    // Reviews moderation
     Route::get('/reviews', [\App\Http\Controllers\Admin\ReviewController::class, 'index'])->name('reviews.index');
     Route::patch('/reviews/{review}/approve', [\App\Http\Controllers\Admin\ReviewController::class, 'approve'])->name('reviews.approve');
     Route::patch('/reviews/{review}/hide', [\App\Http\Controllers\Admin\ReviewController::class, 'hide'])->name('reviews.hide');
     Route::delete('/reviews/{review}', [\App\Http\Controllers\Admin\ReviewController::class, 'destroy'])->name('reviews.destroy');
+
+    // Trò chuyện khách hàng
+    Route::get('/chats', [\App\Http\Controllers\Admin\ChatController::class, 'index'])->name('chats.index');
+    Route::get('/chats/unread', [\App\Http\Controllers\Admin\ChatController::class, 'unread'])->name('chats.unread');
+    Route::get('/chats/{chat}', [\App\Http\Controllers\Admin\ChatController::class, 'show'])->name('chats.show');
+    Route::post('/chats/{chat}/reply', [\App\Http\Controllers\Admin\ChatController::class, 'reply'])->name('chats.reply');
+    Route::post('/chats/{chat}/close', [\App\Http\Controllers\Admin\ChatController::class, 'close'])->name('chats.close');
+    Route::post('/chats/{chat}/reopen', [\App\Http\Controllers\Admin\ChatController::class, 'reopen'])->name('chats.reopen');
+    Route::post('/chats/{chat}/assign', [\App\Http\Controllers\Admin\ChatController::class, 'assign'])->name('chats.assign');
+    Route::post('/chats/{chat}/claim', [\App\Http\Controllers\Admin\ChatController::class, 'claim'])->name('chats.claim');
+
+    // Quản lý nhân viên (chỉ Quản trị viên)
+    Route::resource('staff', \App\Http\Controllers\Admin\StaffController::class)->except(['show'])->middleware('adminonly');
+    Route::patch('/staff/{staff}/toggle', [\App\Http\Controllers\Admin\StaffController::class, 'toggle'])->name('staff.toggle')->middleware('adminonly');
 });

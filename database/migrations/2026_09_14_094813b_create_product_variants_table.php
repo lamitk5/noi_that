@@ -8,15 +8,19 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('product_variants')) {
+            return;
+        }
+
         Schema::create('product_variants', function (Blueprint $table) {
             $table->id();
             $table->foreignId('product_id')->constrained('products')->cascadeOnDelete();
-            $table->string('color')->nullable()->comment('Màu sắc');
-            $table->string('size')->nullable()->comment('Kích thước');
-            $table->string('material')->nullable()->comment('Chất liệu');
-            $table->decimal('price', 15, 2)->comment('Giá riêng của biến thể');
-            $table->unsignedInteger('stock')->default(0)->comment('Số lượng tồn kho');
-            $table->string('sku')->unique()->comment('Mã SKU riêng của biến thể');
+            $table->string('color')->nullable();
+            $table->string('size')->nullable();
+            $table->string('material')->nullable();
+            $table->decimal('price', 15, 2);
+            $table->unsignedInteger('stock')->default(0);
+            $table->string('sku')->nullable()->unique();
             $table->timestamps();
         });
     }

@@ -19,8 +19,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        view()->composer('*', function ($view) {
-            $view->with('cartCount', app(\App\Services\CartService::class)->count());
+        \Illuminate\Support\Facades\View::composer('*', function ($view) {
+            $cart = session('furniture_cart', []);
+            $view->with('cartCount', array_sum(array_column($cart, 'quantity')));
         });
     }
 }

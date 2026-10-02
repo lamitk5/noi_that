@@ -2,156 +2,150 @@
 
 namespace Database\Seeders;
 
+use App\Models\Category;
+use App\Models\Order;
+use App\Models\Product;
 use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
-        User::updateOrCreate(
-            ['email' => 'admin@mocan.test'],
-            [
-                'name' => 'Quản trị Mộc An',
-                'phone' => '0901234567',
-                'password' => Hash::make('Admin@123'),
-                'role' => 'admin',
-            ],
-        );
+        $this->call(AdminUserSeeder::class);
 
-        User::updateOrCreate(
-            ['email' => 'customer@mocan.test'],
+        $customer = User::firstOrCreate(
+            ['email' => 'customer@example.com'],
             [
-                'name' => 'Khách hàng Demo',
-                'phone' => '0909876543',
-                'password' => Hash::make('Customer@123'),
+                'name' => 'Nguyễn Văn An',
+                'password' => Hash::make('password123'),
                 'role' => 'customer',
+                'phone' => '0987654321',
+            ]
+        );
+
+        $categoriesData = [
+            ['name' => 'Nội thất Phòng khách', 'slug' => 'phong-khach', 'description' => 'Bộ sưu tập sofa da cao cấp.', 'sort_order' => 1],
+            ['name' => 'Nội thất Phòng ngủ', 'slug' => 'phong-ngu', 'description' => 'Giường ngủ gỗ sồi tự nhiên.', 'sort_order' => 2],
+            ['name' => 'Nội thất Phòng ăn & Bếp', 'slug' => 'phong-an-bep', 'description' => 'Bàn ăn thông minh.', 'sort_order' => 3],
+        ];
+
+        $categories = [];
+        foreach ($categoriesData as $cat) {
+            $categories[$cat['slug']] = Category::firstOrCreate(['slug' => $cat['slug']], $cat);
+        }
+
+        $productsData = [
+            [
+                'category_slug' => 'phong-khach',
+                'name' => 'Bàn Console Gỗ Sồi',
+                'sku' => 'MA-001',
+                'short_description' => 'Bàn console thanh mảnh cho lối vào.',
+                'description' => 'Sản phẩm Mộc An — vật liệu tự nhiên, hoàn thiện chỉn chu.',
+                'base_price' => 4590000,
+                'sale_price' => null,
+                'material' => 'Gỗ sồi',
+                'dimensions' => '120 x 35 x 80 cm',
+                'color' => 'Gỗ sáng',
+                'weight' => 7.4,
+                'is_featured' => true,
             ],
-        );
-
-        // PictureProductSeeder wipes products then inserts 1 product per image file
-        $this->call(PictureProductSeeder::class);
-
-        \App\Models\Coupon::updateOrCreate(
-            ['code' => 'MOCAN10'],
             [
-                'name' => 'Ưu đãi thành viên Mộc An - Giảm 10%',
-                'type' => 'percent',
-                'value' => 10,
-                'min_order_amount' => 1000000,
-                'max_discount_amount' => 500000,
-                'usage_limit' => 100,
-                'is_active' => true,
-            ]
-        );
+                'category_slug' => 'phong-an-bep',
+                'name' => 'Bàn Ăn Gỗ Sồi',
+                'sku' => 'MA-002',
+                'short_description' => 'Bàn ăn tự nhiên cho 6–8 người.',
+                'description' => 'Bàn ăn gỗ sồi bền đẹp cho không gian ấm cúng.',
+                'base_price' => 8990000,
+                'sale_price' => null,
+                'material' => 'Gỗ sồi',
+                'dimensions' => '160 x 80 x 75 cm',
+                'color' => 'Gỗ sáng',
+                'weight' => 48.6,
+                'is_featured' => true,
+            ],
+        ];
 
-        \App\Models\Coupon::updateOrCreate(
-            ['code' => 'GIAM50K'],
-            [
-                'name' => 'Voucher chào bạn mới - Giảm 50K',
-                'type' => 'fixed',
-                'value' => 50000,
-                'min_order_amount' => 200000,
-                'usage_limit' => 200,
-                'is_active' => true,
-            ]
-        );
+        foreach ($productsData as $prod) {
+            $catSlug = $prod['category_slug'];
+            unset($prod['category_slug']);
+            $prod['category_id'] = $categories[$catSlug]->id;
+            $prod['slug'] = Str::slug($prod['name']);
 
-        // Seed demo orders for Analytics & Reporting if empty
-        if (\App\Models\Order::count() === 0) {
-            $products = \App\Models\Product::with('variants')->take(4)->get();
-            if ($products->isNotEmpty()) {
-                $customer = \App\Models\User::where('role', 'customer')->first();
-                $demoOrders = [
-                    [
-                        'order_code' => 'ORD-MOCAN-001',
-                        'customer_name' => 'Nguyễn Thị Lan',
-                        'customer_phone' => '0912345678',
-                        'customer_email' => 'lan.nguyen@example.com',
-                        'shipping_address' => '25 Hoàng Đạo Thúy, Cầu Giấy, Hà Nội',
-                        'total_price' => 5490000,
-                        'shipping_fee' => 0,
-                        'payment_method' => 'cod',
-                        'payment_status' => 'paid',
-                        'order_status' => 'completed',
-                        'created_at' => now()->subHours(2),
-                    ],
-                    [
-                        'order_code' => 'ORD-MOCAN-002',
-                        'customer_name' => 'Trần Văn Minh',
-                        'customer_phone' => '0987654321',
-                        'customer_email' => 'minh.tran@example.com',
-                        'shipping_address' => '120 Lê Lợi, Quận 1, TP. Hồ Chí Minh',
-                        'total_price' => 8990000,
-                        'shipping_fee' => 0,
-                        'payment_method' => 'vnpay',
-                        'payment_status' => 'pending',
-                        'order_status' => 'pending',
-                        'created_at' => now()->subHours(1),
-                    ],
-                    [
-                        'order_code' => 'ORD-MOCAN-003',
-                        'customer_name' => 'Phạm Hoàng Nam',
-                        'customer_phone' => '0933445566',
-                        'customer_email' => 'nam.pham@example.com',
-                        'shipping_address' => '45 Nguyễn Thị Minh Khai, Đà Nẵng',
-                        'total_price' => 4590000,
-                        'shipping_fee' => 0,
-                        'payment_method' => 'cod',
-                        'payment_status' => 'pending',
-                        'order_status' => 'shipping',
-                        'created_at' => now()->subDays(1),
-                    ],
-                    [
-                        'order_code' => 'ORD-MOCAN-004',
-                        'customer_name' => 'Lê Thanh Thảo',
-                        'customer_phone' => '0977889900',
-                        'customer_email' => 'thao.le@example.com',
-                        'shipping_address' => '88 Nguyễn Du, Hai Bà Trưng, Hà Nội',
-                        'total_price' => 12500000,
-                        'shipping_fee' => 0,
-                        'payment_method' => 'momo',
-                        'payment_status' => 'paid',
-                        'order_status' => 'completed',
-                        'created_at' => now()->subDays(2),
-                    ],
-                    [
-                        'order_code' => 'ORD-MOCAN-005',
-                        'customer_name' => 'Hoàng Đức Anh',
-                        'customer_phone' => '0966112233',
-                        'customer_email' => 'ducanh@example.com',
-                        'shipping_address' => '12 Thảo Điền, TP. Thủ Đức',
-                        'total_price' => 3200000,
-                        'shipping_fee' => 0,
-                        'payment_method' => 'cod',
-                        'payment_status' => 'failed',
-                        'order_status' => 'canceled',
-                        'created_at' => now()->subDays(4),
-                    ],
-                ];
+            $product = Product::firstOrCreate(['sku' => $prod['sku']], $prod);
 
-                foreach ($demoOrders as $idx => $orderData) {
-                    $order = \App\Models\Order::create(array_merge($orderData, [
-                        'user_id' => $customer?->id,
-                    ]));
-                    $p = $products[$idx % $products->count()];
-                    $variant = $p->variants->first();
-                    $order->items()->create([
-                        'product_variant_id' => $variant?->id,
-                        'product_name' => $p->name,
-                        'variant_info' => $variant?->color ?? 'Tiêu chuẩn',
-                        'quantity' => 1,
-                        'price' => $order->total_price,
-                    ]);
+            if ($product->variants()->count() === 0) {
+                foreach ($this->variantMatrix($product) as $variant) {
+                    $product->variants()->create($variant);
                 }
             }
         }
+
+        if (Order::count() === 0) {
+            $firstProduct = Product::with('variants')->first();
+            $variant = $firstProduct?->variants->first();
+
+            $order = Order::create([
+                'order_code' => 'ORD-DEMO-001',
+                'user_id' => $customer->id,
+                'customer_name' => 'Nguyễn Văn An',
+                'customer_email' => 'customer@example.com',
+                'customer_phone' => '0987654321',
+                'shipping_address' => 'Số 123 Đường Cầu Giấy, Hà Nội',
+                'shipping_fee' => 0,
+                'discount_amount' => 0,
+                'total_price' => 4590000,
+                'payment_method' => 'cod',
+                'payment_status' => Order::PAYMENT_PENDING,
+                'order_status' => Order::STATUS_PENDING,
+                'note' => 'Giao hàng giờ hành chính.',
+            ]);
+
+            if ($variant) {
+                $order->items()->create([
+                    'product_variant_id' => $variant->id,
+                    'product_name' => $firstProduct->name,
+                    'variant_info' => $variant->display_label,
+                    'price' => $variant->price,
+                    'quantity' => 1,
+                ]);
+            }
+        }
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    protected function variantMatrix(Product $product): array
+    {
+        $woodColors = [
+            ['color' => 'Gỗ sáng', 'material' => 'Gỗ sồi'],
+            ['color' => 'Nâu óc chó', 'material' => 'Gỗ sồi'],
+        ];
+
+        $sizes = [
+            ['size' => '120 x 35 x 80 cm', 'price_factor' => 0.9, 'stock' => 8],
+            ['size' => '160 x 80 x 75 cm', 'price_factor' => 1.0, 'stock' => 12],
+        ];
+
+        $basePrice = (float) $product->base_price;
+        $rows = [];
+
+        foreach ($sizes as $sizeRow) {
+            foreach ($woodColors as $colorRow) {
+                $rows[] = [
+                    'size' => $sizeRow['size'],
+                    'color' => $colorRow['color'],
+                    'material' => $colorRow['material'],
+                    'sku' => $product->sku . '-' . strtoupper(substr(md5($sizeRow['size'] . $colorRow['color']), 0, 4)),
+                    'price' => (int) round($basePrice * $sizeRow['price_factor'] / 1000) * 1000,
+                    'stock' => $sizeRow['stock'],
+                ];
+            }
+        }
+
+        return $rows;
     }
 }

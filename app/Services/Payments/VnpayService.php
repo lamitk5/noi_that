@@ -8,35 +8,43 @@ use RuntimeException;
 
 class VnpayService
 {
-    /**
-     * Build VNPAY 2.1.0 payment redirect URL.
-     */
     public function buildPaymentUrl(Order $order, PaymentTransaction $transaction, ?string $ipAddress = null): string
     {
         $vnpUrl = config('services.vnpay.url');
         $tmnCode = config('services.vnpay.tmn_code');
         $hashSecret = config('services.vnpay.hash_secret');
 
-        if (empty($tmnCode) || empty($hashSecret)) {
+        if (empty($tmnCode) || empty($hashSecret) || empty($vnpUrl)) {
             throw new RuntimeException('Cổng thanh toán VNPAY hiện chưa được cấu hình.');
         }
 
+        // Dev mock mode: bật VNPAY_MOCK=true trong .env để giả lập thanh toán thành công
+        if (config('services.vnpay.mock', false)) {
+            return route('payments.vnpay.mock', [
+                'orderCode' => $order->order_code,
+                'reference' => $transaction->provider_reference,
+            ]);
+        }
+
         $amount = (int) round((float) $order->total_price * 100);
+
+        $now = now('Asia/Ho_Chi_Minh');
+        $ip = ($ipAddress && $ipAddress !== '::1') ? $ipAddress : '127.0.0.1';
 
         $inputData = [
             'vnp_Version' => '2.1.0',
             'vnp_TmnCode' => $tmnCode,
             'vnp_Amount' => $amount,
             'vnp_Command' => 'pay',
-            'vnp_CreateDate' => date('YmdHis'),
+            'vnp_CreateDate' => $now->format('YmdHis'),
             'vnp_CurrCode' => 'VND',
-            'vnp_IpAddr' => $ipAddress ?: '127.0.0.1',
+            'vnp_IpAddr' => $ip,
             'vnp_Locale' => 'vn',
-            'vnp_OrderInfo' => "Thanh toan don hang #{$order->order_code}",
+            'vnp_OrderInfo' => "Thanh toan don hang " . $order->order_code,
             'vnp_OrderType' => 'other',
             'vnp_ReturnUrl' => route('payments.vnpay.return'),
             'vnp_TxnRef' => $transaction->provider_reference,
-            'vnp_ExpireDate' => date('YmdHis', strtotime('+15 minutes')),
+            'vnp_ExpireDate' => $now->copy()->addMinutes(15)->format('YmdHis'),
         ];
 
         ksort($inputData);
@@ -60,9 +68,6 @@ class VnpayService
         return $vnpUrl . '?' . $query . 'vnp_SecureHash=' . $vnpSecureHash;
     }
 
-    /**
-     * Verify VNPAY checksum signature using HMAC-SHA512.
-     */
     public function verifySignature(array $inputData): bool
     {
         $hashSecret = config('services.vnpay.hash_secret');

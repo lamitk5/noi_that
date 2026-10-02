@@ -72,6 +72,7 @@
                             </td>
                             <td class="py-3 px-4 text-right">
                                 <div class="inline-flex items-center gap-2">
+                                    <a href="{{ route('admin.customers.edit', $customer) }}" class="font-semibold text-primary hover:underline">Sửa</a>
                                     <a href="{{ route('admin.customers.show', $customer) }}" class="font-semibold text-primary hover:underline">Chi tiết</a>
                                     <form action="{{ route('admin.customers.toggle', $customer) }}" method="POST" class="inline">
                                         @csrf
