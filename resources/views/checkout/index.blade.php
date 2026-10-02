@@ -99,7 +99,7 @@
                                     type="tel"
                                     id="customer_phone"
                                     name="customer_phone"
-                                    value="{{ old('customer_phone') }}"
+                                    value="{{ old('customer_phone', $user?->phone) }}"
                                     required
                                     autocomplete="tel"
                                     placeholder="0912345678"
@@ -130,6 +130,30 @@
                             </div>
                         </div>
 
+                        @if (!empty($savedAddresses) && count($savedAddresses) > 0)
+                            <div class="p-3.5 rounded-2xl border border-ui-border bg-surface-alt/70">
+                                <div class="flex items-center gap-2 mb-2 text-xs font-bold text-heading uppercase tracking-wider">
+                                    <svg viewBox="0 0 24 24" class="size-4 text-primary" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/>
+                                    </svg>
+                                    <span>Chọn từ địa chỉ đã lưu ({{ count($savedAddresses) }})</span>
+                                </div>
+                                <div class="flex flex-wrap gap-2">
+                                    @foreach ($savedAddresses as $savedAddr)
+                                        <button
+                                            type="button"
+                                            class="saved-address-chip text-left text-xs px-3 py-1.5 rounded-xl border border-ui-border bg-surface hover:border-primary hover:text-primary transition line-clamp-1 max-w-full cursor-pointer"
+                                            data-address="{{ $savedAddr }}"
+                                            title="{{ $savedAddr }}"
+                                        >
+                                            📍 {{ Str::limit($savedAddr, 50) }}
+                                        </button>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
+
                         <div>
                             <label for="shipping_address" class="block text-xs font-bold uppercase tracking-wider text-heading mb-1.5">
                                 Địa chỉ nhận hàng <span class="text-rose-500">*</span>
@@ -142,7 +166,7 @@
                                 autocomplete="street-address"
                                 placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố..."
                                 class="w-full rounded-xl border border-ui-border bg-surface-alt px-4 py-3 text-sm text-heading placeholder:text-muted focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary @error('shipping_address') border-rose-500 @enderror"
-                            >{{ old('shipping_address') }}</textarea>
+                            >{{ old('shipping_address', $user?->address) }}</textarea>
                             @error('shipping_address')
                                 <p class="mt-1 text-xs text-rose-500">{{ $message }}</p>
                             @enderror
@@ -167,9 +191,9 @@
                         <div class="grid sm:grid-cols-3 gap-4 mt-2" id="ghn-address-section">
                             <div>
                                 <label for="province_id" class="block text-xs font-bold uppercase tracking-wider text-heading mb-1.5">
-                                    Tỉnh / Thành phố <span class="text-rose-500">*</span>
+                                    Tỉnh / Thành phố <span class="text-xs text-muted font-normal">(Tính phí ship)</span>
                                 </label>
-                                <select id="province_id" name="province_id" required
+                                <select id="province_id" name="province_id"
                                     class="w-full rounded-xl border border-ui-border bg-surface-alt px-4 py-3 text-sm text-heading focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
                                     <option value="">-- Chọn tỉnh/TP --</option>
                                 </select>
@@ -177,9 +201,9 @@
                             </div>
                             <div>
                                 <label for="district_id" class="block text-xs font-bold uppercase tracking-wider text-heading mb-1.5">
-                                    Quận / Huyện <span class="text-rose-500">*</span>
+                                    Quận / Huyện
                                 </label>
-                                <select id="district_id" name="district_id" required disabled
+                                <select id="district_id" name="district_id" disabled
                                     class="w-full rounded-xl border border-ui-border bg-surface-alt px-4 py-3 text-sm text-heading focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50">
                                     <option value="">-- Chọn quận/huyện --</option>
                                 </select>
@@ -187,9 +211,9 @@
                             </div>
                             <div>
                                 <label for="ward_code" class="block text-xs font-bold uppercase tracking-wider text-heading mb-1.5">
-                                    Phường / Xã <span class="text-rose-500">*</span>
+                                    Phường / Xã
                                 </label>
-                                <select id="ward_code" name="ward_code" required disabled
+                                <select id="ward_code" name="ward_code" disabled
                                     class="w-full rounded-xl border border-ui-border bg-surface-alt px-4 py-3 text-sm text-heading focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50">
                                     <option value="">-- Chọn phường/xã --</option>
                                 </select>
@@ -675,6 +699,36 @@ function removeCouponAjax() {
             }
         })
         .catch(() => showMsg('Không thể tính phí vận chuyển, sẽ cập nhật khi đặt hàng.', true));
+    });
+
+    // Quick fill from saved addresses
+    document.querySelectorAll('.saved-address-chip').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const address = this.dataset.address;
+            const textarea = document.getElementById('shipping_address');
+            if (textarea && address) {
+                textarea.value = address;
+                textarea.focus();
+
+                document.querySelectorAll('.saved-address-chip').forEach(b => {
+                    b.classList.remove('border-primary', 'bg-primary/10', 'text-primary');
+                });
+                this.classList.add('border-primary', 'bg-primary/10', 'text-primary');
+
+                if (provinceSelect) {
+                    for (let i = 0; i < provinceSelect.options.length; i++) {
+                        const opt = provinceSelect.options[i];
+                        if (opt.value && opt.dataset.name && address.toLowerCase().includes(opt.dataset.name.toLowerCase())) {
+                            if (provinceSelect.value !== opt.value) {
+                                provinceSelect.value = opt.value;
+                                provinceSelect.dispatchEvent(new Event('change'));
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+        });
     });
 })();
 </script>

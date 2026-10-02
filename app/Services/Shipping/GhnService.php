@@ -33,21 +33,25 @@ class GhnService
     {
         return Cache::remember('ghn_provinces', 86400, function () {
             try {
-                $response = Http::timeout(10)
+                $response = Http::timeout(5)
                     ->withHeaders(['Token' => $this->token])
                     ->get($this->apiUrl . 'master-data/province');
 
                 if ($response->successful() && !empty($response->json('data'))) {
-                    return collect($response->json('data'))
+                    $provinces = collect($response->json('data'))
                         ->map(fn ($p) => [
                             'id' => (int) ($p['ProvinceID'] ?? 0),
                             'name' => (string) ($p['ProvinceName'] ?? ''),
                             'code' => (string) ($p['Code'] ?? ''),
                         ])
-                        ->filter(fn ($p) => $p['id'] > 0 && !empty($p['name']))
+                        ->filter(fn ($p) => $p['id'] > 0 && !empty($p['name']) && !str_contains($p['name'], 'Test') && !str_contains($p['name'], '02'))
                         ->sortBy('name')
                         ->values()
                         ->all();
+
+                    if (count($provinces) >= 60) {
+                        return $provinces;
+                    }
                 }
             } catch (\Throwable $e) {
                 Log::warning('GHN getProvinces error: ' . $e->getMessage());
@@ -388,43 +392,64 @@ class GhnService
         return $simulatedCode;
     }
 
+    protected function getMasterLocationData(): array
+    {
+        static $cached = null;
+        if ($cached !== null) {
+            return $cached;
+        }
+
+        $path = database_path('data/ghn_locations.json');
+        if (file_exists($path)) {
+            $json = @file_get_contents($path);
+            if ($json) {
+                $decoded = json_decode($json, true);
+                if (is_array($decoded)) {
+                    return $cached = $decoded;
+                }
+            }
+        }
+
+        return $cached = [];
+    }
+
     protected function getFallbackProvinces(): array
     {
+        $master = $this->getMasterLocationData();
+        if (!empty($master)) {
+            return collect($master)
+                ->map(fn ($p) => [
+                    'id' => (int) $p['id'],
+                    'name' => (string) $p['name'],
+                    'code' => (string) ($p['code'] ?? ''),
+                ])
+                ->sortBy('name')
+                ->values()
+                ->all();
+        }
+
         return [
             ['id' => 201, 'name' => 'Hà Nội', 'code' => 'HN'],
             ['id' => 202, 'name' => 'Hồ Chí Minh', 'code' => 'HCM'],
             ['id' => 203, 'name' => 'Đà Nẵng', 'code' => 'DN'],
-            ['id' => 204, 'name' => 'Hải Phòng', 'code' => 'HP'],
-            ['id' => 205, 'name' => 'Cần Thơ', 'code' => 'CT'],
-            ['id' => 206, 'name' => 'Bình Dương', 'code' => 'BD'],
-            ['id' => 207, 'name' => 'Đồng Nai', 'code' => 'DNA'],
+            ['id' => 224, 'name' => 'Hải Phòng', 'code' => 'HP'],
+            ['id' => 220, 'name' => 'Cần Thơ', 'code' => 'CT'],
+            ['id' => 205, 'name' => 'Bình Dương', 'code' => 'BD'],
+            ['id' => 204, 'name' => 'Đồng Nai', 'code' => 'DNA'],
             ['id' => 208, 'name' => 'Khánh Hòa', 'code' => 'KH'],
-            ['id' => 209, 'name' => 'Quảng Ninh', 'code' => 'QN'],
-            ['id' => 210, 'name' => 'Lâm Đồng', 'code' => 'LD'],
+            ['id' => 230, 'name' => 'Quảng Ninh', 'code' => 'QN'],
+            ['id' => 209, 'name' => 'Lâm Đồng', 'code' => 'LD'],
         ];
     }
 
     protected function getFallbackDistricts(int $provinceId): array
     {
-        if ($provinceId === 202) {
-            return [
-                ['id' => 1442, 'name' => 'Quận 1', 'province_id' => 202],
-                ['id' => 1443, 'name' => 'Quận 3', 'province_id' => 202],
-                ['id' => 1444, 'name' => 'Quận 4', 'province_id' => 202],
-                ['id' => 1446, 'name' => 'Quận 7', 'province_id' => 202],
-                ['id' => 1451, 'name' => 'Quận Bình Thạnh', 'province_id' => 202],
-                ['id' => 1452, 'name' => 'TP. Thủ Đức', 'province_id' => 202],
-            ];
-        }
-
-        if ($provinceId === 201) {
-            return [
-                ['id' => 1482, 'name' => 'Quận Ba Đình', 'province_id' => 201],
-                ['id' => 1484, 'name' => 'Quận Hoàn Kiếm', 'province_id' => 201],
-                ['id' => 1485, 'name' => 'Quận Hai Bà Trưng', 'province_id' => 201],
-                ['id' => 1486, 'name' => 'Quận Đống Đa', 'province_id' => 201],
-                ['id' => 1488, 'name' => 'Quận Cầu Giấy', 'province_id' => 201],
-            ];
+        $master = $this->getMasterLocationData();
+        if (isset($master[$provinceId]['districts']) && !empty($master[$provinceId]['districts'])) {
+            return collect($master[$provinceId]['districts'])
+                ->sortBy('name')
+                ->values()
+                ->all();
         }
 
         return [
@@ -436,9 +461,10 @@ class GhnService
     protected function getFallbackWards(int $districtId): array
     {
         return [
-            ['code' => "W{$districtId}01", 'name' => 'Phường / Xã 1', 'district_id' => $districtId],
-            ['code' => "W{$districtId}02", 'name' => 'Phường / Xã 2', 'district_id' => $districtId],
-            ['code' => "W{$districtId}03", 'name' => 'Phường / Xã 3', 'district_id' => $districtId],
+            ['code' => "W{$districtId}01", 'name' => 'Phường / Xã trung tâm', 'district_id' => $districtId],
+            ['code' => "W{$districtId}02", 'name' => 'Thị trấn / Khu vực 1', 'district_id' => $districtId],
+            ['code' => "W{$districtId}03", 'name' => 'Khu vực ngoại thành', 'district_id' => $districtId],
+            ['code' => "W{$districtId}99", 'name' => 'Khu vực khác (ghi rõ ở địa chỉ)', 'district_id' => $districtId],
         ];
     }
 }

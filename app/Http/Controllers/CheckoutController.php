@@ -57,10 +57,30 @@ class CheckoutController extends Controller
         $total = $this->cartService->getTotal();
         $totalPrice = $total;
         $user = Auth::user();
+        $savedAddresses = [];
+        if ($user) {
+            if (!empty($user->address)) {
+                $savedAddresses[] = trim($user->address);
+            }
+            $recentOrderAddresses = Order::where('user_id', $user->id)
+                ->whereNotNull('shipping_address')
+                ->where('shipping_address', '!=', '')
+                ->latest()
+                ->take(5)
+                ->pluck('shipping_address')
+                ->all();
+
+            foreach ($recentOrderAddresses as $addr) {
+                $addr = trim($addr);
+                if ($addr !== '' && !in_array($addr, $savedAddresses, true)) {
+                    $savedAddresses[] = $addr;
+                }
+            }
+        }
         $checkoutToken = (string) Str::random(40);
         session(['checkout_token' => $checkoutToken]);
 
-        $data = compact('cart', 'items', 'subtotal', 'hasCalculatedShipping', 'shippingFee', 'coupon', 'discountAmount', 'availableCoupons', 'total', 'totalPrice', 'user', 'checkoutToken', 'isBuyNow');
+        $data = compact('cart', 'items', 'subtotal', 'hasCalculatedShipping', 'shippingFee', 'coupon', 'discountAmount', 'availableCoupons', 'total', 'totalPrice', 'user', 'savedAddresses', 'checkoutToken', 'isBuyNow');
 
         if ($request->wantsJson()) {
             return response()->json(['success' => true, 'data' => $data]);

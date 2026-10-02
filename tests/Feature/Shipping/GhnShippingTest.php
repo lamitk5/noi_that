@@ -322,4 +322,49 @@ class GhnShippingTest extends TestCase
         $this->assertEquals(75, $item['height']);
         $this->assertEquals(64900, $item['weight']);
     }
+
+    public function test_offline_fallback_provides_full_63_provinces_and_districts(): void
+    {
+        \Illuminate\Support\Facades\Cache::forget('ghn_provinces');
+        \Illuminate\Support\Facades\Cache::forget('ghn_districts_217');
+
+        Http::fake([
+            '*/master-data/province*' => Http::response(null, 500),
+            '*/master-data/district*' => Http::response(null, 500),
+        ]);
+
+        $ghnService = app(\App\Services\Shipping\GhnService::class);
+        $provinces = $ghnService->getProvinces();
+
+        $this->assertGreaterThanOrEqual(63, count($provinces));
+        $names = collect($provinces)->pluck('name')->all();
+        $this->assertContains('Hà Nội', $names);
+        $this->assertContains('Hồ Chí Minh', $names);
+        $this->assertContains('An Giang', $names);
+        $this->assertContains('Cần Thơ', $names);
+
+        // Check districts fallback for An Giang (217)
+        $districts = $ghnService->getDistricts(217);
+        $this->assertNotEmpty($districts);
+        $districtNames = collect($districts)->pluck('name')->all();
+        $this->assertContains('Thành phố Long Xuyên', $districtNames);
+    }
+
+    public function test_checkout_displays_saved_addresses_for_user(): void
+    {
+        $user = User::factory()->create([
+            'address' => 'Số 99 Đường Hoa Hồng, Phường 2, Quận Phú Nhuận, TP.HCM',
+            'phone' => '0933445566',
+        ]);
+
+        [$order, $variant] = $this->createOrderWithVariant($user);
+
+        app(\App\Services\CartService::class)->setBuyNowItem($variant->product, 1, $variant);
+
+        $response = $this->actingAs($user)->get(route('checkout.index'));
+
+        $response->assertStatus(200);
+        $response->assertSee('Số 99 Đường Hoa Hồng');
+        $response->assertSee('0933445566');
+    }
 }
