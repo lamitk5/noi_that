@@ -12,17 +12,27 @@ use Illuminate\View\View;
 
 class WishlistController extends Controller
 {
-    public function index(Request $request): View|JsonResponse
+    public function index(Request $request): View|JsonResponse|RedirectResponse
     {
+        if (!Auth::check()) {
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Vui lòng đăng nhập để xem danh sách yêu thích.',
+                    'redirect' => route('login'),
+                ], 401);
+            }
+
+            return redirect()->route('login')->with('error', 'Vui lòng đăng nhập để xem danh sách yêu thích.');
+        }
+
         $user = Auth::user();
 
-        $products = $user
-            ? Product::active()
-                ->with(['category', 'images', 'variants'])
-                ->whereHas('wishlists', fn ($q) => $q->where('user_id', $user->id))
-                ->latest()
-                ->get()
-            : collect();
+        $products = Product::active()
+            ->with(['category', 'images', 'primaryImage', 'variants'])
+            ->whereHas('wishlists', fn ($q) => $q->where('user_id', $user->id))
+            ->latest()
+            ->get();
 
         if ($request->wantsJson()) {
             return response()->json([
@@ -78,6 +88,7 @@ class WishlistController extends Controller
                 'message' => $message,
                 'in_wishlist' => $inWishlist,
                 'count' => $count,
+                'product_id' => $product->id,
             ]);
         }
 
@@ -101,6 +112,7 @@ class WishlistController extends Controller
             ->where('product_id', $product->id)
             ->delete();
 
+        $count = Wishlist::where('user_id', Auth::id())->count();
         $message = "Đã bỏ \"{$product->name}\" khỏi danh sách yêu thích.";
 
         if ($request->wantsJson()) {
@@ -108,7 +120,8 @@ class WishlistController extends Controller
                 'success' => true,
                 'message' => $message,
                 'in_wishlist' => false,
-                'count' => Wishlist::where('user_id', Auth::id())->count(),
+                'count' => $count,
+                'product_id' => $product->id,
             ]);
         }
 

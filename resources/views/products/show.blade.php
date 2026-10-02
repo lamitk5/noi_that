@@ -273,13 +273,17 @@
                                 </button>
                             </div>
 
+                            @php
+                                $isWishlisted = in_array($product->id, $wishlistProductIds ?? []);
+                            @endphp
                             <button
                                 type="button"
-                                class="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-ui-border bg-surface px-4 py-2.5 text-xs font-semibold text-muted hover:text-red-500 hover:border-red-200 transition"
-                                aria-label="Thêm vào danh sách yêu thích"
+                                class="wishlist-detail-btn w-full inline-flex items-center justify-center gap-2 rounded-xl border {{ $isWishlisted ? 'border-rose-300 bg-rose-50/50 text-rose-600 dark:bg-rose-950/20 is-active' : 'border-ui-border bg-surface text-muted hover:text-rose-500 hover:border-rose-200' }} px-4 py-2.5 text-xs font-semibold transition cursor-pointer"
+                                data-wishlist-url="{{ route('wishlist.toggle', $product) }}"
+                                aria-label="{{ $isWishlisted ? 'Bỏ khỏi danh sách yêu thích' : 'Thêm vào danh sách yêu thích' }}"
                             >
-                                <svg viewBox="0 0 24 24" class="size-4 text-muted hover:text-red-500 transition-colors" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20.8 5.7a5.5 5.5 0 0 0-7.8 0L12 6.8l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 22l8.8-8.5a5.5 5.5 0 0 0 0-7.8Z"/></svg>
-                                <span>Thêm vào danh sách yêu thích</span>
+                                <svg viewBox="0 0 24 24" class="wishlist-icon size-4 transition-colors {{ $isWishlisted ? 'fill-current text-rose-600' : '' }}" fill="{{ $isWishlisted ? 'currentColor' : 'none' }}" stroke="currentColor" stroke-width="1.7"><path d="M20.8 5.7a5.5 5.5 0 0 0-7.8 0L12 6.8l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 22l8.8-8.5a5.5 5.5 0 0 0 0-7.8Z"/></svg>
+                                <span class="wishlist-btn-text">{{ $isWishlisted ? 'Đã lưu trong yêu thích' : 'Thêm vào danh sách yêu thích' }}</span>
                             </button>
                         </div>
                     </form>
@@ -344,7 +348,7 @@
                                         loading="lazy"
                                     >
                                 </a>
-                                <button class="wishlist-button" type="button" aria-label="Thêm {{ $related->name }} vào yêu thích">
+                                <button class="wishlist-button {{ in_array($related->id, $wishlistProductIds ?? []) ? 'is-active' : '' }}" type="button" data-wishlist-url="{{ route('wishlist.toggle', $related) }}" aria-label="Thêm {{ $related->name }} vào yêu thích">
                                     <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20.8 5.7a5.5 5.5 0 0 0-7.8 0L12 6.8l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 22l8.8-8.5a5.5 5.5 0 0 0 0-7.8Z"/></svg>
                                 </button>
                                 <a href="{{ route('products.show', $related->slug) }}" class="quick-add">

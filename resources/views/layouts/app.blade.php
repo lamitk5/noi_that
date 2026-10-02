@@ -45,12 +45,24 @@
             <nav class="hidden items-center gap-8 lg:flex" aria-label="Điều hướng chính">
                 <a href="{{ route('home') }}" class="nav-link {{ request()->routeIs('home') ? 'is-active' : '' }}">Trang chủ</a>
                 <a href="{{ route('products.index') }}" class="nav-link {{ request()->routeIs('products.*') ? 'is-active' : '' }}">Sản phẩm</a>
+                <a href="{{ route('wishlist.index') }}" class="nav-link {{ request()->routeIs('wishlist.*') ? 'is-active' : '' }}">Yêu thích</a>
                 <a href="{{ route('home') }}#bo-suu-tap" class="nav-link">Bộ sưu tập</a>
                 <a href="{{ route('home') }}#ve-chung-toi" class="nav-link">Về Mộc An</a>
                 <a href="{{ route('home') }}#lien-he" class="nav-link">Liên hệ</a>
             </nav>
 
             <div class="flex items-center gap-1 sm:gap-2">
+                <a
+                    href="{{ route('wishlist.index') }}"
+                    class="icon-button relative {{ request()->routeIs('wishlist.*') ? 'bg-surface-alt text-primary font-bold' : '' }}"
+                    aria-label="Danh sách yêu thích"
+                    title="Danh sách yêu thích"
+                >
+                    <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
+                    </svg>
+                    <span class="wishlist-badge-count absolute right-0.5 top-0.5 grid size-4 place-items-center rounded-full bg-rose-500 text-[9px] font-bold text-white {{ ($wishlistCount ?? 0) > 0 ? '' : 'hidden' }}">{{ $wishlistCount ?? 0 }}</span>
+                </a>
                 <a
                     href="{{ route('orders.index') }}"
                     class="icon-button {{ request()->routeIs('orders.*') ? 'bg-surface-alt text-primary font-bold' : '' }}"
@@ -119,6 +131,11 @@
                                             <span>Đăng ký</span>
                                         </span>
                                     @endif
+
+                                    <a href="{{ route('wishlist.index') }}" class="flex items-center gap-2.5 rounded-lg px-2.5 py-2 hover:bg-surface-alt hover:text-heading transition-colors">
+                                        <svg viewBox="0 0 24 24" class="size-4 text-rose-500" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"/></svg>
+                                        <span>Danh sách yêu thích</span>
+                                    </a>
                                 @endguest
 
                                 @auth
@@ -138,6 +155,14 @@
                                             <span>Tài khoản của tôi</span>
                                         </span>
                                     @endif
+
+                                    <a href="{{ route('wishlist.index') }}" class="flex items-center justify-between rounded-lg px-2.5 py-2 hover:bg-surface-alt hover:text-heading transition-colors">
+                                        <div class="flex items-center gap-2.5">
+                                            <svg viewBox="0 0 24 24" class="size-4 text-rose-500" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"/></svg>
+                                            <span>Danh sách yêu thích</span>
+                                        </div>
+                                        <span class="wishlist-badge-count rounded-full bg-rose-500/15 text-rose-600 px-2 py-0.5 text-[10px] font-bold {{ ($wishlistCount ?? 0) > 0 ? '' : 'hidden' }}">{{ $wishlistCount ?? 0 }}</span>
+                                    </a>
 
                                     @if (Route::has('orders.index'))
                                         <a href="{{ route('orders.index') }}" class="flex items-center gap-2.5 rounded-lg px-2.5 py-2 hover:bg-surface-alt hover:text-heading transition-colors">
@@ -260,6 +285,10 @@
             <div class="mx-auto flex max-w-7xl flex-col">
                 <a href="{{ route('home') }}" class="mobile-nav-link">Trang chủ</a>
                 <a href="{{ route('products.index') }}" class="mobile-nav-link">Sản phẩm</a>
+                <a href="{{ route('wishlist.index') }}" class="mobile-nav-link flex items-center justify-between">
+                    <span>Danh sách yêu thích</span>
+                    <span class="wishlist-badge-count rounded-full bg-rose-500 px-2 py-0.5 text-xs font-semibold text-white {{ ($wishlistCount ?? 0) > 0 ? '' : 'hidden' }}">{{ $wishlistCount ?? 0 }}</span>
+                </a>
                 <a href="{{ route('cart.index') }}" class="mobile-nav-link flex items-center justify-between">
                     <span>Giỏ hàng</span>
                     <span class="rounded-full bg-accent px-2 py-0.5 text-xs font-semibold text-accent-foreground">{{ $cartCount ?? 0 }}</span>
@@ -286,9 +315,9 @@
                     <ul class="mt-4 space-y-2.5 text-xs text-muted">
                         <li><a href="{{ route('home') }}#ve-chung-toi" class="hover:text-primary transition-colors">Về thương hiệu Mộc An</a></li>
                         <li><a href="{{ route('products.index') }}" class="hover:text-primary transition-colors">Bộ sưu tập nội thất tự nhiên</a></li>
+                        <li><a href="{{ route('wishlist.index') }}" class="hover:text-primary transition-colors">Danh sách yêu thích</a></li>
                         <li><a href="{{ route('home') }}#bo-suu-tap" class="hover:text-primary transition-colors">Hệ thống showroom & nhà xưởng</a></li>
                         <li><a href="{{ route('home') }}#ve-chung-toi" class="hover:text-primary transition-colors">Tiêu chuẩn vật liệu bền vững</a></li>
-                        <li><a href="{{ route('home') }}#ve-chung-toi" class="hover:text-primary transition-colors">Điều khoản dịch vụ & bảo mật</a></li>
                     </ul>
                 </div>
 
@@ -296,6 +325,7 @@
                 <div>
                     <h3 class="font-display text-base font-bold uppercase tracking-wider text-heading">Hỗ trợ</h3>
                     <ul class="mt-4 space-y-2.5 text-xs text-muted">
+                        <li><a href="{{ route('wishlist.index') }}" class="hover:text-primary transition-colors">Sản phẩm đã lưu</a></li>
                         <li><a href="{{ route('home') }}#lien-he" class="hover:text-primary transition-colors">Câu hỏi thường gặp (FAQ)</a></li>
                         <li><a href="{{ route('home') }}#lien-he" class="hover:text-primary transition-colors">Hướng dẫn đặt hàng & thanh toán</a></li>
                         <li><a href="{{ route('home') }}#lien-he" class="hover:text-primary transition-colors">Chính sách bảo hành 5 năm</a></li>

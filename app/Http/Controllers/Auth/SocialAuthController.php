@@ -37,6 +37,16 @@ class SocialAuthController extends Controller
         try {
             /** @var \Laravel\Socialite\Contracts\Provider $driver */
             $driver = Socialite::driver($provider);
+            $redirectUrl = config('services.google.redirect') ?: url('/auth/google/callback');
+            if (str_starts_with((string) config('app.url'), 'https://') && str_starts_with($redirectUrl, 'http://')) {
+                $redirectUrl = preg_replace('/^http:/', 'https:', $redirectUrl);
+            }
+            if (method_exists($driver, 'redirectUrl')) {
+                $driver->redirectUrl($redirectUrl);
+            }
+            if (method_exists($driver, 'stateless')) {
+                $driver = $driver->stateless();
+            }
             return $driver->redirect();
         } catch (Throwable $e) {
             return redirect()->route('login')->with('error', 'Lỗi khởi tạo đăng nhập Google: ' . $e->getMessage());
@@ -52,6 +62,16 @@ class SocialAuthController extends Controller
         try {
             /** @var \Laravel\Socialite\Contracts\Provider $driver */
             $driver = Socialite::driver($provider);
+            $redirectUrl = config('services.google.redirect') ?: url('/auth/google/callback');
+            if (str_starts_with((string) config('app.url'), 'https://') && str_starts_with($redirectUrl, 'http://')) {
+                $redirectUrl = preg_replace('/^http:/', 'https:', $redirectUrl);
+            }
+            if (method_exists($driver, 'redirectUrl')) {
+                $driver->redirectUrl($redirectUrl);
+            }
+            if (method_exists($driver, 'stateless')) {
+                $driver = $driver->stateless();
+            }
             $socialUser = $driver->user();
 
             $email = $socialUser->getEmail();
