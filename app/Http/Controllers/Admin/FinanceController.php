@@ -53,11 +53,18 @@ class FinanceController extends Controller
         );
         $orderSelects = array_map(fn ($col) => "orders.{$col}", $orderColumns);
 
+        $hasPaymentGateway = Schema::hasColumn('payment_transactions', 'gateway');
+        $hasPaymentProvider = Schema::hasColumn('payment_transactions', 'provider');
+        $hasOrderStatus = Schema::hasColumn('orders', 'status');
+
+        $gatewayField = $hasPaymentGateway ? 'payment.gateway' : ($hasPaymentProvider ? 'payment.provider' : 'NULL');
+        $statusField = $hasOrderStatus ? 'orders.status' : 'orders.order_status';
+
         $orders = DB::table('orders')->leftJoin('payment_transactions as payment', function ($join) use ($paymentId) {
             $join->on('payment.order_id', '=', 'orders.id')->where('payment.id', '=', $paymentId);
         })->select(array_merge($orderSelects, ['payment.id as payment_id', 'payment.paid_at']))
-        ->selectRaw("COALESCE(payment.gateway, CASE WHEN orders.status IN ('cod_ordered', 'cod_paid') THEN 'cod' WHEN orders.status IN ('paid', 'paid_momo') THEN 'momo' ELSE 'unknown' END) as gateway")
-        ->selectRaw("COALESCE(payment.status, CASE WHEN orders.status = 'cod_ordered' THEN 'pending' WHEN orders.status IN ('cod_paid', 'paid_momo') THEN 'paid' ELSE orders.status END) as payment_status");
+        ->selectRaw("COALESCE({$gatewayField}, CASE WHEN {$statusField} IN ('cod_ordered', 'cod_paid') OR orders.payment_method = 'cod' THEN 'cod' WHEN {$statusField} IN ('paid', 'paid_momo') OR orders.payment_method = 'momo' THEN 'momo' WHEN orders.payment_method = 'vnpay' THEN 'vnpay' ELSE 'unknown' END) as gateway")
+        ->selectRaw("COALESCE(payment.status, CASE WHEN {$statusField} = 'cod_ordered' THEN 'pending' WHEN {$statusField} IN ('cod_paid', 'paid_momo') THEN 'paid' ELSE orders.payment_status END, 'pending') as payment_status");
 
         return DB::query()->fromSub($orders, 'finance_orders');
     }
@@ -87,8 +94,18 @@ class FinanceController extends Controller
 
         if ($request->filled('search')) {
             $search = trim($filters['search']);
-            $query->where(function ($query) use ($search) {
-                $query->where('name', 'like', '%'.$search.'%')->orWhere('phone', 'like', '%'.$search.'%');
+            $hasName = Schema::hasColumn('orders', 'name');
+            $hasPhone = Schema::hasColumn('orders', 'phone');
+            $query->where(function ($query) use ($search, $hasName, $hasPhone) {
+                $query->where('customer_name', 'like', '%'.$search.'%')
+                    ->orWhere('customer_phone', 'like', '%'.$search.'%')
+                    ->orWhere('order_code', 'like', '%'.$search.'%');
+                if ($hasName) {
+                    $query->orWhere('name', 'like', '%'.$search.'%');
+                }
+                if ($hasPhone) {
+                    $query->orWhere('phone', 'like', '%'.$search.'%');
+                }
                 if (ctype_digit(ltrim($search, '#'))) {
                     $query->orWhere('id', ltrim($search, '#'));
                 }
@@ -181,13 +198,16 @@ class FinanceController extends Controller
 
             $payment = $order->paymentTransactions()->orderByRaw(self::PAYMENT_PRIORITY)->orderByDesc('id')->lockForUpdate()->first();
 
-            $isCod = $payment ? $payment->gateway === 'cod' : in_array($order->status, ['cod_ordered', 'cod_paid'], true);
+            $orderStatusVal = $order->status ?? $order->order_status;
+            $paymentGatewayVal = $payment?->gateway ?? $payment?->provider ?? $order->payment_method;
+
+            $isCod = $paymentGatewayVal === 'cod' || in_array($orderStatusVal, ['cod_ordered', 'cod_paid'], true) || $order->payment_method === 'cod';
             if (!$isCod) {
                 throw ValidationException::withMessages(['payment_status' => 'Chỉ được cập nhật thủ công cho đơn COD.']);
             }
 
-            $currentStatus = $payment?->status ?? ($order->status === 'cod_paid' ? 'paid' : 'pending');
-            if ($currentStatus !== $data['current_payment_status'] || $order->status !== $data['current_order_status'] || (int) ($payment?->id ?? 0) !== (int) $data['current_payment_id']) {
+            $currentStatus = $payment?->status ?? ($order->payment_status ?? ($orderStatusVal === 'cod_paid' ? 'paid' : 'pending'));
+            if ($currentStatus !== $data['current_payment_status'] || (int) ($payment?->id ?? 0) !== (int) $data['current_payment_id']) {
                 throw ValidationException::withMessages(['payment_status' => 'Đơn hàng vừa thay đổi. Vui lòng tải lại trang trước khi cập nhật.']);
             }
 
@@ -200,34 +220,45 @@ class FinanceController extends Controller
                 return;
             }
 
-            if (in_array($newStatus, ['pending', 'paid'], true) && ($order->status === 'cancelled' || in_array($order->shipping_status, ['cancelled', 'return', 'returned'], true))) {
+            $orderShippingStatus = $order->shipping_status ?? $order->ghn_status ?? '';
+            if (in_array($newStatus, ['pending', 'paid'], true) && ($order->order_status === 'cancelled' || in_array($orderShippingStatus, ['cancelled', 'return', 'returned'], true))) {
                 throw ValidationException::withMessages(['payment_status' => 'Không thể xác nhận thu tiền cho đơn đã hủy hoặc hoàn hàng.']);
             }
 
             $adminId = $request->user()?->id ?? auth()->id() ?? 'admin';
             $attributes = [
                 'status' => $newStatus,
-                'message' => 'Quản trị viên #'.$adminId.' cập nhật: '.self::STATUSES[$newStatus],
                 'paid_at' => $newStatus === 'paid' ? ($payment?->paid_at ?? now()) : $payment?->paid_at,
             ];
+
+            if (Schema::hasColumn('payment_transactions', 'message')) {
+                $attributes['message'] = 'Quản trị viên #'.$adminId.' cập nhật: '.self::STATUSES[$newStatus];
+            }
+            if (Schema::hasColumn('payment_transactions', 'gateway')) {
+                $attributes['gateway'] = 'cod';
+            }
+            $attributes['provider'] = 'cod';
+            $attributes['provider_reference'] = $payment?->provider_reference ?? ('COD_' . $order->id . '_' . time());
+            $attributes['amount'] = $order->total_price;
 
             if ($payment) {
                 $payment->update($attributes);
             } else {
-                $order->paymentTransactions()->create(array_merge($attributes, ['gateway' => 'cod', 'amount' => $order->total_price]));
+                $order->paymentTransactions()->create($attributes);
             }
 
+            $orderUpdates = ['payment_status' => ($newStatus === 'paid' ? 'paid' : $newStatus)];
             if ($newStatus === 'paid') {
-                $order->update([
-                    'status' => 'cod_paid',
-                    'payment_status' => 'paid',
-                ]);
+                $orderUpdates['order_status'] = 'confirmed';
+                if (Schema::hasColumn('orders', 'status')) {
+                    $orderUpdates['status'] = 'cod_paid';
+                }
             } elseif (in_array($newStatus, ['pending', 'failed'], true)) {
-                $order->update([
-                    'status' => 'cod_ordered',
-                    'payment_status' => $newStatus,
-                ]);
+                if (Schema::hasColumn('orders', 'status')) {
+                    $orderUpdates['status'] = 'cod_ordered';
+                }
             }
+            $order->update($orderUpdates);
         });
 
         return back()->with('success', 'Đã lưu trạng thái thanh toán đơn COD #'.$order->id.'.');

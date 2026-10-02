@@ -185,7 +185,7 @@
                 <tbody class="divide-y divide-ui-border text-body">
                     @forelse($orders as $order)
                         @php
-                            $isCod = $order->gateway === 'cod' || in_array($order->status, ['cod_ordered', 'cod_paid'], true);
+                            $isCod = ($order->gateway ?? '') === 'cod' || in_array($order->status ?? '', ['cod_ordered', 'cod_paid'], true) || ($order->payment_method ?? '') === 'cod';
                             $transitions = $isCod ? ($codTransitions[$order->payment_status] ?? []) : [];
                             $statusColor = match($order->payment_status) {
                                 'paid' => 'bg-emerald-50 text-emerald-700 border-emerald-200',
@@ -215,7 +215,7 @@
                                     {{ $order->name ?: ($order->customer_name ?: 'Khách #' . $order->id) }}
                                 </div>
                                 <div class="text-[11px] text-muted">
-                                    {{ $order->phone ?: $order->customer_phone }}
+                                    {{ $order->phone ?: ($order->customer_phone ?: '—') }}
                                 </div>
                             </td>
                             <td class="py-3.5 px-4">
@@ -242,7 +242,7 @@
                                         @csrf
                                         @method('PATCH')
                                         <input type="hidden" name="current_payment_status" value="{{ $order->payment_status }}">
-                                        <input type="hidden" name="current_order_status" value="{{ $order->status }}">
+                                        <input type="hidden" name="current_order_status" value="{{ $order->status ?? $order->order_status ?? 'pending' }}">
                                         <input type="hidden" name="current_payment_id" value="{{ $order->payment_id ?? 0 }}">
                                         <select
                                             name="payment_status"
