@@ -205,7 +205,7 @@ class GhnShippingTest extends TestCase
                 'checkout_token' => 'test-ghn-token',
             ]);
 
-        $newOrder = Order::latest()->first();
+        $newOrder = Order::latest('id')->first();
         $this->assertNotNull($newOrder);
         $this->assertNotNull($newOrder->ghn_order_code);
         $this->assertEquals('L59XN890P', $newOrder->ghn_order_code);
@@ -262,5 +262,64 @@ class GhnShippingTest extends TestCase
         $response->assertRedirect();
         $response->assertSessionHas('success');
         $this->assertEquals('L59MANUAL01', $order->fresh()->ghn_order_code);
+    }
+
+    public function test_parse_dimensions_utility(): void
+    {
+        $dims1 = \App\Services\Shipping\GhnService::parseDimensions('6 ghế (160 x 85 x 75 cm) · Gỗ sồi tự nhiên');
+        $this->assertEquals(['length' => 160, 'width' => 85, 'height' => 75], $dims1);
+
+        $dims2 = \App\Services\Shipping\GhnService::parseDimensions('150 x 80 x 90 cm');
+        $this->assertEquals(['length' => 150, 'width' => 80, 'height' => 90], $dims2);
+
+        $dims3 = \App\Services\Shipping\GhnService::parseDimensions('180x80cm');
+        $this->assertEquals(['length' => 180, 'width' => 80, 'height' => 20], $dims3);
+
+        $dims4 = \App\Services\Shipping\GhnService::parseDimensions(null);
+        $this->assertEquals(['length' => 30, 'width' => 20, 'height' => 20], $dims4);
+    }
+
+    public function test_ghn_order_creation_uses_actual_variant_dimensions_and_weight(): void
+    {
+        $user = User::factory()->create();
+        [$order, $variant] = $this->createOrderWithVariant($user, 8490000);
+
+        // Update variant size and product weight to mimic the user's "Đảo Bếp" product
+        $variant->update(['size' => '6 ghế (160 x 85 x 75 cm)']);
+        $variant->product->update(['weight' => 64.9]);
+
+        $capturedPayload = null;
+        Http::fake([
+            '*/v2/shipping-order/create*' => function (\Illuminate\Http\Client\Request $request) use (&$capturedPayload) {
+                $capturedPayload = $request->data();
+                return Http::response([
+                    'code' => 200,
+                    'data' => [
+                        'order_code' => 'GHN_DIM_TEST_01',
+                        'expected_delivery_time' => '2026-10-05T12:00:00Z',
+                    ],
+                ], 200);
+            },
+        ]);
+
+        $ghnService = app(\App\Services\Shipping\GhnService::class);
+        $code = $ghnService->createShippingOrder($order);
+
+        $this->assertEquals('GHN_DIM_TEST_01', $code);
+        $this->assertNotNull($capturedPayload);
+
+        // Package dimensions (capped at GHN max 150cm)
+        $this->assertEquals(150, $capturedPayload['length']);
+        $this->assertEquals(85, $capturedPayload['width']);
+        $this->assertEquals(75, $capturedPayload['height']);
+        $this->assertEquals(50000, $capturedPayload['weight']); // Capped at max 50kg for courier safety
+
+        // Items array dimensions
+        $this->assertNotEmpty($capturedPayload['items']);
+        $item = $capturedPayload['items'][0];
+        $this->assertEquals(150, $item['length']);
+        $this->assertEquals(85, $item['width']);
+        $this->assertEquals(75, $item['height']);
+        $this->assertEquals(64900, $item['weight']);
     }
 }

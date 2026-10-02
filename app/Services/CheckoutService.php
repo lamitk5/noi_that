@@ -84,8 +84,43 @@ class CheckoutService
             // Calculate shipping fee from GHN or session
             $shippingFee = (float) session()->get('shipping_fee', config('shop.shipping_fee', 0));
             if (! empty($data['district_id']) && ! empty($data['ward_code'])) {
-                $totalWeight = max(500, count($itemsData) * 500);
-                $shippingFee = $this->ghnService->calculateFee((int) $data['district_id'], (string) $data['ward_code'], $totalWeight, $subtotal);
+                $totalWeight = 0;
+                $maxLength = 30;
+                $maxWidth = 20;
+                $totalHeight = 0;
+
+                foreach ($itemsData as $itemEntry) {
+                    $variant = $itemEntry['variant'] ?? null;
+                    $product = $variant?->product;
+                    $qty = max(1, (int) ($itemEntry['quantity'] ?? 1));
+
+                    $dimString = $variant?->size ?: ($product?->dimensions ?? null);
+                    $dims = \App\Services\Shipping\GhnService::parseDimensions($dimString);
+
+                    $unitWeight = 500;
+                    if ($product && !empty($product->weight) && (float) $product->weight > 0) {
+                        $unitWeight = (int) round(((float) $product->weight) * 1000);
+                    }
+                    $totalWeight += max(200, $unitWeight * $qty);
+                    $maxLength = max($maxLength, min(150, $dims['length']));
+                    $maxWidth = max($maxWidth, min(150, $dims['width']));
+                    $totalHeight += min(150, $dims['height']) * $qty;
+                }
+
+                $totalWeight = min(50000, max(500, $totalWeight));
+                $packageLength = min(150, max(10, $maxLength));
+                $packageWidth = min(150, max(10, $maxWidth));
+                $packageHeight = min(150, max(10, $totalHeight));
+
+                $shippingFee = $this->ghnService->calculateFee(
+                    (int) $data['district_id'],
+                    (string) $data['ward_code'],
+                    $totalWeight,
+                    $subtotal,
+                    $packageLength,
+                    $packageWidth,
+                    $packageHeight
+                );
             }
 
             // Handle coupon discount if applied

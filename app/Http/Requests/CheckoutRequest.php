@@ -11,6 +11,13 @@ class CheckoutRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if (! $this->filled('customer_email') && auth()->check()) {
+            $this->merge(['customer_email' => auth()->user()->email]);
+        }
+    }
+
     public function rules(): array
     {
         return [

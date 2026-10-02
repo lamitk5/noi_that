@@ -76,6 +76,25 @@ class CheckoutController extends Controller
 
         $cart = $this->cartService->getSelectedCart();
 
+        if (empty($cart) && session()->has('cart')) {
+            $legacyCart = session('cart', []);
+            $cart = [];
+            foreach ($legacyCart as $variantId => $qty) {
+                $variant = \App\Models\ProductVariant::with('product')->find($variantId);
+                if ($variant) {
+                    $key = "{$variant->product_id}-{$variant->id}";
+                    $cart[$key] = [
+                        'id' => $variant->product_id,
+                        'key' => $key,
+                        'variant_id' => $variant->id,
+                        'name' => $variant->product?->name ?? 'Sản phẩm nội thất',
+                        'price' => (float) $variant->price,
+                        'quantity' => (int) $qty,
+                    ];
+                }
+            }
+        }
+
         if (empty($cart)) {
             if ($request->wantsJson()) {
                 return response()->json([

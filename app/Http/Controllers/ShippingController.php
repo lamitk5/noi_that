@@ -68,11 +68,50 @@ class ShippingController extends Controller
             ]);
         }
 
-        $cart = $this->cartService->getCart();
-        $totalWeight = max(500, array_sum(array_column($cart, 'quantity')) * 500);
-        $orderValue = $this->cartService->getSubtotal();
+        $items = $this->cartService->getSelectedItems();
+        if ($items->isEmpty()) {
+            $items = $this->cartService->getItems();
+        }
 
-        $fee = $this->ghnService->calculateFee($toDistrictId, $toWardCode, $totalWeight, $orderValue);
+        $totalWeight = 0;
+        $maxLength = 30;
+        $maxWidth = 20;
+        $totalHeight = 0;
+
+        foreach ($items as $item) {
+            $qty = max(1, (int) $item->quantity);
+            $product = $item->product;
+            $variant = $item->variant;
+
+            $dimString = $variant?->size ?: $product?->dimensions;
+            $dims = \App\Services\Shipping\GhnService::parseDimensions($dimString);
+
+            $unitWeight = 500;
+            if ($product && !empty($product->weight) && (float) $product->weight > 0) {
+                $unitWeight = (int) round(((float) $product->weight) * 1000);
+            }
+            $totalWeight += max(200, $unitWeight * $qty);
+            $maxLength = max($maxLength, min(150, $dims['length']));
+            $maxWidth = max($maxWidth, min(150, $dims['width']));
+            $totalHeight += min(150, $dims['height']) * $qty;
+        }
+
+        $totalWeight = min(50000, max(500, $totalWeight));
+        $packageLength = min(150, max(10, $maxLength));
+        $packageWidth = min(150, max(10, $maxWidth));
+        $packageHeight = min(150, max(10, $totalHeight));
+
+        $orderValue = $this->cartService->getSelectedSubtotal() ?: $this->cartService->getSubtotal();
+
+        $fee = $this->ghnService->calculateFee(
+            $toDistrictId,
+            $toWardCode,
+            $totalWeight,
+            $orderValue,
+            $packageLength,
+            $packageWidth,
+            $packageHeight
+        );
 
         session()->put('shipping_fee', $fee);
         session()->put('shipping_destination', [

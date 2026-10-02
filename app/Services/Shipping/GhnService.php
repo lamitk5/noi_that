@@ -125,23 +125,61 @@ class GhnService
         });
     }
 
-    public function calculateFee(int $toDistrictId, string $toWardCode, int $weight = 2000, float $insuranceValue = 0): float
+    /**
+     * Trích xuất kích thước [dài, rộng, cao] (cm) từ chuỗi định dạng (vd: "160 x 85 x 75 cm" hoặc "180x80cm").
+     */
+    public static function parseDimensions(?string $dimString): array
     {
+        if (empty($dimString)) {
+            return ['length' => 30, 'width' => 20, 'height' => 20];
+        }
+
+        if (preg_match('/(\d+(?:\.\d+)?)\s*[xX*×]\s*(\d+(?:\.\d+)?)(?:\s*[xX*×]\s*(\d+(?:\.\d+)?))?/', $dimString, $matches)) {
+            $length = (int) round((float) $matches[1]);
+            $width = (int) round((float) $matches[2]);
+            $height = isset($matches[3]) ? (int) round((float) $matches[3]) : 20;
+
+            return [
+                'length' => max(10, $length),
+                'width' => max(10, $width),
+                'height' => max(10, $height),
+            ];
+        }
+
+        return ['length' => 30, 'width' => 20, 'height' => 20];
+    }
+
+    public function calculateFee(
+        int $toDistrictId,
+        string $toWardCode,
+        int $weight = 2000,
+        float $insuranceValue = 0,
+        int $length = 30,
+        int $width = 20,
+        int $height = 20
+    ): float {
         if ($toDistrictId <= 0 || $toWardCode === '') {
             return $this->defaultFee;
         }
 
         try {
+            $pkgLength = min(150, max(10, $length));
+            $pkgWidth = min(150, max(10, $width));
+            $pkgHeight = min(150, max(10, $height));
+            $pkgWeight = min(50000, max(200, $weight));
+
+            $serviceTypeId = ($pkgWeight > 20000 || $pkgLength > 100 || $pkgWidth > 100) ? 5 : 2;
+
             $payload = [
                 'shop_id' => $this->shopId,
-                'service_type_id' => 2,
+                'service_type_id' => $serviceTypeId,
                 'from_district_id' => $this->fromDistrictId,
                 'to_district_id' => $toDistrictId,
                 'to_ward_code' => (string) $toWardCode,
-                'height' => 15,
-                'length' => 30,
-                'width' => 20,
-                'weight' => max(200, $weight),
+                'height' => $pkgHeight,
+                'length' => $pkgLength,
+                'width' => $pkgWidth,
+                'weight' => $pkgWeight,
                 'insurance_value' => (int) min(5000000, max(0, $insuranceValue)),
             ];
 
@@ -154,6 +192,22 @@ class GhnService
 
             if ($response->successful() && isset($response->json('data')['total'])) {
                 return (float) $response->json('data')['total'];
+            }
+
+            // Thử fallback sang loại dịch vụ khác nếu gói hàng không hỗ trợ dịch vụ hiện tại
+            if ($serviceTypeId === 5) {
+                $payload['service_type_id'] = 2;
+                $payload['weight'] = min(20000, $pkgWeight);
+                $fallbackRes = Http::timeout(10)
+                    ->withHeaders([
+                        'Token' => $this->token,
+                        'ShopId' => (string) $this->shopId,
+                    ])
+                    ->post($this->apiUrl . 'v2/shipping-order/fee', $payload);
+
+                if ($fallbackRes->successful() && isset($fallbackRes->json('data')['total'])) {
+                    return (float) $fallbackRes->json('data')['total'];
+                }
             }
         } catch (\Throwable $e) {
             Log::warning('GHN calculateFee error: ' . $e->getMessage());
@@ -172,21 +226,52 @@ class GhnService
             return $order->ghn_order_code;
         }
 
+        $order->loadMissing('items.variant.product');
+
         $isCod = $order->payment_method === 'cod';
         $codAmount = $isCod ? (int) round((float) $order->total_price) : 0;
 
         $items = [];
         $totalWeight = 0;
+        $maxLength = 30;
+        $maxWidth = 20;
+        $totalHeight = 0;
+
         foreach ($order->items as $item) {
             $qty = max(1, (int) $item->quantity);
-            $itemWeight = 500 * $qty;
+            $variant = $item->variant;
+            $product = $variant?->product;
+
+            // Kích thước: ưu tiên từ biến thể -> ghi chú biến thể -> thông số sản phẩm
+            $dimString = $variant?->size ?: ($item->variant_info ?: $product?->dimensions);
+            $dims = self::parseDimensions($dimString);
+
+            // Cân nặng: ưu tiên từ sản phẩm (kg -> gram)
+            $unitWeight = 500;
+            if ($product && !empty($product->weight) && (float) $product->weight > 0) {
+                $unitWeight = (int) round(((float) $product->weight) * 1000);
+            }
+            $itemWeight = max(200, $unitWeight * $qty);
             $totalWeight += $itemWeight;
+
+            // Giới hạn từng chiều tối đa 150cm theo quy định GHN
+            $itemLength = min(150, max(10, $dims['length']));
+            $itemWidth = min(150, max(10, $dims['width']));
+            $itemHeight = min(150, max(10, $dims['height']));
+
+            $maxLength = max($maxLength, $itemLength);
+            $maxWidth = max($maxWidth, $itemWidth);
+            $totalHeight += $itemHeight * $qty;
+
             $items[] = [
                 'name' => Str::limit($item->product_name ?? 'Sản phẩm nội thất', 80, ''),
                 'code' => (string) ($item->product_variant_id ?? $item->id),
                 'quantity' => $qty,
                 'price' => (int) round((float) $item->price),
                 'weight' => $itemWeight,
+                'length' => $itemLength,
+                'width' => $itemWidth,
+                'height' => $itemHeight,
             ];
         }
 
@@ -196,9 +281,22 @@ class GhnService
                 'quantity' => 1,
                 'price' => (int) round((float) $order->total_price),
                 'weight' => 1000,
+                'length' => 30,
+                'width' => 20,
+                'height' => 20,
             ];
             $totalWeight = 1000;
+            $maxLength = 30;
+            $maxWidth = 20;
+            $totalHeight = 20;
         }
+
+        $packageLength = min(150, max(10, $maxLength));
+        $packageWidth = min(150, max(10, $maxWidth));
+        $packageHeight = min(150, max(10, $totalHeight));
+        $packageWeight = min(50000, max(500, $totalWeight));
+
+        $serviceTypeId = ($packageWeight > 20000 || $packageLength > 100 || $packageWidth > 100) ? 5 : 2;
 
         $toDistrictId = (int) ($order->district_id ?: 1444);
         $toWardCode = (string) ($order->ward_code ?: '20311');
@@ -223,12 +321,12 @@ class GhnService
             'to_district_id' => $toDistrictId,
             'cod_amount' => $codAmount,
             'content' => "Don hang {$order->order_code}",
-            'weight' => max(500, $totalWeight),
-            'length' => 30,
-            'width' => 20,
-            'height' => 20,
+            'weight' => $packageWeight,
+            'length' => $packageLength,
+            'width' => $packageWidth,
+            'height' => $packageHeight,
             'insurance_value' => (int) min(5000000, max(0, (float) $order->total_price)),
-            'service_type_id' => 2,
+            'service_type_id' => $serviceTypeId,
             'items' => $items,
         ];
 
@@ -239,6 +337,23 @@ class GhnService
                     'ShopId' => (string) $this->shopId,
                 ])
                 ->post($this->apiUrl . 'v2/shipping-order/create', $payload);
+
+            // Tự động thử lại loại dịch vụ 2 nếu loại 5 không hỗ trợ khu vực này
+            if (! $response->successful() && $serviceTypeId === 5) {
+                $fallbackPayload = $payload;
+                $fallbackPayload['service_type_id'] = 2;
+                $fallbackPayload['weight'] = min(20000, $packageWeight);
+                $fallbackRes = Http::timeout(15)
+                    ->withHeaders([
+                        'Token' => $this->token,
+                        'ShopId' => (string) $this->shopId,
+                    ])
+                    ->post($this->apiUrl . 'v2/shipping-order/create', $fallbackPayload);
+
+                if ($fallbackRes->successful() && !empty($fallbackRes->json('data')['order_code'])) {
+                    $response = $fallbackRes;
+                }
+            }
 
             $data = $response->json('data');
             if ($response->successful() && !empty($data['order_code'])) {
