@@ -332,6 +332,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             const token = document.querySelector('meta[name="csrf-token"]')?.content;
             try {
+                const formData = new FormData();
+                if (token) formData.append('_token', token);
+                formData.append('_method', 'DELETE');
+
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: {
@@ -340,6 +344,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         'X-CSRF-TOKEN': token || '',
                         'X-HTTP-Method-Override': 'DELETE',
                     },
+                    body: formData,
                 });
                 const data = await response.json();
                 if (response.status === 401) {

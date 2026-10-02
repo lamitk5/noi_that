@@ -50,7 +50,7 @@ Route::prefix('checkout')->name('checkout.')->group(function () {
 Route::prefix('wishlist')->name('wishlist.')->group(function () {
     Route::get('/', [WishlistController::class, 'index'])->name('index');
     Route::post('/toggle/{product}', [WishlistController::class, 'toggle'])->name('toggle');
-    Route::delete('/remove/{product}', [WishlistController::class, 'remove'])->name('remove');
+    Route::match(['post', 'delete'], '/remove/{product}', [WishlistController::class, 'remove'])->name('remove');
 });
 
 // Chat với nhân viên (đăng nhập)
@@ -124,9 +124,10 @@ Route::middleware('auth')->group(function () {
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/login', [AuthController::class, 'login'])->name('login.submit');
     Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
-    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/register', [AuthController::class, 'register'])->name('register.submit');
+    Route::post('/register/store', [AuthController::class, 'register'])->name('register.store');
 
     Route::get('/auth/{provider}/redirect', [SocialAuthController::class, 'redirect'])->name('auth.social.redirect');
     Route::get('/auth/{provider}/callback', [SocialAuthController::class, 'callback'])->name('auth.social.callback');

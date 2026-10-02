@@ -66,7 +66,7 @@ class SmsService
             return ['success' => false, 'message' => 'Thiếu ESMS_API_KEY hoặc ESMS_SECRET_KEY trong .env.'];
         }
 
-        $response = Http::timeout(10)->get('http://rest.esms.vn/MainService.svc/json/SendMultipleMessage_V4_get', [
+        $response = Http::timeout(3)->get('http://rest.esms.vn/MainService.svc/json/SendMultipleMessage_V4_get', [
             'ApiKey' => $apiKey,
             'SecretKey' => $secretKey,
             'Phone' => $phone,

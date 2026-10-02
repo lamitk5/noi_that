@@ -94,6 +94,27 @@ class WishlistTest extends TestCase
         $this->assertFalse($product->isWishlistedBy($user));
     }
 
+    public function test_user_can_remove_product_via_delete_and_post_route(): void
+    {
+        $user = User::factory()->create();
+        $productA = $this->createProduct('Sản Phẩm A');
+        $productB = $this->createProduct('Sản Phẩm B');
+
+        Wishlist::create(['user_id' => $user->id, 'product_id' => $productA->id]);
+        Wishlist::create(['user_id' => $user->id, 'product_id' => $productB->id]);
+
+        // Remove via DELETE
+        $delResponse = $this->actingAs($user)->delete(route('wishlist.remove', $productA));
+        $delResponse->assertRedirect();
+        $this->assertDatabaseMissing('wishlists', ['user_id' => $user->id, 'product_id' => $productA->id]);
+
+        // Remove via POST (AJAX / JSON)
+        $postResponse = $this->actingAs($user)->postJson(route('wishlist.remove', $productB));
+        $postResponse->assertStatus(200);
+        $postResponse->assertJson(['success' => true, 'in_wishlist' => false]);
+        $this->assertDatabaseMissing('wishlists', ['user_id' => $user->id, 'product_id' => $productB->id]);
+    }
+
     public function test_wishlist_page_displays_saved_products_for_user(): void
     {
         $user = User::factory()->create();

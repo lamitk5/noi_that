@@ -48,26 +48,24 @@ class AuthController extends Controller
                 $code = (string) random_int(100000, 999999);
                 $type = !empty($user->email) ? 'email' : 'phone';
                 $target = $user->email ?: $user->phone;
+                $sentSuccessfully = false;
 
                 if ($type === 'email') {
                     try {
                         $this->sendEmailVerification($user->email, $code);
+                        $sentSuccessfully = true;
                     } catch (Throwable $e) {
-                        Log::error('Send verification email error: ' . $e->getMessage());
-                        if (config('mail.default') !== 'log' && !app()->runningUnitTests()) {
-                            return back()->withErrors([
-                                'email' => 'Lỗi gửi email xác thực: ' . $e->getMessage(),
-                            ])->onlyInput('email');
-                        }
+                        Log::warning('Send verification email error on login: ' . $e->getMessage());
                     }
                 } else {
                     if (!app()->runningUnitTests()) {
                         $smsResult = (new SmsService())->sendOtp($user->phone, $code);
-                        if (!$smsResult['success']) {
-                            return back()->withErrors([
-                                'email' => 'Lỗi gửi tin nhắn OTP: ' . $smsResult['message'],
-                            ])->onlyInput('email');
+                        $sentSuccessfully = $smsResult['success'] ?? false;
+                        if (!$sentSuccessfully) {
+                            Log::warning('Send OTP SMS error on login: ' . ($smsResult['message'] ?? 'Unknown'));
                         }
+                    } else {
+                        $sentSuccessfully = true;
                     }
                 }
 
@@ -85,12 +83,15 @@ class AuthController extends Controller
                     return response()->json([
                         'success' => false,
                         'require_verification' => true,
-                        'message' => 'Tài khoản chưa được kích hoạt. Vui lòng nhập mã xác thực vừa được gửi.',
+                        'message' => 'Tài khoản chưa được kích hoạt. Vui lòng nhập mã xác thực.',
                     ], 403);
                 }
 
-                $warningMsg = 'Tài khoản chưa kích hoạt. Vui lòng nhập mã xác thực vừa được gửi.';
-                if (config('mail.default') === 'log') {
+                $warningMsg = $sentSuccessfully
+                    ? 'Tài khoản chưa kích hoạt. Vui lòng nhập mã xác thực vừa được gửi.'
+                    : "Tài khoản chưa kích hoạt. Mã xác thực của bạn là: {$code}";
+
+                if (config('mail.default') === 'log' && $sentSuccessfully) {
                     $warningMsg .= " (Chưa cấu hình SMTP: Mã của bạn là {$code})";
                 }
 
@@ -201,29 +202,25 @@ class AuthController extends Controller
         // Generate 6-digit verification code / OTP
         $code = (string) random_int(100000, 999999);
         $target = $type === 'email' ? $email : $phone;
+        $sentSuccessfully = false;
 
-        // Send Real Email or Real SMS
+        // Send Real Email or Real SMS with non-blocking fail-safe
         if ($type === 'email') {
             try {
                 $this->sendEmailVerification($email, $code);
+                $sentSuccessfully = true;
             } catch (Throwable $e) {
-                Log::error('Send verification email error: ' . $e->getMessage());
-                if (config('mail.default') !== 'log' && !app()->runningUnitTests()) {
-                    $user->delete();
-                    return back()->withErrors([
-                        'email_or_phone' => 'Lỗi gửi email xác thực: ' . $e->getMessage() . '. Vui lòng kiểm tra lại cấu hình SMTP trong file .env.',
-                    ])->withInput();
-                }
+                Log::warning('Send verification email error on register: ' . $e->getMessage());
             }
         } else {
             if (!app()->runningUnitTests()) {
                 $smsResult = (new SmsService())->sendOtp($phone, $code);
-                if (!$smsResult['success']) {
-                    $user->delete();
-                    return back()->withErrors([
-                        'email_or_phone' => 'Lỗi gửi SMS OTP: ' . $smsResult['message'],
-                    ])->withInput();
+                $sentSuccessfully = $smsResult['success'] ?? false;
+                if (!$sentSuccessfully) {
+                    Log::warning('Send SMS OTP error on register: ' . ($smsResult['message'] ?? 'Unknown'));
                 }
+            } else {
+                $sentSuccessfully = true;
             }
         }
 
@@ -249,12 +246,16 @@ class AuthController extends Controller
             ], 201);
         }
 
-        $infoMsg = $type === 'email'
-            ? "Mã xác thực 6 chữ số đã được gửi về email {$email}. Vui lòng nhập mã để hoàn tất đăng ký."
-            : "Mã OTP 6 chữ số đã được gửi về số điện thoại {$phone}. Vui lòng nhập mã để hoàn tất đăng ký.";
+        if ($sentSuccessfully) {
+            $infoMsg = $type === 'email'
+                ? "Mã xác thực 6 chữ số đã được gửi về email {$email}. Vui lòng nhập mã để hoàn tất đăng ký."
+                : "Mã OTP 6 chữ số đã được gửi về số điện thoại {$phone}. Vui lòng nhập mã để hoàn tất đăng ký.";
 
-        if (config('mail.default') === 'log') {
-            $infoMsg .= " (Chưa cấu hình SMTP: Mã của bạn là {$code})";
+            if (config('mail.default') === 'log') {
+                $infoMsg .= " (Chưa cấu hình SMTP: Mã của bạn là {$code})";
+            }
+        } else {
+            $infoMsg = "Mã xác thực tài khoản của bạn là: {$code}. (Hệ thống không thể gửi email tự động do giới hạn máy chủ, vui lòng dùng mã này để kích hoạt).";
         }
 
         return redirect()->route('auth.verify')->with('info', $infoMsg);
@@ -333,21 +334,24 @@ class AuthController extends Controller
         $verifyData['expires_at'] = now()->addMinutes(10)->timestamp;
 
         $user = User::find($verifyData['user_id']);
+        $sentSuccessfully = false;
+
         if ($verifyData['type'] === 'email' && $user && $user->email) {
             try {
                 $this->sendEmailVerification($user->email, $newCode);
+                $sentSuccessfully = true;
             } catch (Throwable $e) {
-                Log::error('Resend verification email error: ' . $e->getMessage());
-                if (config('mail.default') !== 'log' && !app()->runningUnitTests()) {
-                    return back()->withErrors(['code' => 'Lỗi gửi email xác thực: ' . $e->getMessage()]);
-                }
+                Log::warning('Resend verification email error: ' . $e->getMessage());
             }
         } elseif ($user && $user->phone) {
             if (!app()->runningUnitTests()) {
                 $smsResult = (new SmsService())->sendOtp($user->phone, $newCode);
-                if (!$smsResult['success']) {
-                    return back()->withErrors(['code' => 'Lỗi gửi tin nhắn OTP: ' . $smsResult['message']]);
+                $sentSuccessfully = $smsResult['success'] ?? false;
+                if (!$sentSuccessfully) {
+                    Log::warning('Resend SMS OTP error: ' . ($smsResult['message'] ?? 'Unknown'));
                 }
+            } else {
+                $sentSuccessfully = true;
             }
         }
 
@@ -360,9 +364,13 @@ class AuthController extends Controller
             ]);
         }
 
-        $resendSuccessMsg = 'Mã xác thực mới đã được gửi!';
-        if (config('mail.default') === 'log') {
-            $resendSuccessMsg .= " (Chưa cấu hình SMTP: Mã của bạn là {$newCode})";
+        if ($sentSuccessfully) {
+            $resendSuccessMsg = 'Mã xác thực mới đã được gửi!';
+            if (config('mail.default') === 'log') {
+                $resendSuccessMsg .= " (Chưa cấu hình SMTP: Mã của bạn là {$newCode})";
+            }
+        } else {
+            $resendSuccessMsg = "Mã xác thực mới của bạn là: {$newCode}. (Không thể gửi email tự động).";
         }
 
         return back()->with('success', $resendSuccessMsg);

@@ -85,7 +85,7 @@
                                     @csrf
                                     @method('DELETE')
                                     <button
-                                        type="button"
+                                        type="submit"
                                         class="wishlist-remove-btn absolute right-3 top-3 grid size-10 place-items-center rounded-full bg-surface/90 text-rose-500 shadow-sm transition hover:bg-rose-500 hover:text-white cursor-pointer"
                                         data-remove-url="{{ route('wishlist.remove', $product) }}"
                                         data-product-id="{{ $product->id }}"

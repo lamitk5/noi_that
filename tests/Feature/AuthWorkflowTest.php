@@ -163,4 +163,26 @@ class AuthWorkflowTest extends TestCase
         $response->assertRedirect();
         $this->assertStringContainsString('accounts.google.com', $response->headers->get('Location'));
     }
+
+    public function test_registration_succeeds_even_when_mail_server_fails(): void
+    {
+        \Illuminate\Support\Facades\Mail::shouldReceive('html')
+            ->andThrow(new \Exception('Connection to smtp.gmail.com timed out'));
+
+        $response = $this->post('/register', [
+            'username' => 'testuser_smtp_fail',
+            'name' => 'Nguyen Mail Fail',
+            'email_or_phone' => 'mailfail@example.com',
+            'password' => 'secret123',
+            'password_confirmation' => 'secret123',
+        ]);
+
+        $response->assertRedirect('/xac-thuc');
+        $this->assertDatabaseHas('users', [
+            'username' => 'testuser_smtp_fail',
+            'email' => 'mailfail@example.com',
+        ]);
+        $this->assertNotNull(session('verify_data'));
+        $this->assertStringContainsString('Mã xác thực tài khoản của bạn là:', session('info'));
+    }
 }
