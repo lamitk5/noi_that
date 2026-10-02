@@ -72,11 +72,10 @@ case "${RUN_MIGRATIONS:-true}" in
     *) echo "RUN_MIGRATIONS must be true or false" >&2; exit 1 ;;
 esac
 
-case "${RUN_SEEDERS:-false}" in
-    true) su-exec www-data php artisan db:seed --force --no-interaction ;;
-    false) ;;
-    *) echo "RUN_SEEDERS must be true or false" >&2; exit 1 ;;
-esac
+if [[ -n "${RUN_SEEDERS:-}" && "${RUN_SEEDERS}" != "true" && "${RUN_SEEDERS}" != "false" ]]; then
+    echo "RUN_SEEDERS must be true or false" >&2
+    exit 1
+fi
 
 su-exec www-data php artisan route:cache
 su-exec www-data php artisan view:cache
@@ -106,6 +105,9 @@ server_pids+=("$!")
 echo "Web server is listening; seeding admin user and reviews."
 su-exec www-data php artisan db:seed --class=AdminUserSeeder --force --no-interaction || echo "Admin seed failed; continuing." >&2
 su-exec www-data php artisan db:seed --class=StorefrontReviewSeeder --force --no-interaction || echo "Review seed failed; continuing." >&2
+if [[ "${RUN_SEEDERS:-false}" == "true" ]]; then
+    su-exec www-data php artisan db:seed --force --no-interaction || echo "Database seed failed; continuing." >&2
+fi
 
 status=0
 wait -n "${server_pids[@]}" || status=$?
