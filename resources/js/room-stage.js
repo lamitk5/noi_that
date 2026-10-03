@@ -8,8 +8,39 @@ const LINEN = '#f4f1ea';
 const FLOORS = {
     oak: { kind: 'plank', colors: ['#d9c3a2', '#cfb692', '#e2ceb0', '#c8ad86'], edge: '#cdb593' },
     walnut: { kind: 'plank', colors: ['#8a6446', '#7b583c', '#956f4f', '#6e4e35'], edge: '#6b4b33' },
-    stone: { kind: 'tile', colors: ['#dcd8d1', '#d4d0c8', '#e2ded8'], edge: '#c9c4bb' },
+    stone: { kind: 'tile', size: 0.5, colors: ['#dcd8d1', '#d4d0c8', '#e2ded8'], edge: '#c9c4bb' },
+    ceramic: { kind: 'tile', size: 0.25, colors: ['#f1f0ec', '#ecebe6', '#f4f3ef'], edge: '#b9b8b2', speckle: 0.01 },
 };
+
+function wallTileTexture(kind) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    const random = seeded(kind.length * 131 + 7);
+    const subway = kind === 'kitchen';
+    const tileW = 128;
+    const tileH = subway ? 64 : 128;
+    ctx.fillStyle = '#c9cbc8';
+    ctx.fillRect(0, 0, 512, 512);
+    for (let row = 0; row * tileH < 512; row++) {
+        const offset = subway && row % 2 ? tileW / 2 : 0;
+        for (let x = -offset; x < 512; x += tileW) {
+            const tone = subway ? 238 + random() * 10 : 226 + random() * 12;
+            const tint = subway ? [tone, tone, tone - 4] : [tone - 12, tone - 2, tone];
+            ctx.fillStyle = `rgb(${tint.map((v) => Math.round(v)).join(',')})`;
+            ctx.fillRect(x + 3, row * tileH + 3, tileW - 6, tileH - 6);
+            ctx.fillStyle = 'rgba(255,255,255,0.35)';
+            ctx.fillRect(x + 6, row * tileH + 6, tileW * 0.5, 4);
+        }
+    }
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.anisotropy = 8;
+    return texture;
+}
 
 function seeded(seed) {
     let value = seed % 2147483647;
@@ -29,13 +60,13 @@ function floorTexture(key) {
     const metre = 512;
 
     if (style.kind === 'tile') {
-        const tile = metre * 0.6;
+        const tile = metre * (style.size || 0.5);
         for (let y = 0; y < 1024; y += tile) {
             for (let x = 0; x < 1024; x += tile) {
                 ctx.fillStyle = style.colors[Math.floor(random() * style.colors.length)];
                 ctx.fillRect(x, y, tile, tile);
                 for (let i = 0; i < 40; i++) {
-                    ctx.fillStyle = `rgba(120,110,100,${0.03 + random() * 0.04})`;
+                    ctx.fillStyle = `rgba(120,110,100,${(style.speckle ?? 0.03) + random() * 0.04})`;
                     ctx.beginPath();
                     ctx.arc(x + random() * tile, y + random() * tile, 4 + random() * 18, 0, Math.PI * 2);
                     ctx.fill();
@@ -607,7 +638,7 @@ export class RoomStage {
 
         const texture = floorTexture(floor);
         texture.repeat.set(W / 2, D / 2);
-        const floorMesh = new THREE.Mesh(new THREE.PlaneGeometry(W, D), new THREE.MeshStandardMaterial({ map: texture, roughness: floor === 'stone' ? 0.45 : 0.62 }));
+        const floorMesh = new THREE.Mesh(new THREE.PlaneGeometry(W, D), new THREE.MeshStandardMaterial({ map: texture, roughness: floor === 'ceramic' ? 0.3 : floor === 'stone' ? 0.45 : 0.62 }));
         floorMesh.rotation.x = -Math.PI / 2;
         floorMesh.position.y = 0.001;
         floorMesh.receiveShadow = true;
@@ -625,6 +656,7 @@ export class RoomStage {
         left.receiveShadow = true;
         left.castShadow = true;
         this.roomGroup.add(left);
+        this.buildWallTiles();
 
         const skirtMat = material(shade(wall, -0.18), { roughness: 0.6 });
         const skirtBack = new THREE.Mesh(new THREE.BoxGeometry(W, 0.09, 0.015), skirtMat);
@@ -690,9 +722,38 @@ export class RoomStage {
         cam.updateProjectionMatrix();
     }
 
+    /**
+     * Bathrooms get tiles up to 2 m on both walls; kitchens a subway
+     * backsplash between worktop (0.9 m) and wall-cabinet (1.5 m) height.
+     */
+    buildWallTiles() {
+        const { width: W, depth: D, height: H, tiles } = this.room;
+        if (!tiles) return;
+        const bath = tiles === 'bath';
+        const bottom = bath ? 0 : 0.9;
+        const top = bath ? Math.min(2.1, H - 0.2) : 1.5;
+        const band = top - bottom;
+        const make = (length) => {
+            const texture = wallTileTexture(tiles);
+            texture.repeat.set(length / (bath ? 0.5 : 0.8), band / (bath ? 0.5 : 0.4));
+            return new THREE.MeshStandardMaterial({ map: texture, roughness: 0.25, metalness: 0.02 });
+        };
+        const back = new THREE.Mesh(new THREE.PlaneGeometry(W, band), make(W));
+        back.position.set(0, bottom + band / 2, -D / 2 + 0.003);
+        back.receiveShadow = true;
+        this.roomGroup.add(back);
+        if (bath) {
+            const left = new THREE.Mesh(new THREE.PlaneGeometry(D, band), make(D));
+            left.rotation.y = Math.PI / 2;
+            left.position.set(-W / 2 + 0.003, bottom + band / 2, 0);
+            left.receiveShadow = true;
+            this.roomGroup.add(left);
+        }
+    }
+
     frame3d(jump = false) {
         const { width: W, depth: D } = this.room;
-        const span = Math.max(W, D);
+        const span = Math.max(W, D, 3.6);
         const position = new THREE.Vector3(span * 0.95, span * 1.05, span * 1.35);
         const target = new THREE.Vector3(-W * 0.04, 0.35, -D * 0.06);
         this.view = '3d';

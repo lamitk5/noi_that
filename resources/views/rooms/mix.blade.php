@@ -59,7 +59,10 @@
                 { key: 'oak', label: 'Gỗ sồi', swatch: '#d9c3a2' },
                 { key: 'walnut', label: 'Óc chó', swatch: '#8a6446' },
                 { key: 'stone', label: 'Đá', swatch: '#dcd8d1' },
+                { key: 'ceramic', label: 'Gạch men', swatch: '#efeee9' },
             ],
+            limits: config.limits,
+            dimNotice: '',
             walls: ['#f5f0e8', '#e8e4dd', '#e3e9e2', '#efe0d2', '#dfe4ea'],
 
             init() {
@@ -137,11 +140,11 @@
 
             dim(value) {
                 const n = Number(value);
-                return Number.isFinite(n) ? Math.min(15, Math.max(1.5, Math.round(n * 10) / 10)) : 4;
+                return Number.isFinite(n) ? Math.min(this.limits.max, Math.max(this.limits.min, Math.round(n * 10) / 10)) : 4;
             },
 
             roomSpec() {
-                return { width: this.room.width, depth: this.room.depth, height: this.room.height, floor: this.floor, wall: this.wall };
+                return { width: this.room.width, depth: this.room.depth, height: this.room.height, floor: this.floor, wall: this.wall, tiles: this.room.tiles || null };
             },
 
             footprint(item) {
@@ -325,6 +328,26 @@
                     item.y = D / 2;
                     return;
                 }
+                const nameHas = (other, words) => words.some((w) => this.findProduct(other.product_id).name.toLowerCase().includes(w));
+                if (shape === 'mirror' && this.isElevated(item)) {
+                    const host = [...this.placed].reverse().find((o) => nameHas(o, ['lavabo', 'trang điểm']));
+                    if (host) {
+                        item.x = host.x;
+                        item.y = fp.d / 2 + 1;
+                        return;
+                    }
+                }
+                if (shape === 'glass') {
+                    item.rotation = 90;
+                    const turned = this.footprint(item);
+                    item.y = turned.d / 2 + 1;
+                    const tub = this.placed.find((o) => this.findProduct(o.product_id).shape === 'tub');
+                    const start = tub ? tub.x + this.footprint(tub).w / 2 + turned.w / 2 + 1 : turned.w / 2 + 1;
+                    for (let x = start; x <= W - turned.w / 2; x += 5) {
+                        item.x = x;
+                        if (free()) return;
+                    }
+                }
                 if (AGAINST_WALL.includes(shape)) {
                     item.y = fp.d / 2 + 1;
                     for (let x = fp.w / 2 + 10; x <= W - fp.w / 2; x += 10) {
@@ -429,12 +452,36 @@
                     this.customDepth = this.room.depth;
                 }
                 this.roomKey = key;
+                this.dimNotice = '';
+                const preset = this.rooms[key];
+                if (preset.floor) this.floor = preset.floor;
+                if (preset.wall) this.wall = preset.wall;
+                if (preset.category && this.categories.includes(preset.category)) this.category = preset.category;
                 this.applyRoom();
             },
 
-            setDims() {
+            setDims(width, depth) {
+                const raw = [Number(width), Number(depth)];
+                this.customWidth = this.dim(width);
+                this.customDepth = this.dim(depth);
+                this.dimNotice = raw.some((n) => !Number.isFinite(n) || n < this.limits.min || n > this.limits.max)
+                    ? `Mỗi chiều chỉ nhận từ ${this.limits.min} m đến ${this.limits.max} m, đã tự đưa về ${this.customWidth} × ${this.customDepth} m.`
+                    : '';
                 this.roomKey = 'custom';
                 this.applyRoom();
+            },
+
+            get starterNames() {
+                return (this.rooms[this.roomKey].starter || []).filter((name) => this.catalog.some((p) => p.name === name));
+            },
+
+            placeStarter() {
+                if (!this.starterNames.length) return;
+                if (this.placed.length && !window.confirm('Thay các món đang có bằng bộ gợi ý cho ' + this.rooms[this.roomKey].label.toLowerCase() + '?')) return;
+                this.placed = [];
+                this.selectedUid = null;
+                this.starterNames.forEach((name) => this.add(this.catalog.find((p) => p.name === name)));
+                this.select(null);
             },
 
             setFloor(key) {
@@ -489,6 +536,7 @@
         catalog: {{ \Illuminate\Support\Js::from($catalog) }},
         rooms: {{ \Illuminate\Support\Js::from($rooms) }},
         layout: {{ \Illuminate\Support\Js::from($layout) }},
+        limits: {{ \Illuminate\Support\Js::from($limits) }},
         focusProduct: {{ \Illuminate\Support\Js::from($focusProduct) }}
     })"
 >
@@ -497,7 +545,7 @@
             <div>
                 <p class="eyebrow text-xs font-bold uppercase tracking-wider text-primary">Phối phòng 3D</p>
                 <h1 class="mt-1 font-display text-3xl sm:text-4xl font-semibold text-heading">Đặt nội thất vào phòng của bạn</h1>
-                <p class="mt-2 max-w-2xl text-sm text-muted">Nhập kích thước phòng, chọn đúng size từng món rồi kéo thả. Mọi khối đều theo tỉ lệ thật 1:1, có khoảng cách tới tường và cảnh báo khi đồ chồng lên nhau.</p>
+                <p class="mt-2 max-w-2xl text-sm text-muted">Chọn phòng khách, phòng ngủ, phòng ăn, bếp hoặc nhà tắm (hoặc tự nhập kích thước 1,5 – 15 m mỗi chiều), chọn đúng size từng món rồi kéo thả. Mọi khối đều theo tỉ lệ thật 1:1, có khoảng cách tới tường và cảnh báo khi đồ chồng lên nhau.</p>
             </div>
             <div class="flex flex-wrap items-center gap-2">
                 <div class="inline-flex rounded-xl border border-ui-border bg-surface p-1 shadow-sm">
@@ -528,16 +576,23 @@
                         </button>
                     </template>
                 </div>
-                <div class="mt-3 flex items-center gap-2 text-xs text-muted">
+                <div class="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted">
                     <label class="flex items-center gap-1.5">Rộng
-                        <input type="number" step="0.1" min="1.5" max="15" class="w-20 rounded-lg border border-ui-border bg-page px-2 py-1.5 text-sm text-heading" :value="room.width" @change="customWidth = $event.target.value; customDepth = room.depth; setDims()">
+                        <input type="number" step="0.1" :min="limits.min" :max="limits.max" class="w-20 rounded-lg border border-ui-border bg-page px-2 py-1.5 text-sm text-heading" :value="room.width" @change="setDims($event.target.value, room.depth); $event.target.value = room.width">
                     </label>
                     <span>×</span>
                     <label class="flex items-center gap-1.5">Sâu
-                        <input type="number" step="0.1" min="1.5" max="15" class="w-20 rounded-lg border border-ui-border bg-page px-2 py-1.5 text-sm text-heading" :value="room.depth" @change="customDepth = $event.target.value; customWidth = room.width; setDims()">
+                        <input type="number" step="0.1" :min="limits.min" :max="limits.max" class="w-20 rounded-lg border border-ui-border bg-page px-2 py-1.5 text-sm text-heading" :value="room.depth" @change="setDims(room.width, $event.target.value); $event.target.value = room.depth">
                     </label>
                     <span>m</span>
+                    <span class="rounded-full bg-surface-alt px-2.5 py-1 text-[11px] font-semibold text-heading" x-text="`Giới hạn mỗi chiều: ${limits.min} – ${limits.max} m · trần cao ${room.height} m`"></span>
                 </div>
+                <p x-show="dimNotice" x-cloak class="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-[11px] font-semibold text-amber-800" x-text="dimNotice"></p>
+                <button type="button" x-show="starterNames.length" class="mt-3 inline-flex items-center gap-1.5 rounded-xl border border-primary/40 bg-primary/5 px-3 py-1.5 text-xs font-bold text-primary transition hover:bg-primary/10" :disabled="!ready" @click="placeStarter()">
+                    <span>Đặt bộ gợi ý cho</span>
+                    <span x-text="rooms[roomKey].label.toLowerCase()"></span>
+                    <span class="font-medium text-muted" x-text="`(${starterNames.length} món)`"></span>
+                </button>
             </div>
             <div>
                 <p class="text-[11px] font-bold uppercase tracking-wider text-muted">Sàn</p>
@@ -597,7 +652,7 @@
                     </div>
 
                     <div x-show="ready && !placed.length" class="pointer-events-none absolute inset-x-0 bottom-24 z-10 flex justify-center">
-                        <p class="rounded-full bg-surface/90 px-4 py-2 text-xs font-semibold text-heading shadow">Chọn size và bấm “Thêm” ở danh sách bên phải để đặt món vào phòng.</p>
+                        <p class="rounded-full bg-surface/90 px-4 py-2 text-xs font-semibold text-heading shadow">Bấm “Đặt bộ gợi ý” hoặc chọn size rồi bấm “Thêm” ở danh sách bên phải.</p>
                     </div>
 
                     <div x-show="selected" x-transition class="absolute inset-x-3 bottom-3 z-20">

@@ -13,11 +13,44 @@ use InvalidArgumentException;
 
 class RoomMixController extends Controller
 {
+    public const MIN_SIZE = 1.5;
+
+    public const MAX_SIZE = 15.0;
+
+    /**
+     * Presets carry the look of the room (floor, wall, wall tiles), the
+     * catalog category shown first and a starter set of product names.
+     */
     private const ROOMS = [
-        'khach' => ['label' => 'Phòng khách', 'width' => 5.0, 'depth' => 4.0, 'height' => 2.8],
-        'ngu' => ['label' => 'Phòng ngủ', 'width' => 4.0, 'depth' => 3.5, 'height' => 2.7],
-        'an' => ['label' => 'Phòng ăn', 'width' => 4.5, 'depth' => 3.5, 'height' => 2.8],
-        'custom' => ['label' => 'Tự nhập', 'width' => 4.0, 'depth' => 4.0, 'height' => 2.8],
+        'khach' => [
+            'label' => 'Phòng khách', 'width' => 5.0, 'depth' => 4.0, 'height' => 2.8,
+            'floor' => 'oak', 'wall' => '#f5f0e8', 'tiles' => null, 'category' => 'Phòng khách',
+            'starter' => ['Sofa Giường', 'Thảm Trải Sàn', 'Bàn Trà Tròn', 'Kệ Tivi', 'Ghế Bành', 'Đèn Cây Đứng'],
+        ],
+        'ngu' => [
+            'label' => 'Phòng ngủ', 'width' => 4.0, 'depth' => 3.5, 'height' => 2.7,
+            'floor' => 'oak', 'wall' => '#efe0d2', 'tiles' => null, 'category' => 'Phòng ngủ',
+            'starter' => ['Giường Ngủ Gỗ Sồi', 'Kệ Đầu Giường', 'Kệ Đầu Giường', 'Tủ Quần Áo', 'Bàn Trang Điểm'],
+        ],
+        'an' => [
+            'label' => 'Phòng ăn', 'width' => 4.5, 'depth' => 3.5, 'height' => 2.8,
+            'floor' => 'walnut', 'wall' => '#e8e4dd', 'tiles' => null, 'category' => 'Phòng ăn',
+            'starter' => ['Bàn Ăn Gỗ Sồi', 'Tủ Buffet', 'Tủ Rượu', 'Đèn Chùm'],
+        ],
+        'bep' => [
+            'label' => 'Bếp', 'width' => 4.0, 'depth' => 3.2, 'height' => 2.7,
+            'floor' => 'stone', 'wall' => '#f5f0e8', 'tiles' => 'kitchen', 'category' => 'Phòng ăn',
+            'starter' => ['Tủ Bếp', 'Đảo Bếp', 'Ghế Quầy Bar', 'Ghế Quầy Bar'],
+        ],
+        'tam' => [
+            'label' => 'Nhà tắm', 'width' => 2.6, 'depth' => 2.2, 'height' => 2.6,
+            'floor' => 'ceramic', 'wall' => '#e3e9e2', 'tiles' => 'bath', 'category' => 'Phòng tắm',
+            'starter' => ['Bồn Tắm', 'Vách Kính Tắm', 'Tủ Lavabo', 'Gương Phòng Tắm'],
+        ],
+        'custom' => [
+            'label' => 'Tự nhập', 'width' => 4.0, 'depth' => 4.0, 'height' => 2.8,
+            'floor' => null, 'wall' => null, 'tiles' => null, 'category' => null, 'starter' => [],
+        ],
     ];
 
     public function __construct(protected CartService $cartService)
@@ -45,6 +78,7 @@ class RoomMixController extends Controller
             'catalog' => $catalog,
             'layout' => $layout,
             'rooms' => self::ROOMS,
+            'limits' => ['min' => self::MIN_SIZE, 'max' => self::MAX_SIZE],
             'focusProduct' => $request->integer('product') ?: null,
         ]);
     }
@@ -149,9 +183,9 @@ class RoomMixController extends Controller
     {
         $data = $request->validate([
             'room' => ['required', 'in:'.implode(',', array_keys(self::ROOMS))],
-            'width' => ['nullable', 'numeric', 'min:1.5', 'max:15'],
-            'depth' => ['nullable', 'numeric', 'min:1.5', 'max:15'],
-            'floor' => ['nullable', 'in:oak,walnut,stone'],
+            'width' => ['nullable', 'numeric', 'min:'.self::MIN_SIZE, 'max:'.self::MAX_SIZE],
+            'depth' => ['nullable', 'numeric', 'min:'.self::MIN_SIZE, 'max:'.self::MAX_SIZE],
+            'floor' => ['nullable', 'in:oak,walnut,stone,ceramic'],
             'wall' => ['nullable', 'regex:/^#[0-9a-fA-F]{6}$/'],
             'items' => ['nullable', 'array', 'max:30'],
             'items.*.product_id' => ['required', 'integer'],
