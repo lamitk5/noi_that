@@ -179,6 +179,57 @@ function shade(hex, amount) {
     return `#${color.getHexString()}`;
 }
 
+/**
+ * Window and door layout per room type. `center` runs along the wall:
+ * x for the back wall, z for the left wall. Kitchens and bathrooms have
+ * no main door or large window, only a doorway and a small high window.
+ */
+function roomOpenings(kind, W, D, H) {
+    const nearFront = (width) => D / 2 - width / 2 - Math.min(0.35, D * 0.08);
+    const fit = (width, length) => Math.min(width, length - 0.4);
+    switch (kind) {
+        case 'khach': {
+            const winW = fit(Math.min(2.4, W * 0.45), W);
+            const doorW = fit(Math.min(1.4, D * 0.35), D);
+            return {
+                window: { wall: 'back', center: W * 0.12, width: winW, sill: 0.4, height: Math.min(2.0, H - 0.65), panes: 3, curtain: 'long' },
+                door: { wall: 'left', center: nearFront(doorW), width: doorW, height: Math.min(2.2, H - 0.3), leaf: 'wood', double: true },
+            };
+        }
+        case 'an': {
+            const doorW = fit(Math.min(1.2, D * 0.3), D);
+            return {
+                window: { wall: 'back', center: W * 0.15, width: fit(Math.min(1.8, W * 0.38), W), sill: 0.8, height: Math.min(1.5, H - 1.1), panes: 3 },
+                door: { wall: 'left', center: nearFront(doorW), width: doorW, height: Math.min(2.2, H - 0.3), leaf: null },
+            };
+        }
+        case 'bep': {
+            const sill = 1.58;
+            return {
+                window: { wall: 'back', center: W * 0.2, width: fit(Math.min(1.0, W * 0.25), W), sill, height: Math.max(0.35, Math.min(0.6, H - sill - 0.22)), panes: 2 },
+                door: { wall: 'left', center: nearFront(0.9), width: fit(0.9, D), height: Math.min(2.1, H - 0.3), leaf: null },
+            };
+        }
+        case 'tam': {
+            const sill = Math.min(2.15, H - 0.5);
+            return {
+                window: { wall: 'back', center: W * 0.25, width: fit(0.5, W), sill, height: Math.max(0.25, Math.min(0.35, H - sill - 0.12)), panes: 1, frosted: true },
+                door: { wall: 'left', center: nearFront(0.75), width: fit(0.75, D), height: Math.min(2.05, H - 0.3), leaf: 'frosted' },
+            };
+        }
+        case 'ngu':
+            return {
+                window: { wall: 'back', center: W * 0.18, width: fit(Math.min(1.6, W * 0.32), W), sill: 0.9, height: Math.min(1.4, H * 0.5), panes: 2, curtain: 'short' },
+                door: { wall: 'left', center: nearFront(0.85), width: fit(0.85, D), height: Math.min(2.1, H - 0.3), leaf: 'wood' },
+            };
+        default:
+            return {
+                window: { wall: 'back', center: W * 0.18, width: fit(Math.min(1.6, W * 0.32), W), sill: 0.9, height: Math.min(1.4, H * 0.5), panes: 2 },
+                door: { wall: 'left', center: nearFront(0.9), width: fit(0.9, D), height: Math.min(2.1, H - 0.3), leaf: 'wood' },
+            };
+    }
+}
+
 class Builder {
     constructor(colors) {
         this.group = new THREE.Group();
@@ -666,34 +717,9 @@ export class RoomStage {
         skirtLeft.position.set(-W / 2 + 0.0075, 0.045, 0);
         this.roomGroup.add(skirtLeft);
 
-        const winW = Math.min(1.6, W * 0.32);
-        const winH = Math.min(1.4, H * 0.5);
-        const winX = W * 0.18;
-        const winY = H * 0.52;
-        const frameMat = material('#ffffff', { roughness: 0.4 });
-        const glass = new THREE.Mesh(new THREE.PlaneGeometry(winW, winH), new THREE.MeshStandardMaterial({ color: '#cfe3ec', emissive: '#dcecf3', emissiveIntensity: 0.55, roughness: 0.1 }));
-        glass.position.set(winX, winY, -D / 2 + 0.004);
-        this.roomGroup.add(glass);
-        [[0, winH / 2], [0, -winH / 2], [0, 0]].forEach(([dx, dy]) => {
-            const bar = new THREE.Mesh(new THREE.BoxGeometry(winW + 0.06, 0.04, 0.03), frameMat);
-            bar.position.set(winX + dx, winY + dy, -D / 2 + 0.015);
-            this.roomGroup.add(bar);
-        });
-        [-winW / 2, 0, winW / 2].forEach((dx) => {
-            const bar = new THREE.Mesh(new THREE.BoxGeometry(0.04, winH, 0.03), frameMat);
-            bar.position.set(winX + dx, winY, -D / 2 + 0.015);
-            this.roomGroup.add(bar);
-        });
-
-        const doorW = 0.9;
-        const doorH = Math.min(2.1, H - 0.3);
-        const doorZ = D / 2 - Math.min(0.9, D * 0.25);
-        const door = new THREE.Mesh(new THREE.BoxGeometry(0.02, doorH, doorW), material('#c9b49a', { roughness: 0.6 }));
-        door.position.set(-W / 2 + 0.012, doorH / 2, doorZ);
-        this.roomGroup.add(door);
-        const knob = new THREE.Mesh(new THREE.SphereGeometry(0.025, 12, 10), material(METAL, { metalness: 0.8, roughness: 0.3 }));
-        knob.position.set(-W / 2 + 0.04, 1.0, doorZ + doorW / 2 - 0.1);
-        this.roomGroup.add(knob);
+        const { window: win, door } = roomOpenings(this.room.kind, W, D, H);
+        if (win) this.roomGroup.add(this.wallMount(this.buildWindow(win), win.wall, win.center));
+        if (door) this.roomGroup.add(this.wallMount(this.buildDoor(door), door.wall, door.center));
 
         const grid = new THREE.GridHelper(Math.max(W, D), Math.round(Math.max(W, D) * 2), '#8c7b6c', '#8c7b6c');
         grid.material.transparent = true;
@@ -749,6 +775,125 @@ export class RoomStage {
             left.receiveShadow = true;
             this.roomGroup.add(left);
         }
+    }
+
+    /** Built in wall space: x along the wall, y up, +z pointing into the room. */
+    wallMount(group, wall, center) {
+        const { width: W, depth: D } = this.room;
+        const box = new THREE.Box3().setFromObject(group);
+        const half = (box.max.x - box.min.x) / 2;
+        const length = wall === 'left' ? D : W;
+        const along = Math.max(-length / 2 + half + 0.05, Math.min(length / 2 - half - 0.05, center));
+        if (wall === 'left') {
+            group.rotation.y = Math.PI / 2;
+            group.position.set(-W / 2, 0, along);
+        } else {
+            group.position.set(along, 0, -D / 2);
+        }
+        return group;
+    }
+
+    buildWindow({ width, sill, height, panes, curtain, frosted }) {
+        const group = new THREE.Group();
+        const frameMat = material('#ffffff', { roughness: 0.4 });
+        const glassMat = frosted
+            ? new THREE.MeshStandardMaterial({ color: '#e7eef0', emissive: '#eef4f6', emissiveIntensity: 0.35, roughness: 0.6 })
+            : new THREE.MeshStandardMaterial({ color: '#cfe3ec', emissive: '#dcecf3', emissiveIntensity: 0.55, roughness: 0.1 });
+        const midY = sill + height / 2;
+        const glass = new THREE.Mesh(new THREE.PlaneGeometry(width, height), glassMat);
+        glass.position.set(0, midY, 0.005);
+        group.add(glass);
+
+        const bar = 0.045;
+        [sill, sill + height].forEach((y) => {
+            const rail = new THREE.Mesh(new THREE.BoxGeometry(width + bar, bar, 0.035), frameMat);
+            rail.position.set(0, y, 0.018);
+            group.add(rail);
+        });
+        for (let i = 0; i <= panes; i++) {
+            const stile = new THREE.Mesh(new THREE.BoxGeometry(i === 0 || i === panes ? bar : bar * 0.7, height, 0.03), frameMat);
+            stile.position.set(-width / 2 + (width / panes) * i, midY, 0.018);
+            group.add(stile);
+        }
+        if (sill > 0.3) {
+            const ledge = new THREE.Mesh(new THREE.BoxGeometry(width + 0.12, 0.03, 0.1), frameMat);
+            ledge.position.set(0, sill - 0.03, 0.05);
+            group.add(ledge);
+        }
+
+        if (curtain) {
+            const H = this.room.height;
+            const top = Math.min(H - 0.05, sill + height + 0.18);
+            const bottom = curtain === 'long' ? 0.03 : Math.max(0.03, sill - 0.25);
+            const fabric = material(curtain === 'long' ? '#e6dccd' : '#d9c8b4', { roughness: 0.95 });
+            const panel = Math.min(0.45, width * 0.28);
+            [-1, 1].forEach((side) => {
+                const drape = new THREE.Mesh(new THREE.BoxGeometry(panel, top - bottom, 0.05), fabric);
+                drape.position.set(side * (width / 2 + panel / 2 - 0.08), (top + bottom) / 2, 0.09);
+                drape.castShadow = true;
+                group.add(drape);
+            });
+            const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, width + panel * 2 + 0.1, 10), material(METAL, { metalness: 0.7, roughness: 0.35 }));
+            rod.rotation.z = Math.PI / 2;
+            rod.position.set(0, top + 0.03, 0.09);
+            group.add(rod);
+        }
+        return group;
+    }
+
+    buildDoor({ width, height, leaf, double }) {
+        const group = new THREE.Group();
+        const trim = 0.06;
+        const trimMat = material(leaf === 'wood' ? '#a98a68' : '#f4f1ea', { roughness: 0.55 });
+        [-1, 1].forEach((side) => {
+            const jamb = new THREE.Mesh(new THREE.BoxGeometry(trim, height + trim, 0.03), trimMat);
+            jamb.position.set(side * (width / 2 + trim / 2), (height + trim) / 2, 0.015);
+            group.add(jamb);
+        });
+        const head = new THREE.Mesh(new THREE.BoxGeometry(width + trim * 2, trim, 0.03), trimMat);
+        head.position.set(0, height + trim / 2, 0.015);
+        group.add(head);
+
+        if (!leaf) {
+            const passage = new THREE.Mesh(new THREE.PlaneGeometry(width, height), material(shade(this.room.wall, -0.3), { roughness: 1 }));
+            passage.position.set(0, height / 2, 0.004);
+            group.add(passage);
+            const reveal = material(shade(this.room.wall, -0.12), { roughness: 0.9 });
+            [-1, 1].forEach((side) => {
+                const cheek = new THREE.Mesh(new THREE.BoxGeometry(0.01, height, 0.12), reveal);
+                cheek.position.set(side * (width / 2 - 0.005), height / 2, 0.06);
+                group.add(cheek);
+            });
+            return group;
+        }
+
+        const leafMat = leaf === 'wood' ? material('#c9b49a', { roughness: 0.6 }) : material('#f1f3f2', { roughness: 0.35 });
+        const knobMat = material(METAL, { metalness: 0.8, roughness: 0.3 });
+        const count = double ? 2 : 1;
+        const leafW = (width - 0.01 * (count - 1)) / count;
+        for (let i = 0; i < count; i++) {
+            const x = -width / 2 + leafW / 2 + i * (leafW + 0.01);
+            const slab = new THREE.Mesh(new THREE.BoxGeometry(leafW, height, 0.04), leafMat);
+            slab.position.set(x, height / 2, 0.02);
+            slab.castShadow = true;
+            group.add(slab);
+            if (leaf === 'frosted') {
+                const pane = new THREE.Mesh(new THREE.PlaneGeometry(leafW * 0.62, height * 0.62), new THREE.MeshStandardMaterial({ color: '#dfe8ea', emissive: '#eef4f6', emissiveIntensity: 0.25, roughness: 0.55 }));
+                pane.position.set(x, height * 0.55, 0.041);
+                group.add(pane);
+            } else {
+                [0.72, 0.28].forEach((ratio) => {
+                    const inset = new THREE.Mesh(new THREE.BoxGeometry(leafW * 0.68, height * 0.34, 0.01), material(shade('#c9b49a', -0.06), { roughness: 0.6 }));
+                    inset.position.set(x, height * ratio, 0.043);
+                    group.add(inset);
+                });
+            }
+            const handleSide = double ? (i === 0 ? 1 : -1) : 1;
+            const knob = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.02, 0.03), knobMat);
+            knob.position.set(x + handleSide * (leafW / 2 - 0.1), 1.0, 0.055);
+            group.add(knob);
+        }
+        return group;
     }
 
     frame3d(jump = false) {

@@ -144,7 +144,7 @@
             },
 
             roomSpec() {
-                return { width: this.room.width, depth: this.room.depth, height: this.room.height, floor: this.floor, wall: this.wall, tiles: this.room.tiles || null };
+                return { kind: this.roomKey, width: this.room.width, depth: this.room.depth, height: this.room.height, floor: this.floor, wall: this.wall, tiles: this.room.tiles || null };
             },
 
             footprint(item) {
