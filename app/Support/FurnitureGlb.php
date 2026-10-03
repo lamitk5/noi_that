@@ -110,8 +110,21 @@ class FurnitureGlb
         $d = max($depth, 4) / 100;
         $h = max($height, 4) / 100;
         $builder = new self();
-        $builder->paintFromPhoto($imagePath);
-        $builder->build($shape, $w, $d, $h);
+        $facing = self::facingPhoto($imagePath, $shape === 'rug' ? $w / max($d, 0.01) : $w / max($h, 0.01));
+        if ($facing !== null) {
+            $builder->palette['wood'] = $facing['shell'];
+            $builder->photoJpeg = $facing['bytes'];
+            $builder->hasPhoto = true;
+            if ($shape === 'rug') {
+                $builder->addBox('wood', 0, 0.008, 0, $w, 0.016, $d);
+            } else {
+                $builder->addBox('wood', 0, $h / 2, 0, $w, $h, $d);
+            }
+            $builder->addPhotoCard($shape, $w, $d, $h, $facing['width'], $facing['height']);
+        } else {
+            $builder->paintFromPhoto($imagePath);
+            $builder->build($shape, $w, $d, $h);
+        }
 
         return [$builder->encode(), $builder->encodeUsdz()];
     }
@@ -164,6 +177,81 @@ class FurnitureGlb
     }
 
     /**
+     * Crop the catalog photo to the furniture face, and take the body color from that crop.
+     *
+     * @return array{bytes: string, width: int, height: int, shell: array{0: float, 1: float, 2: float, 3: float}}|null
+     */
+    private static function facingPhoto(?string $imagePath, float $panelAspect): ?array
+    {
+        if ($imagePath === null || ! is_file($imagePath) || ! function_exists('imagecreatefromstring')) {
+            return null;
+        }
+
+        $raw = file_get_contents($imagePath);
+        if ($raw === false || $raw === '') {
+            return null;
+        }
+
+        $source = @imagecreatefromstring($raw);
+        if ($source === false) {
+            return null;
+        }
+
+        $panelAspect = max(0.15, min($panelAspect, 8));
+        $crop = self::cropToPanel($source, $panelAspect);
+        if ($crop !== $source) {
+            imagedestroy($source);
+        }
+
+        $colors = self::colorsFromImage($crop);
+        $shell = $colors[0] ?? [0.62, 0.42, 0.24, 1];
+
+        $width = imagesx($crop);
+        $height = imagesy($crop);
+        $limit = 900;
+        $scale = min(1, $limit / max($width, $height));
+        $targetW = max(8, (int) round($width * $scale));
+        $targetH = max(8, (int) round($height * $scale));
+        $canvas = imagecreatetruecolor($targetW, $targetH);
+        imagecopyresampled($canvas, $crop, 0, 0, 0, 0, $targetW, $targetH, $width, $height);
+        imagedestroy($crop);
+        ob_start();
+        imagejpeg($canvas, null, 82);
+        $bytes = ob_get_clean();
+        imagedestroy($canvas);
+        if (! is_string($bytes) || strlen($bytes) < 100) {
+            return null;
+        }
+
+        return ['bytes' => $bytes, 'width' => $targetW, 'height' => $targetH, 'shell' => $shell];
+    }
+
+    private static function cropToPanel(\GdImage $src, float $panelAspect): \GdImage
+    {
+        $sw = imagesx($src);
+        $sh = imagesy($src);
+        $imageAspect = $sw / max($sh, 1);
+        if ($panelAspect >= $imageAspect) {
+            $ch = min($sh, (int) round($sw / $panelAspect));
+            $cw = min($sw, (int) round($ch * $panelAspect));
+            $x = (int) (($sw - $cw) / 2);
+            $y = (int) max(0, $sh * 0.64 - $ch / 2);
+            if ($y + $ch > $sh) {
+                $y = $sh - $ch;
+            }
+        } else {
+            $cw = min($sw, (int) round($sh * $panelAspect));
+            $ch = min($sh, (int) round($cw / max($panelAspect, 0.05)));
+            $x = (int) (($sw - $cw) / 2);
+            $y = (int) max(0, ($sh - $ch) * 0.38);
+        }
+
+        $crop = imagecrop($src, ['x' => $x, 'y' => $y, 'width' => max(8, $cw), 'height' => max(8, $ch)]);
+
+        return $crop instanceof \GdImage ? $crop : $src;
+    }
+
+    /**
      * Pull the shell and front colors out of the catalog photo so the solid
      * model matches the product without pasting the room onto a face.
      */
@@ -209,10 +297,10 @@ class FurnitureGlb
         }
 
         $buckets = [];
-        $x0 = (int) ($width * 0.18);
-        $x1 = max($x0 + 1, (int) ($width * 0.82));
-        $y0 = (int) ($height * 0.40);
-        $y1 = max($y0 + 1, (int) ($height * 0.88));
+        $x0 = (int) ($width * 0.22);
+        $x1 = max($x0 + 1, (int) ($width * 0.78));
+        $y0 = (int) ($height * 0.22);
+        $y1 = max($y0 + 1, (int) ($height * 0.78));
         for ($y = $y0; $y < $y1; $y += 4) {
             for ($x = $x0; $x < $x1; $x += 4) {
                 $color = imagecolorat($image, $x, $y);
@@ -600,8 +688,8 @@ class FurnitureGlb
 
     private function addPhotoCard(string $shape, float $w, float $d, float $h, int $imageW, int $imageH): void
     {
+        $uvs = [[0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0]];
         if ($shape === 'rug') {
-            $uvs = $this->coverUvs($w / $d, $imageW / $imageH);
             $y = 0.02;
             $verts = [
                 [-$w / 2, $y, $d / 2],
@@ -614,14 +702,14 @@ class FurnitureGlb
             return;
         }
 
-        $z = $d / 2 + 0.03;
+        $z = $d / 2 + 0.004;
         $verts = [
-            [-$w / 2, 0.004, $z],
-            [$w / 2, 0.004, $z],
-            [$w / 2, $h - 0.004, $z],
-            [-$w / 2, $h - 0.004, $z],
+            [-$w / 2, 0.002, $z],
+            [$w / 2, 0.002, $z],
+            [$w / 2, $h - 0.002, $z],
+            [-$w / 2, $h - 0.002, $z],
         ];
-        $this->addTexturedQuad([0, 0, 1], $verts, $this->coverUvs($w / $h, $imageW / max($imageH, 1)));
+        $this->addTexturedQuad([0, 0, 1], $verts, $uvs);
     }
 
     /**

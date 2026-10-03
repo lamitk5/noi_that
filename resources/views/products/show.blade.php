@@ -124,7 +124,7 @@
                                 ar-modes="webxr scene-viewer quick-look"
                                 ar-scale="fixed"
                                 camera-controls
-                                camera-orbit="32deg 68deg auto"
+                                camera-orbit="18deg 82deg auto"
                                 touch-action="pan-y"
                                 shadow-intensity="1"
                                 style="width: 100%; height: 420px; background: transparent;"
@@ -133,7 +133,7 @@
                                     Xem trong phòng
                                 </button>
                             </model-viewer>
-                            <p class="px-4 pb-4 text-[11px] text-muted">Khối theo màu và kích thước thật của sản phẩm. Kéo để xoay. Kích thước {{ \App\Support\FurnitureGlb::displaySize($product->name, $product->dimensions) }}, tỉ lệ 1:1 khi bấm Xem trong phòng.</p>
+                            <p class="px-4 pb-4 text-[11px] text-muted">Mặt trước là ảnh sản phẩm, các mặt còn lại theo màu của ảnh. Kéo để xoay. Kích thước {{ \App\Support\FurnitureGlb::displaySize($product->name, $product->dimensions) }}, tỉ lệ 1:1 khi bấm Xem trong phòng.</p>
                         </div>
                     @endif
                 </div>
