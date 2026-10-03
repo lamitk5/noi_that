@@ -27,6 +27,8 @@ class Product extends Model
         'sale_price',
         'material',
         'dimensions',
+        'model_glb',
+        'model_usdz',
         'color',
         'weight',
         'is_featured',
@@ -199,6 +201,25 @@ class Product extends Model
         }
 
         return 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=800&q=80';
+    }
+
+    public function getModelGlbUrlAttribute(): ?string
+    {
+        return $this->modelFileUrl($this->model_glb);
+    }
+
+    public function getModelUsdzUrlAttribute(): ?string
+    {
+        return $this->modelFileUrl($this->model_usdz);
+    }
+
+    private function modelFileUrl(?string $path): ?string
+    {
+        if ($path === null || ! Str::startsWith($path, 'picture/')) {
+            return null;
+        }
+
+        return route('media.picture', ['filename' => basename($path)]);
     }
 
     public function scopeActive(Builder $query): Builder

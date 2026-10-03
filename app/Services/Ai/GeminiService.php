@@ -25,7 +25,7 @@ class GeminiService
             return null;
         }
 
-        $model = config('services.gemini.model');
+        $model = $this->model();
         $url = rtrim((string) config('services.gemini.endpoint'), '/')."/models/{$model}:generateContent";
 
         $payload = [
@@ -62,6 +62,72 @@ class GeminiService
 
             return null;
         }
+    }
+
+    public function generateJsonFromImage(string $instruction, string $mime, string $base64): ?array
+    {
+        if (! $this->isConfigured() || $base64 === '') {
+            return null;
+        }
+
+        $model = $this->model();
+        $url = rtrim((string) config('services.gemini.endpoint'), '/')."/models/{$model}:generateContent";
+
+        $payload = [
+            'contents' => [[
+                'role' => 'user',
+                'parts' => [
+                    ['text' => $instruction],
+                    ['inlineData' => ['mimeType' => $mime, 'data' => $base64]],
+                ],
+            ]],
+            'generationConfig' => [
+                'temperature' => 0.2,
+                'maxOutputTokens' => 400,
+                'responseMimeType' => 'application/json',
+            ],
+        ];
+
+        try {
+            $response = Http::timeout((int) config('services.gemini.timeout', 20))
+                ->withHeaders(['x-goog-api-key' => config('services.gemini.key')])
+                ->acceptJson()
+                ->post($url, $payload);
+
+            if (! $response->successful()) {
+                Log::warning('Gemini image request failed', ['status' => $response->status(), 'body' => mb_substr($response->body(), 0, 500)]);
+
+                return null;
+            }
+
+            $text = (string) data_get($response->json(), 'candidates.0.content.parts.0.text', '');
+            $decoded = json_decode($this->stripCodeFence($text), true);
+
+            return is_array($decoded) ? $decoded : null;
+        } catch (Throwable $e) {
+            Log::warning('Gemini image request error: '.$e->getMessage());
+
+            return null;
+        }
+    }
+
+    /**
+     * Google has retired gemini-2.0-flash. Keep working when Render still has that name set.
+     */
+    protected function model(): string
+    {
+        $model = (string) config('services.gemini.model');
+        $retired = [
+            '',
+            'gemini-1.5-flash',
+            'gemini-1.5-flash-latest',
+            'gemini-1.5-pro',
+            'gemini-2.0-flash',
+            'gemini-2.0-flash-001',
+            'gemini-2.0-flash-lite',
+        ];
+
+        return in_array($model, $retired, true) ? 'gemini-3.8-flash' : $model;
     }
 
     protected function stripCodeFence(string $text): string

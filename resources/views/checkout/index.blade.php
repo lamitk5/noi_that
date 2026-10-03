@@ -225,10 +225,61 @@
                     </div>
                 </div>
 
+                @php
+                    $fitItems = $items->map(fn ($item) => [
+                        'name' => $item->product->name,
+                        'dims' => \App\Support\DimensionFit::parse($item->variant->size ?: $item->product->dimensions),
+                    ])->values();
+                @endphp
+                @include('partials.fit-script')
+                <div
+                    class="rounded-3xl border border-ui-border bg-surface p-6 sm:p-8 shadow-sm"
+                    x-data="{
+                        doorWidth: '',
+                        doorHeight: '',
+                        liftWidth: '',
+                        liftHeight: '',
+                        items: {{ \Illuminate\Support\Js::from($fitItems) }},
+                        warnings() {
+                            const asked = this.doorWidth || this.doorHeight || this.liftWidth || this.liftHeight;
+                            if (!asked) return [];
+                            const lines = [];
+                            this.items.forEach((item) => {
+                                if (!item.dims) {
+                                    lines.push(item.name + ': chưa có đủ số đo để kiểm tra.');
+                                    return;
+                                }
+                                const door = mocanFits(item.dims, this.doorWidth, this.doorHeight);
+                                const lift = mocanFits(item.dims, this.liftWidth, this.liftHeight);
+                                if (door === false) lines.push(item.name + ' không lọt cửa vào.');
+                                if (lift === false) lines.push(item.name + ' không lọt thang máy.');
+                            });
+                            return lines;
+                        }
+                    }"
+                >
+                    <div class="flex items-center gap-3 border-b border-ui-border pb-4 mb-6">
+                        <span class="grid size-8 place-items-center rounded-full bg-primary/10 text-primary font-bold text-sm">2</span>
+                        <h2 class="font-display text-xl font-bold text-heading">Kiểm tra lối đi</h2>
+                    </div>
+                    <p class="text-xs text-muted mb-4">Nhập miệng cửa và cabin thang máy. Cảnh báo không chặn đặt hàng — bạn vẫn có thể nhận hàng tháo kiện hoặc giao qua lối khác.</p>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="text-[11px] text-muted">Cửa rộng (cm)<input type="number" min="1" x-model.number="doorWidth" class="mt-1 w-full rounded-xl border border-ui-border bg-surface-alt px-3 py-2 text-sm text-heading"></label>
+                        <label class="text-[11px] text-muted">Cửa cao (cm)<input type="number" min="1" x-model.number="doorHeight" class="mt-1 w-full rounded-xl border border-ui-border bg-surface-alt px-3 py-2 text-sm text-heading"></label>
+                        <label class="text-[11px] text-muted">Thang máy rộng (cm)<input type="number" min="1" x-model.number="liftWidth" class="mt-1 w-full rounded-xl border border-ui-border bg-surface-alt px-3 py-2 text-sm text-heading"></label>
+                        <label class="text-[11px] text-muted">Thang máy cao (cm)<input type="number" min="1" x-model.number="liftHeight" class="mt-1 w-full rounded-xl border border-ui-border bg-surface-alt px-3 py-2 text-sm text-heading"></label>
+                    </div>
+                    <ul class="mt-4 space-y-1 text-xs text-rose-600" x-show="warnings().length">
+                        <template x-for="line in warnings()" :key="line">
+                            <li x-text="line"></li>
+                        </template>
+                    </ul>
+                </div>
+
                 <!-- Payment Method Selection -->
                 <div class="rounded-3xl border border-ui-border bg-surface p-6 sm:p-8 shadow-sm">
                     <div class="flex items-center gap-3 border-b border-ui-border pb-4 mb-6">
-                        <span class="grid size-8 place-items-center rounded-full bg-primary/10 text-primary font-bold text-sm">2</span>
+                        <span class="grid size-8 place-items-center rounded-full bg-primary/10 text-primary font-bold text-sm">3</span>
                         <h2 class="font-display text-xl font-bold text-heading">Phương thức thanh toán</h2>
                     </div>
 

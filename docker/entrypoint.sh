@@ -105,6 +105,8 @@ server_pids+=("$!")
 echo "Web server is listening; seeding admin user and reviews."
 su-exec www-data php artisan db:seed --class=AdminUserSeeder --force --no-interaction || echo "Admin seed failed; continuing." >&2
 su-exec www-data php artisan db:seed --class=StorefrontReviewSeeder --force --no-interaction || echo "Review seed failed; continuing." >&2
+su-exec www-data php artisan products:fix-sizes --no-interaction || echo "Variant size fix failed; continuing." >&2
+su-exec www-data php artisan products:models --no-interaction || echo "3D model generation failed; continuing." >&2
 if [[ "${RUN_SEEDERS:-false}" == "true" ]]; then
     su-exec www-data php artisan db:seed --force --no-interaction || echo "Database seed failed; continuing." >&2
 fi

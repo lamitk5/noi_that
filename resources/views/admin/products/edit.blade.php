@@ -124,6 +124,31 @@
             @endif
         </div>
 
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Mô hình 3D (.glb)</label>
+                @if ($product->model_glb)
+                    <p class="mb-1 text-[11px] text-emerald-700">Đang có file GLB. Tải file mới sẽ thay thế.</p>
+                    <label class="mb-2 flex items-center gap-2 text-xs text-gray-600">
+                        <input type="checkbox" name="remove_model_glb" value="1"> Gỡ mô hình GLB
+                    </label>
+                @endif
+                <input type="file" name="model_glb" accept=".glb,model/gltf-binary" class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-amber-50 file:text-amber-700">
+                @error('model_glb') <span class="text-xs text-rose-600">{{ $message }}</span> @enderror
+            </div>
+            <div>
+                <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Mô hình Quick Look (.usdz)</label>
+                @if ($product->model_usdz)
+                    <p class="mb-1 text-[11px] text-emerald-700">Đang có file USDZ. Tải file mới sẽ thay thế.</p>
+                    <label class="mb-2 flex items-center gap-2 text-xs text-gray-600">
+                        <input type="checkbox" name="remove_model_usdz" value="1"> Gỡ mô hình USDZ
+                    </label>
+                @endif
+                <input type="file" name="model_usdz" accept=".usdz" class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-amber-50 file:text-amber-700">
+                @error('model_usdz') <span class="text-xs text-rose-600">{{ $message }}</span> @enderror
+            </div>
+        </div>
+
         <div>
             <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Tải thêm ảnh mới (không bắt buộc)</label>
             <p class="text-[10px] text-gray-400 mb-1.5">Nếu không chọn file, ảnh hiện tại sẽ được giữ nguyên.</p>

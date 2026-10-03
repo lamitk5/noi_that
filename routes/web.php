@@ -18,13 +18,23 @@ use App\Http\Controllers\OrderTrackingController;
 use App\Http\Controllers\Payments\MomoController;
 use App\Http\Controllers\Payments\VnpayController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\QuotationController;
 use App\Http\Controllers\ReviewController;
+use App\Http\Controllers\RoomMixController;
+use App\Http\Controllers\VisualSearchController;
 use App\Http\Controllers\ShippingController;
 use App\Http\Controllers\WishlistController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/products', [ProductController::class, 'index'])->name('products.index');
+Route::get('/tim-bang-anh', [VisualSearchController::class, 'index'])->name('products.visual');
+Route::post('/tim-bang-anh', [VisualSearchController::class, 'search'])->middleware('throttle:ai-chat')->name('products.visual.search');
+Route::get('/phoi-combo', [RoomMixController::class, 'show'])->name('rooms.mix');
+Route::post('/phoi-combo', [RoomMixController::class, 'save'])->name('rooms.mix.save');
+Route::post('/phoi-combo/mua', [RoomMixController::class, 'buy'])->name('rooms.mix.buy');
+Route::get('/bao-gia', [QuotationController::class, 'create'])->name('quotes.create');
+Route::post('/bao-gia', [QuotationController::class, 'store'])->name('quotes.store');
 Route::get('/products/{slug}', [ProductController::class, 'show'])->name('products.show');
 Route::post('/products/{product}/reviews', [ReviewController::class, 'store'])
     ->middleware(['auth', 'throttle:10,1'])
@@ -89,13 +99,15 @@ Route::get('/media/picture/{filename}', function (string $filename) {
 
     abort_unless($safe !== '' && is_file($path), 404);
 
-    $mime = function_exists('mime_content_type') ? (@mime_content_type($path) ?: null) : null;
-    $mime = $mime ?: match (strtolower(pathinfo($path, PATHINFO_EXTENSION))) {
+    $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+    $mime = match ($ext) {
         'jpg', 'jpeg' => 'image/jpeg',
         'png' => 'image/png',
         'webp' => 'image/webp',
         'gif' => 'image/gif',
-        default => 'application/octet-stream',
+        'glb' => 'model/gltf-binary',
+        'usdz' => 'model/vnd.usdz+zip',
+        default => (function_exists('mime_content_type') ? (@mime_content_type($path) ?: null) : null) ?: 'application/octet-stream',
     };
 
     return response()->file($path, [

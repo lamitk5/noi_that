@@ -45,6 +45,8 @@
             <nav class="hidden items-center gap-8 lg:flex" aria-label="Điều hướng chính">
                 <a href="{{ route('home') }}" class="nav-link {{ request()->routeIs('home') ? 'is-active' : '' }}">Trang chủ</a>
                 <a href="{{ route('products.index') }}" class="nav-link {{ request()->routeIs('products.*') ? 'is-active' : '' }}">Sản phẩm</a>
+                <a href="{{ route('rooms.mix') }}" class="nav-link {{ request()->routeIs('rooms.mix') ? 'is-active' : '' }}">Phối combo</a>
+                <a href="{{ route('quotes.create') }}" class="nav-link {{ request()->routeIs('quotes.*') ? 'is-active' : '' }}">Báo giá</a>
                 <a href="{{ route('wishlist.index') }}" class="nav-link {{ request()->routeIs('wishlist.*') ? 'is-active' : '' }}">Yêu thích</a>
                 <a href="{{ route('home') }}#bo-suu-tap" class="nav-link">Bộ sưu tập</a>
                 <a href="{{ route('home') }}#ve-chung-toi" class="nav-link">Về Mộc An</a>
@@ -285,6 +287,8 @@
             <div class="mx-auto flex max-w-7xl flex-col">
                 <a href="{{ route('home') }}" class="mobile-nav-link">Trang chủ</a>
                 <a href="{{ route('products.index') }}" class="mobile-nav-link">Sản phẩm</a>
+                <a href="{{ route('rooms.mix') }}" class="mobile-nav-link">Phối combo</a>
+                <a href="{{ route('quotes.create') }}" class="mobile-nav-link">Báo giá</a>
                 <a href="{{ route('wishlist.index') }}" class="mobile-nav-link flex items-center justify-between">
                     <span>Danh sách yêu thích</span>
                     <span class="wishlist-badge-count rounded-full bg-rose-500 px-2 py-0.5 text-xs font-semibold text-white {{ ($wishlistCount ?? 0) > 0 ? '' : 'hidden' }}">{{ $wishlistCount ?? 0 }}</span>

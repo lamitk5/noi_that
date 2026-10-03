@@ -31,6 +31,10 @@ class ProductRequest extends FormRequest
             'is_featured' => ['sometimes', 'boolean'],
             'is_active' => ['sometimes', 'boolean'],
             'images.*' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:4096'],
+            'model_glb' => ['nullable', 'file', 'extensions:glb', 'max:20480'],
+            'model_usdz' => ['nullable', 'file', 'extensions:usdz', 'max:20480'],
+            'remove_model_glb' => ['sometimes', 'boolean'],
+            'remove_model_usdz' => ['sometimes', 'boolean'],
         ];
     }
 

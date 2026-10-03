@@ -79,6 +79,7 @@ class ProductController extends Controller
             ];
 
             $product = Product::create($payload);
+            $this->attachModelFiles($product, $request);
 
             $product->variants()->create([
                 'sku' => $product->sku.'-DEF',
@@ -183,6 +184,8 @@ class ProductController extends Controller
                 ]);
             }
 
+            $this->attachModelFiles($product, $request);
+
             // Only process when admin actually uploaded valid files — keep existing images otherwise
             $this->attachUploadedImages($product, $request);
 
@@ -225,6 +228,8 @@ class ProductController extends Controller
             foreach ($product->images as $image) {
                 $this->deletePictureFile($image->image_path);
             }
+            $this->deletePictureFile($product->model_glb);
+            $this->deletePictureFile($product->model_usdz);
 
             $product->delete();
 
@@ -326,6 +331,24 @@ class ProductController extends Controller
         }
 
         return $value;
+    }
+
+    private function attachModelFiles(Product $product, Request $request): void
+    {
+        foreach (['model_glb', 'model_usdz'] as $field) {
+            if ($request->boolean('remove_'.$field)) {
+                $this->deletePictureFile($product->{$field});
+                $product->{$field} = null;
+            }
+
+            $file = $request->file($field);
+            if ($file && $file->isValid()) {
+                $this->deletePictureFile($product->{$field});
+                $product->{$field} = $this->storePicture($file);
+            }
+        }
+
+        $product->save();
     }
 
     /**

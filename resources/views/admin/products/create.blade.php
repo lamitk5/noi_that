@@ -78,6 +78,21 @@
             <input type="file" name="images[]" multiple accept="image/*" class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100">
         </div>
 
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Mô hình 3D (.glb)</label>
+                <input type="file" name="model_glb" accept=".glb,model/gltf-binary" class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-amber-50 file:text-amber-700">
+                <p class="mt-1 text-[10px] text-gray-400">Dùng để xoay trên máy tính và xem AR trên Android. Tối đa 20 MB.</p>
+                @error('model_glb') <span class="text-xs text-rose-600">{{ $message }}</span> @enderror
+            </div>
+            <div>
+                <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Mô hình Quick Look (.usdz)</label>
+                <input type="file" name="model_usdz" accept=".usdz" class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-amber-50 file:text-amber-700">
+                <p class="mt-1 text-[10px] text-gray-400">Cần cho nút Xem trong phòng trên iPhone. Tối đa 20 MB.</p>
+                @error('model_usdz') <span class="text-xs text-rose-600">{{ $message }}</span> @enderror
+            </div>
+        </div>
+
         <div class="flex items-center space-x-6 pt-2">
             <label class="flex items-center text-sm font-semibold text-gray-700">
                 <input type="checkbox" name="is_featured" value="1" class="mr-2 text-amber-800">
