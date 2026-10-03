@@ -8,8 +8,12 @@ namespace App\Support;
  */
 class FurnitureGlb
 {
-    /** @var array<string, array{positions: array<int, float>, normals: array<int, float>, indices: array<int, int>}> */
+    /** @var array<string, array{positions: array<int, float>, normals: array<int, float>, indices: array<int, int>, uvs?: array<int, float>}> */
     private array $parts = [];
+
+    private ?string $photoJpeg = null;
+
+    private bool $hasPhoto = false;
 
     /**
      * @return array{0: string, 1: float, 2: float, 3: float} shape, width cm, depth cm, height cm
@@ -87,13 +91,69 @@ class FurnitureGlb
     /**
      * @return array{0: string, 1: string} GLB bytes and USDZ bytes
      */
-    public static function filesFor(string $name, ?string $dimensions): array
+    public static function filesFor(string $name, ?string $dimensions, ?string $imagePath = null): array
     {
         [$shape, $width, $depth, $height] = self::measure($name, $dimensions);
+        $w = max($width, 8) / 100;
+        $d = max($depth, 4) / 100;
+        $h = max($height, 4) / 100;
+        $photo = self::preparePhoto($imagePath);
         $builder = new self();
-        $builder->build($shape, max($width, 8) / 100, max($depth, 4) / 100, max($height, 4) / 100);
+        $builder->hasPhoto = $photo !== null;
+        $builder->build($shape, $w, $d, $h);
+        if ($photo !== null) {
+            $builder->photoJpeg = $photo['bytes'];
+            $builder->addPhotoCard($shape, $w, $d, $h, $photo['width'], $photo['height']);
+        }
 
         return [$builder->encode(), $builder->encodeUsdz()];
+    }
+
+    /**
+     * Shrink the catalog photo so the 3D file stays small enough to load on a phone.
+     *
+     * @return array{bytes: string, width: int, height: int}|null
+     */
+    public static function preparePhoto(?string $imagePath): ?array
+    {
+        if ($imagePath === null || ! is_file($imagePath) || ! function_exists('imagecreatefromstring')) {
+            return null;
+        }
+
+        $raw = file_get_contents($imagePath);
+        if ($raw === false || $raw === '') {
+            return null;
+        }
+
+        $source = @imagecreatefromstring($raw);
+        if ($source === false) {
+            return null;
+        }
+
+        $width = imagesx($source);
+        $height = imagesy($source);
+        if ($width < 8 || $height < 8) {
+            imagedestroy($source);
+
+            return null;
+        }
+
+        $limit = 960;
+        $scale = min(1, $limit / max($width, $height));
+        $targetW = max(8, (int) round($width * $scale));
+        $targetH = max(8, (int) round($height * $scale));
+        $canvas = imagecreatetruecolor($targetW, $targetH);
+        imagecopyresampled($canvas, $source, 0, 0, 0, 0, $targetW, $targetH, $width, $height);
+        imagedestroy($source);
+        ob_start();
+        imagejpeg($canvas, null, 78);
+        $bytes = ob_get_clean();
+        imagedestroy($canvas);
+        if (! is_string($bytes) || strlen($bytes) < 100) {
+            return null;
+        }
+
+        return ['bytes' => $bytes, 'width' => $targetW, 'height' => $targetH];
     }
 
     public static function binaryFor(string $name, ?string $dimensions): string
@@ -298,6 +358,9 @@ class FurnitureGlb
         $plinth = 0.05;
         $this->addBox('wood', 0, $plinth / 2, 0, $w - 0.04, $plinth, $d - 0.04);
         $this->addBox('wood', 0, $plinth + ($h - $plinth) / 2, 0, $w, $h - $plinth, $d);
+        if ($this->hasPhoto) {
+            return;
+        }
         $doors = $low ? 2 : ($w > 1.2 ? 3 : 2);
         $gap = 0.012;
         $doorW = ($w - 0.06 - $gap * ($doors - 1)) / $doors;
@@ -361,6 +424,78 @@ class FurnitureGlb
     {
         $this->addBox('white', 0, $h / 2, 0, $w, $h, $d);
         $this->addBox('glass', 0, $h - 0.04, 0, $w * 0.78, 0.06, $d * 0.62);
+    }
+
+    private function addPhotoCard(string $shape, float $w, float $d, float $h, int $imageW, int $imageH): void
+    {
+        if ($shape === 'rug') {
+            $uvs = $this->coverUvs($w / $d, $imageW / $imageH);
+            $y = 0.02;
+            $verts = [
+                [-$w / 2, $y, $d / 2],
+                [$w / 2, $y, $d / 2],
+                [$w / 2, $y, -$d / 2],
+                [-$w / 2, $y, -$d / 2],
+            ];
+            $this->addTexturedQuad([0, 1, 0], $verts, $uvs);
+
+            return;
+        }
+
+        $z = $d / 2 + 0.03;
+        $verts = [
+            [-$w / 2, 0.004, $z],
+            [$w / 2, 0.004, $z],
+            [$w / 2, $h - 0.004, $z],
+            [-$w / 2, $h - 0.004, $z],
+        ];
+        $this->addTexturedQuad([0, 0, 1], $verts, $this->coverUvs($w / $h, $imageW / max($imageH, 1)));
+    }
+
+    /**
+     * Crop the catalog photo so it fills the furniture face without stretching.
+     *
+     * @return array<int, array{0: float, 1: float}>
+     */
+    private function coverUvs(float $panelAspect, float $imageAspect): array
+    {
+        if ($imageAspect > $panelAspect) {
+            $used = $panelAspect / $imageAspect;
+            $u0 = (1 - $used) / 2;
+            $u1 = 1 - $u0;
+            $v0 = 0.0;
+            $v1 = 1.0;
+        } else {
+            $used = $imageAspect / $panelAspect;
+            $v1 = 1.0;
+            $v0 = max(0.0, 1 - $used);
+            $u0 = 0.0;
+            $u1 = 1.0;
+        }
+
+        return [[$u0, $v1], [$u1, $v1], [$u1, $v0], [$u0, $v0]];
+    }
+
+    /**
+     * @param  array{0: float, 1: float, 2: float}  $normal
+     * @param  array<int, array{0: float, 1: float, 2: float}>  $verts
+     */
+    /**
+     * @param  array<int, array{0: float, 1: float}>  $uvs
+     */
+    private function addTexturedQuad(array $normal, array $verts, array $uvs): void
+    {
+        if ($this->facesIn($normal, $verts[0], $verts[1], $verts[2]) < 0) {
+            $verts = [$verts[0], $verts[3], $verts[2], $verts[1]];
+            $uvs = [$uvs[0], $uvs[3], $uvs[2], $uvs[1]];
+        }
+
+        $base = $this->pushVerts('photo', $verts, $normal);
+        $part = &$this->parts['photo'];
+        foreach ($uvs as $uv) {
+            array_push($part['uvs'], $uv[0], $uv[1]);
+        }
+        array_push($part['indices'], $base, $base + 1, $base + 2, $base, $base + 2, $base + 3);
     }
 
     private function addBox(string $material, float $cx, float $cy, float $cz, float $sx, float $sy, float $sz): void
@@ -464,7 +599,7 @@ class FurnitureGlb
     private function pushVerts(string $material, array $verts, array $normal): int
     {
         if (! isset($this->parts[$material])) {
-            $this->parts[$material] = ['positions' => [], 'normals' => [], 'indices' => []];
+            $this->parts[$material] = ['positions' => [], 'normals' => [], 'indices' => [], 'uvs' => []];
         }
 
         $base = intdiv(count($this->parts[$material]['positions']), 3);
@@ -518,26 +653,54 @@ class FurnitureGlb
         $primitives = [];
         $materials = [];
         $materialIndex = [];
+        $images = [];
+        $textures = [];
+
+        if ($this->photoJpeg !== null) {
+            $pad = (4 - (strlen($bin) % 4)) % 4;
+            $bin .= str_repeat("\0", $pad);
+            $offset = strlen($bin);
+            $bin .= $this->photoJpeg;
+            $bufferViews[] = [
+                'buffer' => 0,
+                'byteOffset' => $offset,
+                'byteLength' => strlen($this->photoJpeg),
+            ];
+            $images[] = ['bufferView' => 0, 'mimeType' => 'image/jpeg'];
+            $textures[] = ['source' => 0];
+        }
 
         foreach ($this->parts as $name => $part) {
             if (! isset($materialIndex[$name])) {
                 $materialIndex[$name] = count($materials);
-                $color = $colors[$name] ?? $colors['wood'];
-                $material = [
-                    'name' => $name,
-                    'pbrMetallicRoughness' => [
-                        'baseColorFactor' => $color,
-                        'metallicFactor' => $name === 'metal' ? 0.7 : 0.0,
-                        'roughnessFactor' => $name === 'metal' ? 0.35 : 0.72,
-                    ],
-                ];
-                if ($color[3] < 1) {
-                    $material['alphaMode'] = 'BLEND';
+                if ($name === 'photo' && $textures !== []) {
+                    $materials[] = [
+                        'name' => 'photo',
+                        'doubleSided' => true,
+                        'pbrMetallicRoughness' => [
+                            'baseColorTexture' => ['index' => 0],
+                            'metallicFactor' => 0,
+                            'roughnessFactor' => 0.85,
+                        ],
+                    ];
+                } else {
+                    $color = $colors[$name] ?? $colors['wood'];
+                    $material = [
+                        'name' => $name,
+                        'pbrMetallicRoughness' => [
+                            'baseColorFactor' => $color,
+                            'metallicFactor' => $name === 'metal' ? 0.7 : 0.0,
+                            'roughnessFactor' => $name === 'metal' ? 0.35 : 0.72,
+                        ],
+                    ];
+                    if ($color[3] < 1) {
+                        $material['alphaMode'] = 'BLEND';
+                    }
+                    if (in_array($name, ['glass', 'rug', 'fabric'], true)) {
+                        $material['doubleSided'] = true;
+                    }
+                    $materials[] = $material;
                 }
-                if (in_array($name, ['glass', 'rug', 'fabric'], true)) {
-                    $material['doubleSided'] = true;
-                }
-                $materials[] = $material;
             }
 
             $pos = pack('f*', ...$part['positions']);
@@ -587,14 +750,37 @@ class FurnitureGlb
                 $accessors[] = $accessor;
             }
 
+            $attributes = ['POSITION' => $accessorIds[0], 'NORMAL' => $accessorIds[1]];
+            $uvs = $part['uvs'] ?? [];
+            if (count($uvs) === $vertexCount * 2) {
+                $uvBytes = pack('f*', ...$uvs);
+                $pad = (4 - (strlen($bin) % 4)) % 4;
+                $bin .= str_repeat("\0", $pad);
+                $offset = strlen($bin);
+                $bin .= $uvBytes;
+                $bufferViews[] = [
+                    'buffer' => 0,
+                    'byteOffset' => $offset,
+                    'byteLength' => strlen($uvBytes),
+                    'target' => 34962,
+                ];
+                $accessors[] = [
+                    'bufferView' => count($bufferViews) - 1,
+                    'componentType' => 5126,
+                    'count' => $vertexCount,
+                    'type' => 'VEC2',
+                ];
+                $attributes['TEXCOORD_0'] = count($accessors) - 1;
+            }
+
             $primitives[] = [
-                'attributes' => ['POSITION' => $accessorIds[0], 'NORMAL' => $accessorIds[1]],
+                'attributes' => $attributes,
                 'indices' => $accessorIds[2],
                 'material' => $materialIndex[$name],
             ];
         }
 
-        $json = json_encode([
+        $document = [
             'asset' => ['version' => '2.0', 'generator' => 'MocAn'],
             'scene' => 0,
             'scenes' => [['nodes' => [0]]],
@@ -604,7 +790,12 @@ class FurnitureGlb
             'buffers' => [['byteLength' => strlen($bin)]],
             'bufferViews' => $bufferViews,
             'accessors' => $accessors,
-        ], JSON_UNESCAPED_SLASHES);
+        ];
+        if ($images !== []) {
+            $document['images'] = $images;
+            $document['textures'] = $textures;
+        }
+        $json = json_encode($document, JSON_UNESCAPED_SLASHES);
 
         $jsonChunk = $json.str_repeat(' ', (4 - (strlen($json) % 4)) % 4);
         $bin .= str_repeat("\0", (4 - (strlen($bin) % 4)) % 4);
@@ -634,6 +825,40 @@ class FurnitureGlb
             'shade' => [0.95, 0.90, 0.78],
         ];
 
+        $photoMaterial = '';
+        if ($this->photoJpeg !== null) {
+            $photoMaterial = <<<'USD'
+    def Material "PhotoMat"
+    {
+        token outputs:surface.connect = </Root/PhotoMat/Surface.outputs:surface>
+
+        def Shader "Surface"
+        {
+            uniform token info:id = "UsdPreviewSurface"
+            token outputs:surface
+            color3f inputs:diffuseColor.connect = </Root/PhotoMat/Texture.outputs:rgb>
+            float inputs:roughness = 0.85
+        }
+
+        def Shader "Texture"
+        {
+            uniform token info:id = "UsdUVTexture"
+            asset inputs:file = @photo.jpg@
+            float2 inputs:st.connect = </Root/PhotoMat/St.outputs:result>
+            token outputs:rgb
+        }
+
+        def Shader "St"
+        {
+            uniform token info:id = "UsdPrimvarReader_float2"
+            string inputs:varname = "st"
+            float2 outputs:result
+        }
+    }
+
+USD;
+        }
+
         $meshes = '';
         $index = 0;
         foreach ($this->parts as $name => $part) {
@@ -643,6 +868,18 @@ class FurnitureGlb
             $indices = implode(', ', $part['indices']);
             $color = $colors[$name] ?? $colors['wood'];
             $colorText = sprintf('(%.3f, %.3f, %.3f)', $color[0], $color[1], $color[2]);
+            $uvLine = '';
+            $bind = '';
+            $uvs = $part['uvs'] ?? [];
+            if ($name === 'photo' && $this->photoJpeg !== null && count($uvs) >= 2) {
+                $sts = [];
+                for ($i = 0; $i < count($uvs); $i += 2) {
+                    $sts[] = sprintf('(%.5f, %.5f)', $uvs[$i], 1 - $uvs[$i + 1]);
+                }
+                $stText = implode(', ', $sts);
+                $uvLine = "        texCoord2f[] primvars:st = [{$stText}] (\n            interpolation = \"vertex\"\n        )\n";
+                $bind = "        rel material:binding = </Root/PhotoMat>\n";
+            }
             $meshes .= <<<USD
     def Mesh "Part{$index}"
     {
@@ -655,7 +892,7 @@ class FurnitureGlb
             interpolation = "vertex"
         )
         color3f[] primvars:displayColor = [{$colorText}]
-    }
+{$uvLine}{$bind}    }
 
 USD;
             $index++;
@@ -671,11 +908,16 @@ USD;
 
 def Xform "Root"
 {
-{$meshes}}
+{$photoMaterial}{$meshes}}
 
 USD;
 
-        return $this->storeZip('model.usda', $usda);
+        $files = ['model.usda' => $usda];
+        if ($this->photoJpeg !== null) {
+            $files['photo.jpg'] = $this->photoJpeg;
+        }
+
+        return $this->storeZip($files);
     }
 
     /**
@@ -692,21 +934,30 @@ USD;
     }
 
     /**
-     * Uncompressed zip with the file payload aligned to 64 bytes, which Quick Look requires.
+     * Uncompressed zip. The first file is the USD scene, and each payload starts on a 64-byte boundary.
+     *
+     * @param  array<string, string>  $files
      */
-    private function storeZip(string $name, string $data): string
+    private function storeZip(array $files): string
     {
-        $crc = crc32($data) & 0xffffffff;
-        $size = strlen($data);
-        $extraLength = (64 - ((30 + strlen($name)) % 64)) % 64;
-        $extra = str_repeat("\0", $extraLength);
+        $localAll = '';
+        $centralAll = '';
+        foreach ($files as $name => $data) {
+            $crc = crc32($data) & 0xffffffff;
+            $size = strlen($data);
+            $offset = strlen($localAll);
+            $extraLength = (64 - (($offset + 30 + strlen($name)) % 64)) % 64;
+            $extra = str_repeat("\0", $extraLength);
+            $local = pack('VvvvvvVVVvv', 0x04034b50, 20, 0, 0, 0, 0, $crc, $size, $size, strlen($name), $extraLength)
+                .$name.$extra.$data;
+            $centralAll .= pack('VvvvvvvVVVvvvvvVV', 0x02014b50, 20, 20, 0, 0, 0, 0, $crc, $size, $size, strlen($name), $extraLength, 0, 0, 0, 0, $offset)
+                .$name.$extra;
+            $localAll .= $local;
+        }
 
-        $local = pack('VvvvvvVVVvv', 0x04034b50, 20, 0, 0, 0, 0, $crc, $size, $size, strlen($name), $extraLength)
-            .$name.$extra.$data;
-        $central = pack('VvvvvvvVVVvvvvvVV', 0x02014b50, 20, 20, 0, 0, 0, 0, $crc, $size, $size, strlen($name), $extraLength, 0, 0, 0, 0, 0)
-            .$name.$extra;
-        $end = pack('VvvvvVVv', 0x06054b50, 0, 0, 1, 1, strlen($central), strlen($local), 0);
+        $count = count($files);
+        $end = pack('VvvvvVVv', 0x06054b50, 0, 0, $count, $count, strlen($centralAll), strlen($localAll), 0);
 
-        return $local.$central.$end;
+        return $localAll.$centralAll.$end;
     }
 }

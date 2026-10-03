@@ -32,7 +32,7 @@ class GenerateProductModelsCommand extends Command
             }
 
             [$shape, $width, $depth, $height] = FurnitureGlb::measure($product->name, $product->dimensions);
-            [$glb, $usdz] = FurnitureGlb::filesFor($product->name, $product->dimensions);
+            [$glb, $usdz] = FurnitureGlb::filesFor($product->name, $product->dimensions, $this->photoPath($product));
             $filename = 'mocan-'.$product->id;
             file_put_contents($dir.DIRECTORY_SEPARATOR.$filename.'.glb', $glb);
             file_put_contents($dir.DIRECTORY_SEPARATOR.$filename.'.usdz', $usdz);
@@ -56,5 +56,18 @@ class GenerateProductModelsCommand extends Command
         $this->info("Đã tạo {$made} cặp GLB/USDZ. Bỏ qua {$skipped} sản phẩm đã có mô hình riêng.");
 
         return self::SUCCESS;
+    }
+
+    private function photoPath(Product $product): ?string
+    {
+        $product->loadMissing('primaryImage');
+        $path = $product->primaryImage?->image_path;
+        if (! is_string($path) || ! str_starts_with($path, 'picture/')) {
+            return null;
+        }
+
+        $file = storage_path('picture/'.basename($path));
+
+        return is_file($file) ? $file : null;
     }
 }

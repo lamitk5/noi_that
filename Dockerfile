@@ -1,9 +1,10 @@
 FROM php:8.2-fpm-alpine AS php-base
 
 RUN apk add --no-cache bash nginx curl gettext su-exec tini ca-certificates \
-    libpng libzip oniguruma \
+    libpng libjpeg-turbo libwebp freetype libzip oniguruma \
     && apk add --no-cache --virtual .build-deps $PHPIZE_DEPS \
-    libpng-dev libzip-dev oniguruma-dev \
+    libpng-dev libjpeg-turbo-dev libwebp-dev freetype-dev libzip-dev oniguruma-dev \
+    && docker-php-ext-configure gd --with-jpeg --with-webp --with-freetype \
     && docker-php-ext-install -j"$(nproc)" pdo_mysql mbstring zip gd bcmath opcache \
     && apk del .build-deps
 
