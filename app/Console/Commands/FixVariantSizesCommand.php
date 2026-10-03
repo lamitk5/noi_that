@@ -23,6 +23,10 @@ class FixVariantSizesCommand extends Command
                 continue;
             }
 
+            if ($product->variants->map(fn ($v) => trim((string) $v->size))->unique()->count() > 1) {
+                continue;
+            }
+
             foreach ($product->variants as $variant) {
                 $next = $this->sizeFor($product, (string) $variant->size);
                 if ($next === null || $next === $variant->size) {

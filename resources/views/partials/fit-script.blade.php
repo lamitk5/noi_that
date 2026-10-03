@@ -1,7 +1,8 @@
 <script>
     function mocanParseDims(text) {
         if (!text) return null;
-        const matches = String(text).match(/\d+(?:[.,]\d+)?/g);
+        const triple = String(text).match(/(\d+(?:[.,]\d+)?)\s*[x×*]\s*(\d+(?:[.,]\d+)?)\s*[x×*]\s*(\d+(?:[.,]\d+)?)/i);
+        const matches = triple ? triple.slice(1, 4) : String(text).match(/\d+(?:[.,]\d+)?/g);
         if (!matches || matches.length < 3) return null;
         const numbers = matches.slice(0, 3).map((value) => parseFloat(value.replace(',', '.')));
         if (Math.min(...numbers) <= 0) return null;

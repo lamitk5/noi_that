@@ -74,7 +74,7 @@
                 if (saved.floor) this.floor = saved.floor;
                 if (saved.wall) this.wall = saved.wall;
                 (saved.items || []).forEach((raw) => {
-                    const product = this.product(raw.product_id);
+                    const product = this.findProduct(raw.product_id);
                     if (!product) return;
                     const size = product.sizes.find((s) => s.variant_id === raw.variant_id) || product.sizes[0];
                     this.placed.push({ uid: this.newUid(), product_id: product.id, variant_id: size.variant_id, x: raw.x, y: raw.y, rotation: raw.rotation || 0 });
@@ -95,9 +95,9 @@
                         return;
                     }
                     stage.setRoom(this.roomSpec());
-                    this.placed.forEach((item) => { this.clamp(item); this.loadPalette(this.product(item.product_id)); });
+                    this.placed.forEach((item) => { this.clamp(item); this.loadPalette(this.findProduct(item.product_id)); });
                     this.ready = true;
-                    const focus = config.focusProduct ? this.product(config.focusProduct) : null;
+                    const focus = config.focusProduct ? this.findProduct(config.focusProduct) : null;
                     if (focus && !this.placed.some((i) => i.product_id === focus.id)) {
                         this.add(focus);
                     } else {
@@ -116,12 +116,12 @@
                 return 'i' + Date.now().toString(36) + uidSeed;
             },
 
-            product(id) {
+            findProduct(id) {
                 return this.catalog.find((p) => p.id === Number(id));
             },
 
             sizeOf(item) {
-                const product = this.product(item.product_id);
+                const product = this.findProduct(item.product_id);
                 return product.sizes.find((s) => s.variant_id === Number(item.variant_id)) || product.sizes[0];
             },
 
@@ -151,12 +151,12 @@
             },
 
             isElevated(item) {
-                const shape = this.product(item.product_id).shape;
+                const shape = this.findProduct(item.product_id).shape;
                 return shape === 'pendant' || shape === 'wall-lamp' || (shape === 'mirror' && this.sizeOf(item).box.h < 120);
             },
 
             elevation(item) {
-                const shape = this.product(item.product_id).shape;
+                const shape = this.findProduct(item.product_id).shape;
                 const box = this.sizeOf(item).box;
                 if (shape === 'pendant') return Math.max(1.9, this.room.height - box.h / 100 - 0.45);
                 if (shape === 'wall-lamp') return 1.75;
@@ -165,7 +165,7 @@
             },
 
             collides(item) {
-                return !NO_COLLIDE.includes(this.product(item.product_id).shape) && !this.isElevated(item);
+                return !NO_COLLIDE.includes(this.findProduct(item.product_id).shape) && !this.isElevated(item);
             },
 
             overlap(a, b) {
@@ -219,17 +219,17 @@
             get warnings() {
                 const lines = [];
                 if (this.conflictUids.size) lines.push(`${this.conflictUids.size} món đang chồng lên nhau (viền đỏ). Kéo ra hoặc đổi size.`);
-                this.oversized.forEach((item) => lines.push(`${this.product(item.product_id).name} (${this.sizeOf(item).label}) lớn hơn phòng.`));
+                this.oversized.forEach((item) => lines.push(`${this.findProduct(item.product_id).name} (${this.sizeOf(item).label}) lớn hơn phòng.`));
                 return lines;
             },
 
             get rows() {
-                return this.placed.map((item) => ({ item, product: this.product(item.product_id), size: this.sizeOf(item), conflict: this.conflictUids.has(item.uid) }));
+                return this.placed.map((item) => ({ item, product: this.findProduct(item.product_id), size: this.sizeOf(item), conflict: this.conflictUids.has(item.uid) }));
             },
 
             get selected() {
                 const item = this.placed.find((i) => i.uid === this.selectedUid);
-                return item ? { item, product: this.product(item.product_id), size: this.sizeOf(item) } : null;
+                return item ? { item, product: this.findProduct(item.product_id), size: this.sizeOf(item) } : null;
             },
 
             get distances() {
@@ -263,7 +263,7 @@
 
             stageItems() {
                 return this.placed.map((item) => {
-                    const product = this.product(item.product_id);
+                    const product = this.findProduct(item.product_id);
                     const size = this.sizeOf(item);
                     const elevation = this.elevation(item);
                     return {
@@ -315,7 +315,7 @@
             freeSpot(item) {
                 const others = this.placed.filter((i) => i.uid !== item.uid && this.collides(i));
                 const free = () => !this.collides(item) || !others.some((o) => this.overlap(item, o));
-                const shape = this.product(item.product_id).shape;
+                const shape = this.findProduct(item.product_id).shape;
                 const W = this.room.width * 100;
                 const D = this.room.depth * 100;
                 const fp = this.footprint(item);

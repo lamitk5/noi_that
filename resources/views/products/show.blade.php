@@ -212,7 +212,7 @@
                         <div class="space-y-2.5 pt-3 border-t border-ui-border">
                             <div class="flex items-center justify-between text-xs">
                                 <span class="font-bold text-heading">
-                                    Kích thước tiêu chuẩn:
+                                    Kích thước:
                                     <span class="text-primary font-semibold ml-1" x-text="selectedSize"></span>
                                 </span>
                                 <span class="text-muted text-[11px]" x-text="stockStatusMessage"></span>
@@ -555,7 +555,11 @@
                         list.push(v.size);
                     }
                 });
-                return list;
+                const area = (size) => {
+                    const dims = mocanParseDims(size);
+                    return dims ? dims.l * dims.w * dims.h : 0;
+                };
+                return list.sort((a, b) => area(a) - area(b));
             },
 
             init() {
