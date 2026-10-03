@@ -15,6 +15,18 @@ class FurnitureGlb
 
     private bool $hasPhoto = false;
 
+    /** @var array<string, array{0: float, 1: float, 2: float, 3: float}> */
+    private array $palette = [
+        'wood' => [0.62, 0.42, 0.24, 1],
+        'fabric' => [0.48, 0.40, 0.34, 1],
+        'cushion' => [0.86, 0.78, 0.66, 1],
+        'metal' => [0.25, 0.25, 0.27, 1],
+        'glass' => [0.72, 0.86, 0.92, 0.55],
+        'white' => [0.94, 0.94, 0.92, 1],
+        'rug' => [0.55, 0.28, 0.20, 1],
+        'shade' => [0.95, 0.90, 0.78, 1],
+    ];
+
     /**
      * @return array{0: string, 1: float, 2: float, 3: float} shape, width cm, depth cm, height cm
      */
@@ -97,14 +109,9 @@ class FurnitureGlb
         $w = max($width, 8) / 100;
         $d = max($depth, 4) / 100;
         $h = max($height, 4) / 100;
-        $photo = self::preparePhoto($imagePath);
         $builder = new self();
-        $builder->hasPhoto = $photo !== null;
+        $builder->paintFromPhoto($imagePath);
         $builder->build($shape, $w, $d, $h);
-        if ($photo !== null) {
-            $builder->photoJpeg = $photo['bytes'];
-            $builder->addPhotoCard($shape, $w, $d, $h, $photo['width'], $photo['height']);
-        }
 
         return [$builder->encode(), $builder->encodeUsdz()];
     }
@@ -156,6 +163,152 @@ class FurnitureGlb
         return ['bytes' => $bytes, 'width' => $targetW, 'height' => $targetH];
     }
 
+    /**
+     * Pull the shell and front colors out of the catalog photo so the solid
+     * model matches the product without pasting the room onto a face.
+     */
+    private function paintFromPhoto(?string $imagePath): void
+    {
+        if ($imagePath === null || ! is_file($imagePath) || ! function_exists('imagecreatefromstring')) {
+            return;
+        }
+
+        $raw = file_get_contents($imagePath);
+        if ($raw === false || $raw === '') {
+            return;
+        }
+
+        $image = @imagecreatefromstring($raw);
+        if ($image === false) {
+            return;
+        }
+
+        $sampled = self::colorsFromImage($image);
+        imagedestroy($image);
+        if ($sampled === null) {
+            return;
+        }
+
+        [$shell, $panel] = $sampled;
+        $this->palette['wood'] = $shell;
+        $this->palette['cushion'] = $panel;
+        $this->palette['fabric'] = $panel;
+        $this->palette['rug'] = $panel;
+        $this->palette['shade'] = $panel;
+    }
+
+    /**
+     * @return array{0: array{0: float, 1: float, 2: float, 3: float}, 1: array{0: float, 1: float, 2: float, 3: float}}|null
+     */
+    private static function colorsFromImage(\GdImage $image): ?array
+    {
+        $width = imagesx($image);
+        $height = imagesy($image);
+        if ($width < 8 || $height < 8) {
+            return null;
+        }
+
+        $buckets = [];
+        $x0 = (int) ($width * 0.18);
+        $x1 = max($x0 + 1, (int) ($width * 0.82));
+        $y0 = (int) ($height * 0.40);
+        $y1 = max($y0 + 1, (int) ($height * 0.88));
+        for ($y = $y0; $y < $y1; $y += 4) {
+            for ($x = $x0; $x < $x1; $x += 4) {
+                $color = imagecolorat($image, $x, $y);
+                $red = ($color >> 16) & 255;
+                $green = ($color >> 8) & 255;
+                $blue = $color & 255;
+                $key = (intdiv($red, 18) << 8) | (intdiv($green, 18) << 4) | intdiv($blue, 18);
+                if (! isset($buckets[$key])) {
+                    $buckets[$key] = [0, 0, 0, 0];
+                }
+                $buckets[$key][0]++;
+                $buckets[$key][1] += $red;
+                $buckets[$key][2] += $green;
+                $buckets[$key][3] += $blue;
+            }
+        }
+
+        if ($buckets === []) {
+            return null;
+        }
+
+        $clusters = [];
+        foreach ($buckets as $row) {
+            $clusters[] = [
+                'count' => $row[0],
+                'r' => (int) round($row[1] / $row[0]),
+                'g' => (int) round($row[2] / $row[0]),
+                'b' => (int) round($row[3] / $row[0]),
+            ];
+        }
+        usort($clusters, fn (array $a, array $b) => $b['count'] <=> $a['count']);
+
+        $primary = $clusters[0];
+        $secondary = null;
+        foreach (array_slice($clusters, 1) as $cluster) {
+            if ($cluster['count'] < $primary['count'] * 0.2) {
+                break;
+            }
+            if (abs(self::luminance($primary) - self::luminance($cluster)) < 38) {
+                continue;
+            }
+            if (self::luminance($cluster) < 22 && self::luminance($primary) > 45) {
+                continue;
+            }
+            $secondary = $cluster;
+            break;
+        }
+
+        $panel = $primary;
+        $shell = $secondary ?? $primary;
+        if ($secondary !== null && self::luminance($secondary) > self::luminance($primary)) {
+            $panel = $secondary;
+            $shell = $primary;
+        }
+        if ($secondary === null || abs(self::luminance($shell) - self::luminance($panel)) < 38) {
+            $shell = self::darken($panel, 0.78);
+        }
+
+        return [self::colorFactor($shell), self::colorFactor($panel)];
+    }
+
+    /**
+     * @param  array{r: int, g: int, b: int}  $color
+     */
+    private static function luminance(array $color): float
+    {
+        return 0.2126 * $color['r'] + 0.7152 * $color['g'] + 0.0722 * $color['b'];
+    }
+
+    /**
+     * @param  array{r: int, g: int, b: int, count?: int}  $color
+     * @return array{r: int, g: int, b: int}
+     */
+    private static function darken(array $color, float $amount): array
+    {
+        return [
+            'r' => (int) round($color['r'] * $amount),
+            'g' => (int) round($color['g'] * $amount),
+            'b' => (int) round($color['b'] * $amount),
+        ];
+    }
+
+    /**
+     * @param  array{r: int, g: int, b: int}  $color
+     * @return array{0: float, 1: float, 2: float, 3: float}
+     */
+    private static function colorFactor(array $color): array
+    {
+        return [
+            round($color['r'] / 255, 3),
+            round($color['g'] / 255, 3),
+            round($color['b'] / 255, 3),
+            1,
+        ];
+    }
+
     public static function binaryFor(string $name, ?string $dimensions): string
     {
         return self::filesFor($name, $dimensions)[0];
@@ -181,6 +334,7 @@ class FurnitureGlb
             str_contains($name, 'bàn') => 'table',
             str_contains($name, 'kệ tivi') => 'tv',
             str_contains($name, 'kệ sách'), str_contains($name, 'kệ góc') => 'shelf',
+            str_contains($name, 'đầu giường') => 'nightstand',
             str_contains($name, 'kệ') => 'cabinet',
             str_contains($name, 'giường') => 'bed',
             str_contains($name, 'gương') => 'mirror',
@@ -247,6 +401,7 @@ class FurnitureGlb
             'tub' => $this->tub($w, $d, $h),
             'shelf' => $this->shelf($w, $d, $h),
             'tv' => $this->cabinet($w, $d, $h, true),
+            'nightstand' => $this->nightstand($w, $d, $h),
             'island' => $this->island($w, $d, $h),
             'cabinet' => $this->cabinet($w, $d, $h, false),
             default => $this->addBox('wood', 0, $h / 2, 0, $w, $h, $d),
@@ -358,9 +513,6 @@ class FurnitureGlb
         $plinth = 0.05;
         $this->addBox('wood', 0, $plinth / 2, 0, $w - 0.04, $plinth, $d - 0.04);
         $this->addBox('wood', 0, $plinth + ($h - $plinth) / 2, 0, $w, $h - $plinth, $d);
-        if ($this->hasPhoto) {
-            return;
-        }
         $doors = $low ? 2 : ($w > 1.2 ? 3 : 2);
         $gap = 0.012;
         $doorW = ($w - 0.06 - $gap * ($doors - 1)) / $doors;
@@ -368,6 +520,26 @@ class FurnitureGlb
         for ($i = 0; $i < $doors; $i++) {
             $x = -$w / 2 + 0.03 + $doorW / 2 + $i * ($doorW + $gap);
             $this->addBox('cushion', $x, $plinth + 0.04 + $doorH / 2, $d / 2 + 0.008, $doorW, $doorH, 0.016);
+            $this->addBox('metal', $x, $plinth + 0.04 + $doorH / 2, $d / 2 + 0.018, min($doorW * 0.28, 0.16), 0.01, 0.008);
+        }
+    }
+
+    private function nightstand(float $w, float $d, float $h): void
+    {
+        $this->addBox('wood', 0, $h / 2, 0, $w, $h, $d);
+        $drawers = 3;
+        $side = $w * 0.28;
+        $marginX = min(0.012, $w * 0.04);
+        $marginTop = min(0.028, $h * 0.07);
+        $marginBottom = min(0.022, $h * 0.05);
+        $gap = 0.008;
+        $frontW = max(0.08, $w - $side - $marginX);
+        $frontX = -$w / 2 + $marginX + $frontW / 2;
+        $frontH = ($h - $marginTop - $marginBottom - $gap * ($drawers - 1)) / $drawers;
+        for ($i = 0; $i < $drawers; $i++) {
+            $y = $marginBottom + $frontH / 2 + $i * ($frontH + $gap);
+            $this->addBox('cushion', $frontX, $y, $d / 2 + 0.006, $frontW, max($frontH, 0.02), 0.012);
+            $this->addBox('metal', $frontX, $y, $d / 2 + 0.014, min(0.09, $frontW * 0.42), 0.01, 0.008);
         }
     }
 
@@ -636,16 +808,7 @@ class FurnitureGlb
             $this->addBox('wood', 0, 0.1, 0, 0.2, 0.2, 0.2);
         }
 
-        $colors = [
-            'wood' => [0.62, 0.42, 0.24, 1],
-            'fabric' => [0.48, 0.40, 0.34, 1],
-            'cushion' => [0.86, 0.78, 0.66, 1],
-            'metal' => [0.25, 0.25, 0.27, 1],
-            'glass' => [0.72, 0.86, 0.92, 0.55],
-            'white' => [0.94, 0.94, 0.92, 1],
-            'rug' => [0.55, 0.28, 0.20, 1],
-            'shade' => [0.95, 0.90, 0.78, 1],
-        ];
+        $colors = $this->palette;
 
         $bin = '';
         $bufferViews = [];
@@ -814,16 +977,10 @@ class FurnitureGlb
 
     private function encodeUsdz(): string
     {
-        $colors = [
-            'wood' => [0.62, 0.42, 0.24],
-            'fabric' => [0.48, 0.40, 0.34],
-            'cushion' => [0.86, 0.78, 0.66],
-            'metal' => [0.25, 0.25, 0.27],
-            'glass' => [0.72, 0.86, 0.92],
-            'white' => [0.94, 0.94, 0.92],
-            'rug' => [0.55, 0.28, 0.20],
-            'shade' => [0.95, 0.90, 0.78],
-        ];
+        $colors = [];
+        foreach ($this->palette as $name => $color) {
+            $colors[$name] = [$color[0], $color[1], $color[2]];
+        }
 
         $photoMaterial = '';
         if ($this->photoJpeg !== null) {
