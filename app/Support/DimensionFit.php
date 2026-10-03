@@ -15,14 +15,16 @@ class DimensionFit
             return null;
         }
 
-        if (! preg_match_all('/(\d+(?:[.,]\d+)?)/', $text, $matches) || count($matches[1]) < 3) {
+        $number = '(\d+(?:[.,]\d+)?)';
+        if (preg_match("/{$number}\s*[x×*]\s*{$number}\s*[x×*]\s*{$number}/iu", $text, $triple)) {
+            $raw = array_slice($triple, 1, 3);
+        } elseif (preg_match_all("/{$number}/", $text, $matches) && count($matches[1]) >= 3) {
+            $raw = array_slice($matches[1], 0, 3);
+        } else {
             return null;
         }
 
-        $numbers = array_map(
-            fn (string $value) => (float) str_replace(',', '.', $value),
-            array_slice($matches[1], 0, 3)
-        );
+        $numbers = array_map(fn (string $value) => (float) str_replace(',', '.', $value), $raw);
 
         if (min($numbers) <= 0) {
             return null;

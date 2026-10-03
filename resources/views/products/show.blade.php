@@ -113,29 +113,13 @@
                         </div>
                     @endif
 
-                    @if ($product->model_glb_url)
-                        <div class="overflow-hidden rounded-2xl sm:rounded-3xl border border-ui-border bg-surface shadow-sm">
-                            <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
-                            <model-viewer
-                                src="{{ $product->model_glb_url }}"
-                                @if ($product->model_usdz_url) ios-src="{{ $product->model_usdz_url }}" @endif
-                                alt="Mô hình 3D {{ $product->name }}"
-                                ar
-                                ar-modes="webxr scene-viewer quick-look"
-                                ar-scale="fixed"
-                                camera-controls
-                                camera-orbit="18deg 82deg auto"
-                                touch-action="pan-y"
-                                shadow-intensity="1"
-                                style="width: 100%; height: 420px; background: transparent;"
-                            >
-                                <button slot="ar-button" type="button" class="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-primary px-5 py-2.5 text-xs font-bold text-primary-foreground shadow-lg">
-                                    Xem trong phòng
-                                </button>
-                            </model-viewer>
-                            <p class="px-4 pb-4 text-[11px] text-muted">Mặt trước là ảnh sản phẩm, các mặt còn lại theo màu của ảnh. Kéo để xoay. Kích thước {{ \App\Support\FurnitureGlb::displaySize($product->name, $product->dimensions) }}, tỉ lệ 1:1 khi bấm Xem trong phòng.</p>
-                        </div>
-                    @endif
+                    <a href="{{ route('rooms.mix', ['product' => $product->id]) }}" class="flex items-center justify-between gap-4 rounded-2xl sm:rounded-3xl border border-ui-border bg-surface px-5 py-4 shadow-sm transition hover:border-primary/50">
+                        <span>
+                            <span class="block text-sm font-bold text-heading">Thử đặt món này vào phòng</span>
+                            <span class="block text-xs text-muted">Kích thước {{ \App\Support\FurnitureGlb::displaySize($product->name, $product->dimensions) }}, đặt đúng tỉ lệ trong phòng mẫu.</span>
+                        </span>
+                        <span class="shrink-0 rounded-full bg-primary px-4 py-2 text-xs font-bold text-primary-foreground">Phối phòng</span>
+                    </a>
                 </div>
             </div>
 
@@ -209,7 +193,7 @@
 
                     @include('partials.fit-script')
                     <div class="space-y-3 rounded-2xl border border-ui-border bg-surface-alt p-4" x-show="itemDims" x-cloak>
-                        <p class="text-xs font-bold uppercase tracking-wider text-heading">Kiểm tra cửa và thang máy</p>
+                        <p class="text-xs font-bold uppercase tracking-wider text-heading">Kiểm tra cửa vào</p>
                         <p class="text-[11px] text-muted" x-text="itemDims ? ('Kiện hàng ' + itemDims.l + ' × ' + itemDims.w + ' × ' + itemDims.h + ' cm. Món vừa lối đi khi xoay được sao cho hai cạnh còn lại lọt miệng cửa.') : ''"></p>
                         <div class="grid grid-cols-2 gap-3">
                             <label class="text-[11px] text-muted">Cửa rộng (cm)
@@ -218,15 +202,8 @@
                             <label class="text-[11px] text-muted">Cửa cao (cm)
                                 <input type="number" min="1" x-model.number="doorHeight" class="mt-1 w-full rounded-xl border border-ui-border bg-surface px-3 py-2 text-sm text-heading">
                             </label>
-                            <label class="text-[11px] text-muted">Thang máy rộng (cm)
-                                <input type="number" min="1" x-model.number="liftWidth" class="mt-1 w-full rounded-xl border border-ui-border bg-surface px-3 py-2 text-sm text-heading">
-                            </label>
-                            <label class="text-[11px] text-muted">Thang máy cao (cm)
-                                <input type="number" min="1" x-model.number="liftHeight" class="mt-1 w-full rounded-xl border border-ui-border bg-surface px-3 py-2 text-sm text-heading">
-                            </label>
                         </div>
                         <p class="text-xs font-semibold" :class="fitClass(doorFit)" x-text="fitLabel('Cửa vào', doorFit)"></p>
-                        <p class="text-xs font-semibold" :class="fitClass(liftFit)" x-text="fitLabel('Thang máy', liftFit)"></p>
                     </div>
                     <p class="text-[11px] text-muted" x-show="!itemDims">Sản phẩm chưa có đủ ba số đo (dài × rộng × cao) để kiểm tra lối đi.</p>
 
@@ -560,8 +537,6 @@
             fallbackDims: config.fallbackDims,
             doorWidth: '',
             doorHeight: '',
-            liftWidth: '',
-            liftHeight: '',
 
             get colors() {
                 const list = [];
@@ -671,10 +646,6 @@
 
             get doorFit() {
                 return mocanFits(this.itemDims, this.doorWidth, this.doorHeight);
-            },
-
-            get liftFit() {
-                return mocanFits(this.itemDims, this.liftWidth, this.liftHeight);
             },
 
             fitLabel(name, result) {
