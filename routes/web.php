@@ -4,6 +4,8 @@ use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
 use App\Http\Controllers\Admin\FinanceController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
+use App\Http\Controllers\Admin\SupportRequestController as AdminSupportController;
+use App\Http\Controllers\Customer\SupportRequestController as CustomerSupportController;
 use App\Http\Controllers\AiChatController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Auth\PasswordResetController;
@@ -18,7 +20,6 @@ use App\Http\Controllers\OrderTrackingController;
 use App\Http\Controllers\Payments\MomoController;
 use App\Http\Controllers\Payments\VnpayController;
 use App\Http\Controllers\ProductController;
-use App\Http\Controllers\QuotationController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\RoomMixController;
 use App\Http\Controllers\VisualSearchController;
@@ -33,8 +34,6 @@ Route::post('/tim-bang-anh', [VisualSearchController::class, 'search'])->middlew
 Route::get('/phoi-combo', [RoomMixController::class, 'show'])->name('rooms.mix');
 Route::post('/phoi-combo', [RoomMixController::class, 'save'])->name('rooms.mix.save');
 Route::post('/phoi-combo/mua', [RoomMixController::class, 'buy'])->name('rooms.mix.buy');
-Route::get('/bao-gia', [QuotationController::class, 'create'])->name('quotes.create');
-Route::post('/bao-gia', [QuotationController::class, 'store'])->name('quotes.store');
 Route::get('/products/{slug}', [ProductController::class, 'show'])->name('products.show');
 Route::post('/products/{product}/reviews', [ReviewController::class, 'store'])
     ->middleware(['auth', 'throttle:10,1'])
@@ -148,6 +147,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/don-hang', [CustomerOrderController::class, 'index'])->name('orders.index.alt');
     Route::get('/don-hang/{orderCode}', [CustomerOrderController::class, 'show'])->name('orders.show.alt');
     Route::get('/tai-khoan', [CustomerOrderController::class, 'index'])->name('account.index');
+    Route::get('/ho-tro', [CustomerSupportController::class, 'index'])->name('support.index');
+    Route::get('/ho-tro/tao', [CustomerSupportController::class, 'create'])->name('support.create');
+    Route::post('/ho-tro', [CustomerSupportController::class, 'store'])->name('support.store')->middleware('throttle:10,1');
+    Route::get('/ho-tro/{supportRequest}', [CustomerSupportController::class, 'show'])->name('support.show');
     Route::get('/ho-so', [\App\Http\Controllers\ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/ho-so', [\App\Http\Controllers\ProfileController::class, 'update'])->name('profile.update');
     Route::get('/ho-so/xac-thuc-mat-khau', [\App\Http\Controllers\ProfileController::class, 'showPasswordVerify'])->name('profile.password.verify');
@@ -197,6 +200,10 @@ Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
     Route::get('/orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
     Route::put('/orders/{order}/status', [AdminOrderController::class, 'updateStatus'])->name('orders.updateStatus');
     Route::post('/orders/{order}/create-ghn', [ShippingController::class, 'adminCreateGhn'])->name('orders.createGhn');
+
+    Route::get('/support', [AdminSupportController::class, 'index'])->name('support.index');
+    Route::get('/support/{supportRequest}', [AdminSupportController::class, 'show'])->name('support.show');
+    Route::put('/support/{supportRequest}', [AdminSupportController::class, 'update'])->name('support.update');
 
     // Quản lý Tài chính & Giao dịch thanh toán (Lab 9)
     Route::get('/finance', [FinanceController::class, 'index'])->name('finance.index');

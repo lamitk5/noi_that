@@ -12,7 +12,7 @@
                 <span class="text-heading font-semibold">#{{ $order->order_code }}</span>
             </div>
             <h1 class="text-2xl font-bold text-heading">Chi Tiết Đơn Hàng #{{ $order->order_code }}</h1>
-            <p class="text-xs text-muted mt-0.5">Đặt ngày {{ $order->created_at->format('d/m/Y lúc H:i') }}</p>
+            <p class="text-xs text-muted mt-0.5">Đặt ngày {{ $order->created_at->format('d/m/Y') }} lúc {{ $order->created_at->format('H:i') }}</p>
         </div>
 
         <div class="flex items-center gap-2">
@@ -102,6 +102,55 @@
                     <span class="text-xs font-semibold {{ $step >= 4 ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted' }}">Đã hoàn thành</span>
                     <span class="text-[10px] text-muted mt-0.5">{{ $step >= 4 ? 'Giao thành công' : 'Chờ hoàn tất' }}</span>
                 </div>
+            </div>
+        @endif
+    </div>
+
+    @php
+        $supportRequests = $order->supportRequests()->latest()->get();
+        $returnDeadline = $order->returnDeadline();
+        $canReturn = $order->canRequestReturn();
+    @endphp
+    <div class="bg-surface rounded-2xl border border-ui-border shadow-sm p-6 mb-6">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+                <h2 class="text-xs font-bold uppercase tracking-wider text-muted">Hỗ trợ sau mua hàng</h2>
+                <p class="text-xs text-body mt-1.5">
+                    @if($canReturn)
+                        Bạn có thể yêu cầu hoàn hàng đến hết ngày <strong class="text-heading">{{ $returnDeadline->format('d/m/Y') }}</strong> ({{ \App\Models\SupportRequest::RETURN_WINDOW_DAYS }} ngày kể từ khi nhận hàng).
+                    @elseif($returnDeadline && now()->gt($returnDeadline))
+                        Đơn hàng đã quá thời hạn {{ \App\Models\SupportRequest::RETURN_WINDOW_DAYS }} ngày hoàn hàng. Nếu có vấn đề, hãy gửi khiếu nại để được hỗ trợ.
+                    @elseif($order->order_status === \App\Models\Order::STATUS_COMPLETED)
+                        Đơn hàng đang có yêu cầu hoàn hàng được xử lý.
+                    @else
+                        Yêu cầu hoàn hàng khả dụng sau khi đơn được giao thành công. Bạn có thể gửi khiếu nại bất cứ lúc nào.
+                    @endif
+                    <a href="{{ route('pages.return') }}" class="text-primary font-semibold hover:underline">Xem chính sách đổi trả</a>
+                </p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 shrink-0">
+                @if($canReturn)
+                    <a href="{{ route('support.create', ['type' => 'return', 'order' => $order->order_code]) }}" class="text-xs font-bold px-4 py-2.5 rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition shadow-sm">
+                        Yêu cầu hoàn hàng
+                    </a>
+                @endif
+                <a href="{{ route('support.create', ['type' => 'complaint', 'order' => $order->order_code]) }}" class="text-xs font-bold px-4 py-2.5 rounded-xl border border-ui-border bg-surface hover:bg-surface-alt text-heading transition">
+                    Gửi khiếu nại
+                </a>
+            </div>
+        </div>
+
+        @if($supportRequests->isNotEmpty())
+            <div class="mt-4 pt-4 border-t border-ui-border space-y-2">
+                @foreach($supportRequests as $sr)
+                    <a href="{{ route('support.show', $sr) }}" class="flex items-center justify-between gap-3 rounded-xl border border-ui-border bg-page px-4 py-3 hover:border-primary transition">
+                        <div class="min-w-0">
+                            <span class="text-xs font-bold text-heading">{{ $sr->typeLabel() }} · {{ $sr->code }}</span>
+                            <span class="block text-[11px] text-muted truncate">{{ $sr->reasonLabel() }} · {{ $sr->created_at->format('d/m/Y H:i') }}</span>
+                        </div>
+                        <span class="shrink-0 rounded-full border px-2.5 py-0.5 text-[10px] font-bold {{ $sr->statusTone() }}">{{ $sr->statusLabel() }}</span>
+                    </a>
+                @endforeach
             </div>
         @endif
     </div>

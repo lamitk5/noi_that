@@ -46,6 +46,18 @@
                 </h2>
                 <p class="text-muted">Đối với các trường hợp trả hàng hợp lệ, Mộc An hoàn trả 100% giá trị sản phẩm qua tài khoản ngân hàng hoặc ví điện tử của khách hàng trong vòng <strong>2-3 ngày làm việc</strong> sau khi thu hồi sản phẩm về kho.</p>
             </section>
+
+            <section class="space-y-3 pt-6 border-t border-ui-border">
+                <h2 class="font-display text-xl font-semibold text-heading flex items-center gap-2.5">
+                    <span class="size-7 rounded-lg bg-primary/10 text-primary font-bold text-xs grid place-items-center">4</span>
+                    Cách gửi yêu cầu hoàn hàng hoặc khiếu nại
+                </h2>
+                <p class="text-muted">Mở đơn hàng đã giao trong <strong>Lịch sử đơn hàng</strong>, chọn “Yêu cầu hoàn hàng”, đánh dấu sản phẩm cần hoàn và đính kèm ảnh chụp tình trạng. Với các vấn đề khác như giao hàng, tư vấn hay bảo hành, hãy chọn “Gửi khiếu nại”. Bạn có thể theo dõi tiến trình xử lý ngay trên website.</p>
+                <div class="flex flex-wrap gap-2 pt-1">
+                    <a href="{{ route('orders.index', ['status' => 'completed']) }}" class="rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground hover:opacity-90 transition">Yêu cầu hoàn hàng</a>
+                    <a href="{{ route('support.create', ['type' => 'complaint']) }}" class="rounded-xl border border-ui-border bg-page px-4 py-2.5 text-xs font-bold text-heading hover:bg-surface-alt transition">Gửi khiếu nại</a>
+                </div>
+            </section>
         </div>
     </div>
 </div>

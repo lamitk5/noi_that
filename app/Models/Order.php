@@ -103,6 +103,48 @@ class Order extends Model
         return $this->hasMany(PaymentTransaction::class);
     }
 
+    public function supportRequests(): HasMany
+    {
+        return $this->hasMany(SupportRequest::class);
+    }
+
+    public function scopeOwnedBy($query, User $user)
+    {
+        return $query->where(function ($q) use ($user) {
+            $q->where('user_id', $user->id);
+            if (!empty($user->email)) {
+                $q->orWhere('customer_email', $user->email);
+            }
+            if (!empty($user->phone)) {
+                $q->orWhere('customer_phone', $user->phone);
+            }
+        });
+    }
+
+    public function returnDeadline(): ?\Illuminate\Support\Carbon
+    {
+        if ($this->order_status !== self::STATUS_COMPLETED || !$this->updated_at) {
+            return null;
+        }
+
+        return $this->updated_at->copy()->addDays(SupportRequest::RETURN_WINDOW_DAYS)->endOfDay();
+    }
+
+    public function hasOpenReturn(): bool
+    {
+        return $this->supportRequests()
+            ->where('type', SupportRequest::TYPE_RETURN)
+            ->whereIn('status', SupportRequest::OPEN_STATUSES)
+            ->exists();
+    }
+
+    public function canRequestReturn(): bool
+    {
+        $deadline = $this->returnDeadline();
+
+        return $deadline !== null && now()->lte($deadline) && !$this->hasOpenReturn();
+    }
+
     public function getGhnTrackingUrlAttribute(): ?string
     {
         return $this->ghn_order_code

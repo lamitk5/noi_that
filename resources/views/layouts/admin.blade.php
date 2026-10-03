@@ -116,6 +116,18 @@
                         <span>Quản lý Đơn hàng</span>
                     </a>
 
+                    @php $pendingSupport = \App\Models\SupportRequest::where('status', \App\Models\SupportRequest::STATUS_PENDING)->count(); @endphp
+                    <a
+                        href="{{ route('admin.support.index') }}"
+                        class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition {{ request()->routeIs('admin.support.*') ? 'bg-primary text-primary-foreground shadow-xs' : 'text-body hover:bg-surface-alt hover:text-heading' }}"
+                    >
+                        <svg viewBox="0 0 24 24" class="size-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3"/></svg>
+                        <span class="flex-1">Hoàn hàng & Khiếu nại</span>
+                        @if($pendingSupport > 0)
+                            <span class="rounded-full bg-rose-500 px-2 py-0.5 text-[10px] font-bold text-white">{{ $pendingSupport }}</span>
+                        @endif
+                    </a>
+
                     <a
                         href="{{ route('admin.finance.index') }}"
                         class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition {{ request()->routeIs('admin.finance.index') ? 'bg-primary text-primary-foreground shadow-xs' : 'text-body hover:bg-surface-alt hover:text-heading' }}"

@@ -46,7 +46,6 @@
                 <a href="{{ route('home') }}" class="nav-link {{ request()->routeIs('home') ? 'is-active' : '' }}">Trang chủ</a>
                 <a href="{{ route('products.index') }}" class="nav-link {{ request()->routeIs('products.*') ? 'is-active' : '' }}">Sản phẩm</a>
                 <a href="{{ route('rooms.mix') }}" class="nav-link {{ request()->routeIs('rooms.mix') ? 'is-active' : '' }}">Phối combo</a>
-                <a href="{{ route('quotes.create') }}" class="nav-link {{ request()->routeIs('quotes.*') ? 'is-active' : '' }}">Báo giá</a>
                 <a href="{{ route('wishlist.index') }}" class="nav-link {{ request()->routeIs('wishlist.*') ? 'is-active' : '' }}">Yêu thích</a>
                 <a href="{{ route('home') }}#bo-suu-tap" class="nav-link">Bộ sưu tập</a>
                 <a href="{{ route('home') }}#ve-chung-toi" class="nav-link">Về Mộc An</a>
@@ -177,6 +176,10 @@
                                             <span>Lịch sử đơn hàng</span>
                                         </span>
                                     @endif
+                                    <a href="{{ route('support.index') }}" class="flex items-center gap-2.5 rounded-lg px-2.5 py-2 hover:bg-surface-alt hover:text-heading transition-colors">
+                                        <svg viewBox="0 0 24 24" class="size-4 text-muted" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3"/></svg>
+                                        <span>Hoàn hàng & khiếu nại</span>
+                                    </a>
 
                                     @if ((auth()->user()->isAdmin() || auth()->user()->isStaff()) && Route::has('admin.dashboard'))
                                         <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-accent font-semibold hover:bg-surface-alt transition-colors">
@@ -288,7 +291,6 @@
                 <a href="{{ route('home') }}" class="mobile-nav-link">Trang chủ</a>
                 <a href="{{ route('products.index') }}" class="mobile-nav-link">Sản phẩm</a>
                 <a href="{{ route('rooms.mix') }}" class="mobile-nav-link">Phối combo</a>
-                <a href="{{ route('quotes.create') }}" class="mobile-nav-link">Báo giá</a>
                 <a href="{{ route('wishlist.index') }}" class="mobile-nav-link flex items-center justify-between">
                     <span>Danh sách yêu thích</span>
                     <span class="wishlist-badge-count rounded-full bg-rose-500 px-2 py-0.5 text-xs font-semibold text-white {{ ($wishlistCount ?? 0) > 0 ? '' : 'hidden' }}">{{ $wishlistCount ?? 0 }}</span>
@@ -298,6 +300,9 @@
                     <span class="rounded-full bg-accent px-2 py-0.5 text-xs font-semibold text-accent-foreground">{{ $cartCount ?? 0 }}</span>
                 </a>
                 <a href="{{ route('orders.index') }}" class="mobile-nav-link">Lịch sử đơn hàng</a>
+                @auth
+                    <a href="{{ route('support.index') }}" class="mobile-nav-link">Hoàn hàng & khiếu nại</a>
+                @endauth
                 <a href="{{ route('home') }}#bo-suu-tap" class="mobile-nav-link">Bộ sưu tập</a>
                 <a href="{{ route('home') }}#ve-chung-toi" class="mobile-nav-link">Về Mộc An</a>
                 <a href="{{ route('home') }}#lien-he" class="mobile-nav-link">Liên hệ</a>
