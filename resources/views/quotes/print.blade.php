@@ -65,7 +65,7 @@
                                 <span class="font-semibold text-gray-900">{{ $line['product']->name }}</span>
                             </div>
                         </td>
-                        <td class="py-3 text-gray-500">{{ $line['product']->dimensions ?: '—' }}</td>
+                        <td class="py-3 text-gray-500">{{ \App\Support\FurnitureGlb::displaySize($line['product']->name, $line['product']->dimensions) }}</td>
                         <td class="py-3 text-right">{{ number_format($line['price'], 0, ',', '.') }}₫</td>
                         <td class="py-3 text-center">{{ $line['quantity'] }}</td>
                         <td class="py-3 text-right font-semibold">{{ number_format($line['line'], 0, ',', '.') }}₫</td>

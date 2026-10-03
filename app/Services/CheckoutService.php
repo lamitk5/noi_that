@@ -65,7 +65,7 @@ class CheckoutService
                 }
 
                 // Authoritative server-side price
-                $unitPrice = (float) ($variant->price ?? $variant->product->base_price);
+                $unitPrice = (float) ($variant->final_price ?? $variant->product->final_price);
                 $subtotal += $unitPrice * $qty;
 
                 // Snapshot variant attributes

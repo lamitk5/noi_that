@@ -79,7 +79,8 @@ class ProductVariant extends Model
         $price = (float) $this->price;
 
         if ($product && $product->is_on_sale) {
-            $discount = (float) $product->price - (float) $product->sale_price;
+            $discount = (float) $product->base_price - (float) $product->sale_price;
+
             return max(0, $price - $discount);
         }
 

@@ -48,6 +48,43 @@ class FurnitureGlb
     }
 
     /**
+     * Bounding box in centimetres. Width and depth are equal for a round piece.
+     *
+     * @return array{l: float, w: float, h: float}
+     */
+    public static function box(string $name, ?string $dimensions): array
+    {
+        [, $width, $depth, $height] = self::measure($name, $dimensions);
+
+        return ['l' => $width, 'w' => $depth, 'h' => $height];
+    }
+
+    public static function boxLabel(string $name, ?string $dimensions): string
+    {
+        $box = self::box($name, $dimensions);
+
+        return sprintf('%.0f x %.0f x %.0f cm', $box['l'], $box['w'], $box['h']);
+    }
+
+    /**
+     * Keep a catalog string when it already matches the model. Replace labels
+     * such as "Tiêu chuẩn", "Ø80 x 42 cm" or "3 tầng, 80 x 25 x 120 cm".
+     */
+    public static function displaySize(string $name, ?string $dimensions): string
+    {
+        $label = self::boxLabel($name, $dimensions);
+        $parsed = DimensionFit::parse($dimensions);
+        if ($parsed === null) {
+            return $label;
+        }
+
+        $box = self::box($name, $dimensions);
+        $drift = abs($parsed['l'] - $box['l']) + abs($parsed['w'] - $box['w']) + abs($parsed['h'] - $box['h']);
+
+        return $drift > 5 ? $label : (string) $dimensions;
+    }
+
+    /**
      * @return array{0: string, 1: string} GLB bytes and USDZ bytes
      */
     public static function filesFor(string $name, ?string $dimensions): array

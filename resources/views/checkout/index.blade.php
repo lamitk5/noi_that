@@ -228,7 +228,8 @@
                 @php
                     $fitItems = $items->map(fn ($item) => [
                         'name' => $item->product->name,
-                        'dims' => \App\Support\DimensionFit::parse($item->variant->size ?: $item->product->dimensions),
+                        'dims' => \App\Support\DimensionFit::parse($item->variant->size)
+                            ?: \App\Support\FurnitureGlb::box($item->product->name, $item->product->dimensions),
                     ])->values();
                 @endphp
                 @include('partials.fit-script')

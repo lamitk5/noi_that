@@ -36,8 +36,9 @@ class GeminiService
             ], $history),
             'generationConfig' => [
                 'temperature' => 0.6,
-                'maxOutputTokens' => 800,
+                'maxOutputTokens' => 2048,
                 'responseMimeType' => 'application/json',
+                'thinkingConfig' => ['thinkingBudget' => 0],
             ],
         ];
 
@@ -83,16 +84,26 @@ class GeminiService
             ]],
             'generationConfig' => [
                 'temperature' => 0.2,
-                'maxOutputTokens' => 400,
+                'maxOutputTokens' => 2048,
                 'responseMimeType' => 'application/json',
+                'thinkingConfig' => ['thinkingBudget' => 0],
             ],
         ];
 
         try {
-            $response = Http::timeout((int) config('services.gemini.timeout', 20))
-                ->withHeaders(['x-goog-api-key' => config('services.gemini.key')])
-                ->acceptJson()
-                ->post($url, $payload);
+            $response = null;
+            for ($attempt = 1; $attempt <= 2; $attempt++) {
+                $response = Http::timeout((int) config('services.gemini.timeout', 20))
+                    ->withHeaders(['x-goog-api-key' => config('services.gemini.key')])
+                    ->acceptJson()
+                    ->post($url, $payload);
+
+                if ($response->successful() || ! in_array($response->status(), [429, 503], true) || $attempt === 2) {
+                    break;
+                }
+
+                usleep(800000);
+            }
 
             if (! $response->successful()) {
                 Log::warning('Gemini image request failed', ['status' => $response->status(), 'body' => mb_substr($response->body(), 0, 500)]);
@@ -102,8 +113,13 @@ class GeminiService
 
             $text = (string) data_get($response->json(), 'candidates.0.content.parts.0.text', '');
             $decoded = json_decode($this->stripCodeFence($text), true);
+            if (! is_array($decoded)) {
+                Log::warning('Gemini image response was not JSON', ['text' => mb_substr($text, 0, 300)]);
 
-            return is_array($decoded) ? $decoded : null;
+                return null;
+            }
+
+            return $decoded;
         } catch (Throwable $e) {
             Log::warning('Gemini image request error: '.$e->getMessage());
 

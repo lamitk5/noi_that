@@ -19,7 +19,7 @@ class RoomMixController extends Controller
     {
         $products = Product::query()
             ->active()
-            ->with(['category:id,name', 'primaryImage'])
+            ->with(['category:id,name', 'primaryImage', 'variants'])
             ->orderBy('name')
             ->limit(40)
             ->get();

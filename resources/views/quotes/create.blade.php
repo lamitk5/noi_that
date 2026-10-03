@@ -54,7 +54,7 @@
                                     <span class="font-semibold text-heading">{{ $product->name }}</span>
                                     <span class="block text-xs text-muted">{{ number_format((float) $product->final_price, 0, ',', '.') }}₫</span>
                                 </td>
-                                <td class="px-4 py-3 text-xs text-muted">{{ $product->dimensions ?: '—' }}</td>
+                                <td class="px-4 py-3 text-xs text-muted">{{ \App\Support\FurnitureGlb::displaySize($product->name, $product->dimensions) }}</td>
                                 <td class="px-4 py-3">
                                     <input type="number" name="items[{{ $index }}][quantity]" min="0" max="99" value="{{ old('items.'.$index.'.quantity', 0) }}" class="w-20 rounded-lg border border-ui-border bg-page px-2 py-1.5 text-sm">
                                 </td>

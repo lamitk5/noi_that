@@ -7,7 +7,7 @@
     $catalog = $products->map(fn ($product) => [
         'id' => $product->id,
         'name' => $product->name,
-        'price' => (float) $product->final_price,
+        'price' => (float) ($product->variants->first(fn ($variant) => $variant->stock > 0)?->final_price ?? $product->final_price),
         'image' => $product->primary_image_url,
     ])->values();
 @endphp
@@ -44,8 +44,8 @@
                     class="relative aspect-16/10 overflow-hidden rounded-3xl border border-ui-border bg-surface"
                     x-ref="stage"
                     @pointermove="move($event)"
-                    @pointerup="end()"
-                    @pointercancel="end()"
+                    @pointerup="end($event)"
+                    @pointercancel="end($event)"
                 >
                     <img :src="rooms[room].image" alt="" class="size-full object-cover">
                     <template x-for="item in placed" :key="item.product_id">
@@ -155,6 +155,7 @@
                 this.dragging.y = point.y;
             },
             end(event) {
+                if (!event) return;
                 if (this.dragSource) {
                     const point = this.pointOnStage(event);
                     const tap = this.dragOrigin && Math.hypot(event.clientX - this.dragOrigin.x, event.clientY - this.dragOrigin.y) < 8;

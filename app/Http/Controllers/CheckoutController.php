@@ -108,7 +108,7 @@ class CheckoutController extends Controller
                         'key' => $key,
                         'variant_id' => $variant->id,
                         'name' => $variant->product?->name ?? 'Sản phẩm nội thất',
-                        'price' => (float) $variant->price,
+                        'price' => (float) $variant->final_price,
                         'quantity' => (int) $qty,
                     ];
                 }
@@ -150,7 +150,7 @@ class CheckoutController extends Controller
                         throw new \Exception("Biến thể \"{$variant->display_label}\" chỉ còn lại {$variant->stock} món trong kho.");
                     }
 
-                    $unitPrice = (float) $variant->price;
+                    $unitPrice = (float) $variant->final_price;
                     $variant->decrement('stock', $item['quantity']);
                     $calculatedSubtotal += $unitPrice * $item['quantity'];
 

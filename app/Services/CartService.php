@@ -28,7 +28,7 @@ class CartService
 
     public function setBuyNowItem(Product $product, int $quantity, ProductVariant $variant): void
     {
-        $price = (float) $variant->price;
+        $price = (float) $variant->final_price;
         $id = $this->lineKey($product->id, $variant->id);
 
         $item = [
@@ -81,7 +81,7 @@ class CartService
         return collect($this->getCart())->map(function (array $line) {
             $variant = ProductVariant::with('product.category', 'product.primaryImage')->find($line['variant_id'] ?? 0);
             $product = $variant?->product;
-            $price = (float) ($line['price'] ?? $variant?->price ?? 0);
+            $price = (float) ($variant?->final_price ?? $line['price'] ?? 0);
             $qty = (int) ($line['quantity'] ?? 1);
 
             return (object) [
@@ -158,7 +158,7 @@ class CartService
         return collect($this->getSelectedCart())->map(function (array $line) {
             $variant = ProductVariant::with('product.category', 'product.primaryImage')->find($line['variant_id'] ?? 0);
             $product = $variant?->product;
-            $price = (float) ($line['price'] ?? $variant?->price ?? 0);
+            $price = (float) ($variant?->final_price ?? $line['price'] ?? 0);
             $qty = (int) ($line['quantity'] ?? 1);
 
             return (object) [
@@ -205,7 +205,7 @@ class CartService
             throw new \InvalidArgumentException("Số lượng yêu cầu ({$newQty}) vượt quá số lượng còn lại trong kho ({$variant->stock}).");
         }
 
-        $price = (float) $variant->price;
+        $price = (float) $variant->final_price;
 
         $cart[$id] = [
             'id' => $product->id,

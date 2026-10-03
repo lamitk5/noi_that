@@ -90,13 +90,6 @@ class FixVariantSizesCommand extends Command
 
     private function catalogSize(Product $product): string
     {
-        [$shape, $width, $depth, $height] = FurnitureGlb::measure($product->name, $product->dimensions);
-        $original = mb_strtolower((string) $product->dimensions);
-        $round = str_contains($original, 'ø') || in_array($shape, ['round-table', 'pouf', 'table-lamp', 'floor-lamp', 'pendant'], true);
-        if ($round && abs($width - $depth) < 1) {
-            return sprintf('Ø%.0f x %.0f cm', $width, $height);
-        }
-
-        return sprintf('%.0f x %.0f x %.0f cm', $width, $depth, $height);
+        return FurnitureGlb::boxLabel($product->name, $product->dimensions);
     }
 }

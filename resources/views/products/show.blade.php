@@ -37,7 +37,7 @@
                     'stock' => (int) $v->stock,
                 ])) }},
                 totalStock: {{ $product->totalStock() }},
-                fallbackDims: {{ \Illuminate\Support\Js::from(\App\Support\DimensionFit::parse($product->dimensions)) }}
+                fallbackDims: {{ \Illuminate\Support\Js::from(\App\Support\FurnitureGlb::box($product->name, $product->dimensions)) }}
             })"
         >
             <!-- Left Column: Gallery -->
@@ -132,7 +132,7 @@
                                     Xem trong phòng
                                 </button>
                             </model-viewer>
-                            <p class="px-4 pb-4 text-[11px] text-muted">Kéo để xoay. Mô hình theo kích thước {{ $product->dimensions ?: 'đang bán' }}, tỉ lệ 1:1 khi bấm Xem trong phòng.</p>
+                            <p class="px-4 pb-4 text-[11px] text-muted">Kéo để xoay. Mô hình theo kích thước {{ \App\Support\FurnitureGlb::displaySize($product->name, $product->dimensions) }}, tỉ lệ 1:1 khi bấm Xem trong phòng.</p>
                         </div>
                     @endif
                 </div>
