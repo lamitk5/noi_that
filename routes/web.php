@@ -33,6 +33,7 @@ Route::get('/tim-bang-anh', [VisualSearchController::class, 'index'])->name('pro
 Route::post('/tim-bang-anh', [VisualSearchController::class, 'search'])->middleware('throttle:ai-chat')->name('products.visual.search');
 Route::get('/phoi-combo', [RoomMixController::class, 'show'])->name('rooms.mix');
 Route::post('/phoi-combo', [RoomMixController::class, 'save'])->name('rooms.mix.save');
+Route::post('/phoi-combo/xoa-het', [RoomMixController::class, 'clear'])->name('rooms.mix.clear');
 Route::post('/phoi-combo/mua', [RoomMixController::class, 'buy'])->name('rooms.mix.buy');
 Route::get('/products/{slug}', [ProductController::class, 'show'])->name('products.show');
 Route::post('/products/{product}/reviews', [ReviewController::class, 'store'])

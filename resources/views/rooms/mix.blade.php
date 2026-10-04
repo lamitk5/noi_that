@@ -430,9 +430,16 @@
             },
 
             clearAll() {
+                if (!this.placed.length) return;
+                if (!window.confirm('Xóa hết ' + this.placed.length + ' món đang đặt trong phòng? Kích thước phòng và màu tường được giữ nguyên.')) return;
                 this.placed = [];
                 this.selectedUid = null;
                 this.refresh();
+                const token = document.querySelector('meta[name="csrf-token"]')?.content;
+                fetch(@json(route('rooms.mix.clear')), {
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': token || '', 'Accept': 'application/json' },
+                }).catch(() => {});
             },
 
             select(uid) {
@@ -554,7 +561,7 @@
                 </div>
                 <button type="button" class="rounded-xl border border-ui-border bg-surface px-3 py-2 text-xs font-semibold text-heading shadow-sm hover:bg-surface-alt" @click="setView(view)">Căn lại khung nhìn</button>
                 <button type="button" class="rounded-xl border border-ui-border bg-surface px-3 py-2 text-xs font-semibold text-heading shadow-sm hover:bg-surface-alt" @click="download()" :disabled="!ready">Tải ảnh phòng</button>
-                <button type="button" class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 shadow-sm hover:bg-rose-100" x-show="placed.length" @click="clearAll()">Làm trống</button>
+                <button type="button" class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 shadow-sm hover:bg-rose-100" x-show="placed.length" x-cloak @click="clearAll()">Xóa tất cả</button>
             </div>
         </div>
 
@@ -712,6 +719,7 @@
                                     <input type="hidden" :name="`items[${index}][rotation]`" :value="item.rotation || 0">
                                 </span>
                             </template>
+                            <button type="button" class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs font-bold text-rose-700 hover:bg-rose-100" x-show="placed.length" x-cloak @click="clearAll()">Xóa tất cả</button>
                             <button type="submit" class="rounded-xl border border-ui-border bg-surface-alt px-4 py-2.5 text-xs font-bold text-heading hover:bg-stone-200">Lưu bố cục</button>
                             <button type="submit" formaction="{{ route('rooms.mix.buy') }}" class="rounded-xl bg-primary px-5 py-2.5 text-xs font-bold text-primary-foreground shadow-md transition disabled:cursor-not-allowed disabled:opacity-50" :disabled="placed.length === 0">Mua cả phòng</button>
                         </form>

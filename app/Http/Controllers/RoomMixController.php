@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Services\CartService;
 use App\Support\DimensionFit;
 use App\Support\FurnitureGlb;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -88,6 +89,30 @@ class RoomMixController extends Controller
         session(['room_mix' => $this->layout($request)]);
 
         return back()->with('success', 'Đã lưu bố cục phòng.');
+    }
+
+    public function clear(): JsonResponse
+    {
+        $layout = session('room_mix');
+        if (! is_array($layout) || ($layout['version'] ?? 0) !== 2) {
+            $layout = [
+                'version' => 2,
+                'room' => 'khach',
+                'width' => null,
+                'depth' => null,
+                'floor' => 'oak',
+                'wall' => '#f5f0e8',
+                'items' => [],
+            ];
+        }
+
+        $layout['items'] = [];
+        session(['room_mix' => $layout]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Đã xóa toàn bộ nội thất trong phòng.',
+        ]);
     }
 
     public function buy(Request $request): RedirectResponse
