@@ -47,9 +47,13 @@ class OrderController extends Controller
         return view('admin.orders.index', compact('orders'));
     }
 
-    public function show(Order $order): View|JsonResponse
+    public function show(Request $request, Order $order): View|JsonResponse
     {
         $order->load(['items.variant.product', 'user']);
+
+        if ($request->boolean('status')) {
+            return response()->json($this->statusPayload($order));
+        }
 
         return view('admin.orders.show', compact('order'));
     }
@@ -91,6 +95,12 @@ class OrderController extends Controller
                 }
 
                 $validated['order_status'] = $isNewCancelled ? 'canceled' : $newStatus;
+                $validated['ghn_status'] = match ($validated['order_status']) {
+                    'shipping' => 'delivering',
+                    'completed' => 'delivered',
+                    'canceled' => 'cancel',
+                    default => 'ready_to_pick',
+                };
                 $order->update($validated);
             });
 
@@ -116,5 +126,20 @@ class OrderController extends Controller
                 ? response()->json(['success' => false, 'message' => $message], 500)
                 : back()->with('error', $message);
         }
+    }
+
+    /**
+     * @return array{order_status: string, payment_status: string, ghn_status: ?string, order_status_label: string, payment_status_label: string, ghn_status_label: string}
+     */
+    protected function statusPayload(Order $order): array
+    {
+        return [
+            'order_status' => (string) $order->order_status,
+            'payment_status' => (string) $order->payment_status,
+            'ghn_status' => $order->ghn_status,
+            'order_status_label' => $order->order_status_label,
+            'payment_status_label' => $order->payment_status_label,
+            'ghn_status_label' => $order->ghn_status_label,
+        ];
     }
 }

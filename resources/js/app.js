@@ -297,12 +297,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateWishlistCounters(count) {
         document.querySelectorAll('.wishlist-badge-count').forEach((badge) => {
-            badge.textContent = count;
-            if (count > 0) {
-                badge.classList.remove('hidden');
-            } else {
-                badge.classList.add('hidden');
-            }
+            badge.textContent = String(count);
+            badge.classList.remove('hidden');
         });
         const totalText = document.querySelector('#wishlist-total-count');
         if (totalText) {
@@ -488,4 +484,26 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
         revealElements.forEach((element) => element.classList.add('is-visible'));
     }
+
+    document.querySelectorAll('.password-toggle').forEach((button) => {
+        button.addEventListener('click', () => {
+            const field = button.closest('.password-field');
+            const input = field?.querySelector('input');
+            if (!input) return;
+            const show = input.type === 'password';
+            input.type = show ? 'text' : 'password';
+            button.setAttribute('aria-pressed', show ? 'true' : 'false');
+            button.setAttribute('aria-label', show ? 'Ẩn mật khẩu' : 'Hiện mật khẩu');
+            button.querySelector('.password-toggle-show')?.classList.toggle('hidden', show);
+            button.querySelector('.password-toggle-hide')?.classList.toggle('hidden', !show);
+        });
+    });
+
+    document.querySelectorAll('[data-submit-once]').forEach((button) => {
+        button.closest('form')?.addEventListener('submit', () => {
+            if (button.disabled) return;
+            button.disabled = true;
+            button.textContent = button.dataset.submitLabel || 'Đang xử lý...';
+        });
+    });
 });

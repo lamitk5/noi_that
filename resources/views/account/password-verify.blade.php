@@ -39,7 +39,7 @@
                 @error('code') <span class="text-xs text-rose-500 block text-center mt-1.5">{{ $message }}</span> @enderror
             </div>
 
-            <button type="submit" class="w-full bg-primary hover:opacity-90 text-primary-foreground font-bold py-3 rounded-xl transition shadow-sm text-sm">
+            <button type="submit" data-submit-once data-submit-label="Đang kiểm tra..." class="w-full bg-primary hover:opacity-90 text-primary-foreground font-bold py-3 rounded-xl transition shadow-sm text-sm">
                 Xác nhận mật khẩu mới
             </button>
         </form>

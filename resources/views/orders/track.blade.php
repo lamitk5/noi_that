@@ -71,15 +71,7 @@
                         </div>
                         <p class="text-heading">
                             Trạng thái: <strong>{{ $order->ghn_status_label }}</strong>
-                            @if ($order->ghn_expected_delivery_at)
-                                · Dự kiến giao: {{ $order->ghn_expected_delivery_at->format('d/m/Y') }}
-                            @endif
                         </p>
-                        @if ($order->ghn_tracking_url)
-                            <a href="{{ $order->ghn_tracking_url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 mt-2 px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition">
-                                <i class="fa-solid fa-truck-fast"></i> Tra cứu GHN
-                            </a>
-                        @endif
                     </div>
                 @endif
 

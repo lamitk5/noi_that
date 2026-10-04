@@ -46,7 +46,6 @@
                 <a href="{{ route('home') }}" class="nav-link {{ request()->routeIs('home') ? 'is-active' : '' }}">Trang chủ</a>
                 <a href="{{ route('products.index') }}" class="nav-link {{ request()->routeIs('products.*') ? 'is-active' : '' }}">Sản phẩm</a>
                 <a href="{{ route('rooms.mix') }}" class="nav-link {{ request()->routeIs('rooms.mix') ? 'is-active' : '' }}">Phối combo</a>
-                <a href="{{ route('wishlist.index') }}" class="nav-link {{ request()->routeIs('wishlist.*') ? 'is-active' : '' }}">Yêu thích</a>
                 <a href="{{ route('home') }}#bo-suu-tap" class="nav-link">Bộ sưu tập</a>
                 <a href="{{ route('home') }}#ve-chung-toi" class="nav-link">Về Mộc An</a>
                 <a href="{{ route('home') }}#lien-he" class="nav-link">Liên hệ</a>
@@ -62,7 +61,7 @@
                     <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
                     </svg>
-                    <span class="wishlist-badge-count absolute right-0.5 top-0.5 grid size-4 place-items-center rounded-full bg-rose-500 text-[9px] font-bold text-white {{ ($wishlistCount ?? 0) > 0 ? '' : 'hidden' }}">{{ $wishlistCount ?? 0 }}</span>
+                    <span class="wishlist-badge-count absolute right-0.5 top-0.5 grid min-w-4 h-4 place-items-center rounded-full bg-rose-500 px-1 text-[9px] font-bold leading-none text-white">{{ $wishlistCount ?? 0 }}</span>
                 </a>
                 <a
                     href="{{ route('orders.index') }}"
@@ -162,7 +161,7 @@
                                             <svg viewBox="0 0 24 24" class="size-4 text-rose-500" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"/></svg>
                                             <span>Danh sách yêu thích</span>
                                         </div>
-                                        <span class="wishlist-badge-count rounded-full bg-rose-500/15 text-rose-600 px-2 py-0.5 text-[10px] font-bold {{ ($wishlistCount ?? 0) > 0 ? '' : 'hidden' }}">{{ $wishlistCount ?? 0 }}</span>
+                                        <span class="wishlist-badge-count rounded-full bg-rose-500/15 text-rose-600 px-2 py-0.5 text-[10px] font-bold">{{ $wishlistCount ?? 0 }}</span>
                                     </a>
 
                                     @if (Route::has('orders.index'))
@@ -291,10 +290,6 @@
                 <a href="{{ route('home') }}" class="mobile-nav-link">Trang chủ</a>
                 <a href="{{ route('products.index') }}" class="mobile-nav-link">Sản phẩm</a>
                 <a href="{{ route('rooms.mix') }}" class="mobile-nav-link">Phối combo</a>
-                <a href="{{ route('wishlist.index') }}" class="mobile-nav-link flex items-center justify-between">
-                    <span>Danh sách yêu thích</span>
-                    <span class="wishlist-badge-count rounded-full bg-rose-500 px-2 py-0.5 text-xs font-semibold text-white {{ ($wishlistCount ?? 0) > 0 ? '' : 'hidden' }}">{{ $wishlistCount ?? 0 }}</span>
-                </a>
                 <a href="{{ route('cart.index') }}" class="mobile-nav-link flex items-center justify-between">
                     <span>Giỏ hàng</span>
                     <span class="rounded-full bg-accent px-2 py-0.5 text-xs font-semibold text-accent-foreground">{{ $cartCount ?? 0 }}</span>

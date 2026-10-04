@@ -94,6 +94,10 @@ class ProfileController extends Controller
 
     public function verifyPasswordChange(Request $request): RedirectResponse
     {
+        $request->merge([
+            'code' => preg_replace('/\D+/', '', (string) $request->input('code')),
+        ]);
+
         $request->validate([
             'code' => ['required', 'digits:6'],
         ], [
@@ -112,7 +116,7 @@ class ProfileController extends Controller
             return redirect()->route('profile.edit')->withErrors(['password' => 'Bạn đã nhập sai quá nhiều lần. Vui lòng đổi mật khẩu lại.']);
         }
 
-        if (! Hash::check($request->input('code'), $pending['code'])) {
+        if (! OtpSender::codeMatches((string) $request->input('code'), (string) $pending['code'])) {
             $pending['attempts'] = ($pending['attempts'] ?? 0) + 1;
             $request->session()->put(self::SESSION_KEY, $pending);
 
@@ -176,7 +180,7 @@ class ProfileController extends Controller
         $request->session()->put(self::SESSION_KEY, [
             'user_id' => $user->id,
             'password' => $passwordHash,
-            'code' => Hash::make($code),
+            'code' => OtpSender::hashCode($code),
             'expires_at' => now()->addMinutes(10)->timestamp,
             'attempts' => 0,
             'target' => $target,

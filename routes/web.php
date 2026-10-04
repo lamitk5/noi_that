@@ -208,7 +208,7 @@ Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
 
     // Quản lý Tài chính & Giao dịch thanh toán (Lab 9)
     Route::get('/finance', [FinanceController::class, 'index'])->name('finance.index');
-    Route::get('/finance/transactions', [FinanceController::class, 'transactions'])->name('finance.transactions');
+    Route::get('/finance/transactions', fn () => redirect()->route('admin.finance.index'))->name('finance.transactions');
     Route::patch('/finance/{order}/status', [FinanceController::class, 'updateStatus'])->name('finance.update-status');
 
     Route::resource('coupons', \App\Http\Controllers\Admin\CouponController::class)->except(['show']);

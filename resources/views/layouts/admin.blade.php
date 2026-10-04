@@ -137,14 +137,6 @@
                     </a>
 
                     <a
-                        href="{{ route('admin.finance.transactions') }}"
-                        class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition {{ request()->routeIs('admin.finance.transactions') ? 'bg-primary text-primary-foreground shadow-xs' : 'text-body hover:bg-surface-alt hover:text-heading' }}"
-                    >
-                        <svg viewBox="0 0 24 24" class="size-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6H2.25m0 0v8.25m0 0a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V6.75A.75.75 0 0 0 18.75 6H3m0 0a.75.75 0 0 1 .75-.75h15a.75.75 0 0 1 .75.75v12a.75.75 0 0 1-.75.75H3.75A.75.75 0 0 1 3 18V6Z"/></svg>
-                        <span>Giao dịch thanh toán</span>
-                    </a>
-
-                    <a
                         href="{{ route('admin.coupons.index') }}"
                         class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition {{ request()->routeIs('admin.coupons.*') ? 'bg-primary text-primary-foreground shadow-xs' : 'text-body hover:bg-surface-alt hover:text-heading' }}"
                     >

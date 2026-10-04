@@ -119,6 +119,10 @@ class PasswordResetController extends Controller
 
     public function showVerify(Request $request): View|RedirectResponse
     {
+        if ($this->verifiedUserId($request)) {
+            return redirect()->route('password.reset');
+        }
+
         if (! $request->session()->has(self::SESSION_KEY)) {
             return redirect()->route('password.request');
         }
@@ -128,6 +132,14 @@ class PasswordResetController extends Controller
 
     public function verifyCode(Request $request): RedirectResponse
     {
+        if ($this->verifiedUserId($request)) {
+            return redirect()->route('password.reset');
+        }
+
+        $request->merge([
+            'code' => preg_replace('/\D+/', '', (string) $request->input('code')),
+        ]);
+
         $request->validate([
             'code' => ['required', 'digits:6'],
         ], [
@@ -140,10 +152,9 @@ class PasswordResetController extends Controller
             return redirect()->route('password.request');
         }
 
-        $invalid = back()->withErrors(['code' => 'Mã xác thực không chính xác hoặc đã hết hạn.']);
         $userId = $state['user_id'];
         if (! $userId) {
-            return $invalid;
+            return back()->withErrors(['code' => 'Mã xác thực không chính xác hoặc đã hết hạn.']);
         }
 
         $attemptsKey = 'pwreset-attempts:'.$userId;
@@ -155,22 +166,28 @@ class PasswordResetController extends Controller
         }
 
         $row = DB::table('password_reset_tokens')->where('email', $this->tokenKey($userId))->first();
-        $expired = ! $row || Carbon::parse($row->created_at)->addMinutes(self::CODE_TTL_MINUTES)->isPast();
+        $matches = $row
+            && Carbon::parse($row->created_at)->addMinutes(self::CODE_TTL_MINUTES)->isFuture()
+            && OtpSender::codeMatches((string) $request->input('code'), (string) $row->token);
 
-        if ($expired || ! Hash::check($request->input('code'), $row->token)) {
+        if (! $matches) {
+            if ($this->verifiedUserId($request)) {
+                return redirect()->route('password.reset');
+            }
+
             Cache::put($attemptsKey, $attempts + 1, now()->addMinutes(self::CODE_TTL_MINUTES));
 
-            return $invalid;
+            return back()->withErrors(['code' => 'Mã xác thực không chính xác hoặc đã hết hạn.']);
         }
 
         Cache::forget($attemptsKey);
         $this->deleteToken($userId);
 
+        $request->session()->forget('errors');
         $request->session()->put(self::SESSION_KEY, [
             'user_id' => $userId,
             'verified_until' => now()->addMinutes(self::RESET_WINDOW_MINUTES)->timestamp,
         ]);
-        $request->session()->regenerate();
 
         return redirect()->route('password.reset');
     }
@@ -222,7 +239,9 @@ class PasswordResetController extends Controller
             DB::table(config('session.table', 'sessions'))->where('user_id', $user->id)->delete();
         }
 
-        $this->notifyPasswordChanged($user);
+        app()->terminating(function () use ($user) {
+            $this->notifyPasswordChanged($user);
+        });
 
         $request->session()->forget(self::SESSION_KEY);
         $request->session()->regenerate();
@@ -256,7 +275,7 @@ class PasswordResetController extends Controller
 
         DB::table('password_reset_tokens')->updateOrInsert(
             ['email' => $key],
-            ['token' => Hash::make($code), 'created_at' => now()]
+            ['token' => OtpSender::hashCode($code), 'created_at' => now()]
         );
         Cache::forget('pwreset-attempts:'.$user->id);
 

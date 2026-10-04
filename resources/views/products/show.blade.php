@@ -448,7 +448,7 @@
                                     </span>
                                     <div>
                                         <p class="text-sm font-semibold text-heading">{{ $review->user?->name ?? 'Khách hàng' }}</p>
-                                        <p class="text-[11px] text-emerald-600 dark:text-emerald-400">✓ Đã mua và nhận hàng · {{ $review->order?->order_code }}</p>
+                                        <p class="text-[11px] text-emerald-600 dark:text-emerald-400">✓ Đã mua và nhận hàng</p>
                                     </div>
                                 </div>
                                 <span class="text-xs text-muted">{{ $review->created_at->format('d/m/Y') }}</span>

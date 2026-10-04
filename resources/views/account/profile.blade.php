@@ -70,18 +70,27 @@
                     <div class="grid gap-4 sm:grid-cols-3">
                         <div>
                             <label for="current_password" class="block text-xs font-bold text-muted mb-1.5">Mật khẩu hiện tại</label>
-                            <input id="current_password" type="password" name="current_password" autocomplete="current-password"
-                                   class="w-full rounded-xl border border-ui-border bg-page px-3.5 py-2.5 text-sm text-heading outline-none focus:ring-1 focus:ring-primary">
+                            <div class="password-field">
+                                <input id="current_password" type="password" name="current_password" autocomplete="current-password"
+                                       class="w-full rounded-xl border border-ui-border bg-page px-3.5 py-2.5 text-sm text-heading outline-none focus:ring-1 focus:ring-primary">
+                                @include('partials.password-toggle')
+                            </div>
                         </div>
                         <div>
                             <label for="password" class="block text-xs font-bold text-muted mb-1.5">Mật khẩu mới</label>
-                            <input id="password" type="password" name="password" autocomplete="new-password"
-                                   class="w-full rounded-xl border border-ui-border bg-page px-3.5 py-2.5 text-sm text-heading outline-none focus:ring-1 focus:ring-primary">
+                            <div class="password-field">
+                                <input id="password" type="password" name="password" autocomplete="new-password"
+                                       class="w-full rounded-xl border border-ui-border bg-page px-3.5 py-2.5 text-sm text-heading outline-none focus:ring-1 focus:ring-primary">
+                                @include('partials.password-toggle')
+                            </div>
                         </div>
                         <div>
                             <label for="password_confirmation" class="block text-xs font-bold text-muted mb-1.5">Nhập lại mật khẩu mới</label>
-                            <input id="password_confirmation" type="password" name="password_confirmation" autocomplete="new-password"
-                                   class="w-full rounded-xl border border-ui-border bg-page px-3.5 py-2.5 text-sm text-heading outline-none focus:ring-1 focus:ring-primary">
+                            <div class="password-field">
+                                <input id="password_confirmation" type="password" name="password_confirmation" autocomplete="new-password"
+                                       class="w-full rounded-xl border border-ui-border bg-page px-3.5 py-2.5 text-sm text-heading outline-none focus:ring-1 focus:ring-primary">
+                                @include('partials.password-toggle')
+                            </div>
                         </div>
                     </div>
                     @error('current_password') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror

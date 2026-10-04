@@ -8,6 +8,7 @@ use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Services\CartService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -67,7 +68,7 @@ class OrderController extends Controller
     /**
      * Show detail of an order.
      */
-    public function show(string $orderCode): View
+    public function show(Request $request, string $orderCode): View|JsonResponse
     {
         $user = Auth::user();
 
@@ -85,6 +86,14 @@ class OrderController extends Controller
             })
             ->with(['items.variant.product.images', 'paymentTransactions'])
             ->firstOrFail();
+
+        if ($request->boolean('status')) {
+            return response()->json([
+                'order_status' => (string) $order->order_status,
+                'payment_status' => (string) $order->payment_status,
+                'ghn_status' => $order->ghn_status,
+            ]);
+        }
 
         return view('orders.show', compact('order'));
     }

@@ -3,6 +3,7 @@
 @section('title', 'Chi Tiết Đơn Hàng #' . $order->order_code . ' | Mộc An')
 
 @section('content')
+@include('partials.order-status-watch')
 <div class="page-shell py-8">
     <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>

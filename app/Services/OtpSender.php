@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -18,6 +19,20 @@ class OtpSender
     public static function generateCode(): string
     {
         return (string) random_int(100000, 999999);
+    }
+
+    public static function hashCode(string $code): string
+    {
+        return hash_hmac('sha256', $code, (string) config('app.key'));
+    }
+
+    public static function codeMatches(string $code, string $stored): bool
+    {
+        if (str_starts_with($stored, '$2y$') || str_starts_with($stored, '$2a$') || str_starts_with($stored, '$argon2')) {
+            return Hash::check($code, $stored);
+        }
+
+        return hash_equals($stored, self::hashCode($code));
     }
 
     /**
@@ -56,6 +71,7 @@ class OtpSender
         }
 
         try {
+            config(['mail.mailers.smtp.timeout' => 8]);
             Mail::mailer($mailer)->html($html, function ($message) use ($email, $subject, $from) {
                 $message->to($email)->subject($subject);
                 if ($from !== '') {
@@ -95,7 +111,7 @@ class OtpSender
     private function sendViaBrevo(string $key, string $email, string $subject, string $html, string $from): bool
     {
         try {
-            $response = Http::timeout(15)
+            $response = Http::connectTimeout(4)->timeout(8)
                 ->withHeaders([
                     'api-key' => $key,
                     'accept' => 'application/json',
@@ -132,7 +148,7 @@ class OtpSender
     private function sendViaResend(string $key, string $email, string $subject, string $html, string $from): bool
     {
         try {
-            $response = Http::timeout(15)
+            $response = Http::connectTimeout(4)->timeout(8)
                 ->withToken($key)
                 ->acceptJson()
                 ->post('https://api.resend.com/emails', [

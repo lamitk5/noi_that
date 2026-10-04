@@ -49,13 +49,16 @@
 
             <div>
                 <label class="block text-xs font-semibold uppercase tracking-wider text-heading mb-1.5">Mật khẩu</label>
-                <input
-                    type="password"
-                    name="password"
-                    required
-                    placeholder="••••••••"
-                    class="w-full text-sm rounded-xl border border-ui-border bg-surface-alt px-3.5 py-2.5 text-heading placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition @error('password') border-rose-500 @enderror"
-                >
+                <div class="password-field">
+                    <input
+                        type="password"
+                        name="password"
+                        required
+                        placeholder="••••••••"
+                        class="w-full text-sm rounded-xl border border-ui-border bg-surface-alt px-3.5 py-2.5 text-heading placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition @error('password') border-rose-500 @enderror"
+                    >
+                    @include('partials.password-toggle')
+                </div>
                 @error('password') <span class="text-xs text-rose-500 block mt-1.5">{{ $message }}</span> @enderror
             </div>
 

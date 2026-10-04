@@ -86,15 +86,18 @@
                 <label for="password" class="block text-xs font-semibold uppercase tracking-wider text-heading mb-1.5">
                     4. Mật khẩu <span class="text-rose-500">*</span>
                 </label>
-                <input
-                    type="password"
-                    id="password"
-                    name="password"
-                    required
-                    autocomplete="new-password"
-                    placeholder="Tối thiểu 6 ký tự"
-                    class="w-full text-sm rounded-xl border border-ui-border bg-surface-alt px-3.5 py-2.5 text-heading placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition @error('password') border-rose-500 @enderror"
-                >
+                <div class="password-field">
+                    <input
+                        type="password"
+                        id="password"
+                        name="password"
+                        required
+                        autocomplete="new-password"
+                        placeholder="Tối thiểu 6 ký tự"
+                        class="w-full text-sm rounded-xl border border-ui-border bg-surface-alt px-3.5 py-2.5 text-heading placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition @error('password') border-rose-500 @enderror"
+                    >
+                    @include('partials.password-toggle')
+                </div>
                 @error('password') <span class="text-xs text-rose-500 block mt-1.5">{{ $message }}</span> @enderror
             </div>
 
@@ -103,15 +106,18 @@
                 <label for="password_confirmation" class="block text-xs font-semibold uppercase tracking-wider text-heading mb-1.5">
                     5. Nhập lại mật khẩu <span class="text-rose-500">*</span>
                 </label>
-                <input
-                    type="password"
-                    id="password_confirmation"
-                    name="password_confirmation"
-                    required
-                    autocomplete="new-password"
-                    placeholder="Nhập lại chính xác mật khẩu"
-                    class="w-full text-sm rounded-xl border border-ui-border bg-surface-alt px-3.5 py-2.5 text-heading placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition"
-                >
+                <div class="password-field">
+                    <input
+                        type="password"
+                        id="password_confirmation"
+                        name="password_confirmation"
+                        required
+                        autocomplete="new-password"
+                        placeholder="Nhập lại chính xác mật khẩu"
+                        class="w-full text-sm rounded-xl border border-ui-border bg-surface-alt px-3.5 py-2.5 text-heading placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition"
+                    >
+                    @include('partials.password-toggle')
+                </div>
             </div>
 
             <button type="submit" class="w-full bg-primary hover:opacity-90 text-primary-foreground font-bold py-3 rounded-xl transition mt-2 shadow-sm text-sm">

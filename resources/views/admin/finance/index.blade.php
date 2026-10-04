@@ -16,16 +16,6 @@
         <p class="text-xs text-muted">Tổng hợp giá trị thanh toán theo trạng thái và phương thức</p>
     </div>
 
-    <!-- Navigation Tabs -->
-    <div class="flex items-center gap-2">
-        <a href="{{ route('admin.finance.index') }}" class="px-4 py-2 rounded-lg text-xs font-semibold bg-gray-900 text-white shadow-xs">
-            Thống kê chỉ số
-        </a>
-        <a href="{{ route('admin.finance.transactions') }}" class="px-4 py-2 rounded-lg text-xs font-semibold bg-white border border-ui-border text-body hover:bg-surface-alt hover:text-heading transition">
-            Giao dịch thanh toán
-        </a>
-    </div>
-
     <!-- Errors Notification -->
     @if (isset($errors) && $errors->any())
         <div class="p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs">

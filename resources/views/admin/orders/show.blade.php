@@ -4,6 +4,13 @@
 @section('page_title', 'Chi Tiết Đơn Hàng: ' . $order->order_number)
 
 @section('content')
+@include('partials.order-status-watch')
+@if(session('success'))
+    <div class="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">{{ session('success') }}</div>
+@endif
+@if(session('error'))
+    <div class="mb-6 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800">{{ session('error') }}</div>
+@endif
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
     <!-- Order Items & Customer Details -->
     <div class="lg:col-span-2 space-y-6">
@@ -87,23 +94,9 @@
             </div>
 
             @if ($order->ghn_order_code)
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-orange-50/50 p-3.5 rounded-lg border border-orange-100">
-                    <div>
-                        <span class="text-gray-500 block">Mã vận đơn GHN:</span>
-                        <span class="font-mono font-bold text-sm text-gray-900">#{{ $order->ghn_order_code }}</span>
-                    </div>
-                    <div>
-                        <span class="text-gray-500 block">Dự kiến giao:</span>
-                        <span class="font-semibold text-gray-800">
-                            {{ $order->ghn_expected_delivery_at ? $order->ghn_expected_delivery_at->format('d/m/Y') : 'Chưa có thông tin' }}
-                        </span>
-                    </div>
-                </div>
-                <div class="flex items-center gap-3 pt-1">
-                    <a href="{{ $order->ghn_tracking_url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-orange-600 text-white font-bold hover:bg-orange-700 transition shadow-sm">
-                        <span>Tra cứu trên GHN Portal</span>
-                        <span>↗</span>
-                    </a>
+                <div class="bg-orange-50/50 p-3.5 rounded-lg border border-orange-100">
+                    <span class="text-gray-500 block">Mã vận đơn GHN:</span>
+                    <span class="font-mono font-bold text-sm text-gray-900">#{{ $order->ghn_order_code }}</span>
                 </div>
             @else
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 bg-gray-50 rounded-lg border">
@@ -133,7 +126,7 @@
                     <option value="confirmed" {{ $order->order_status == 'confirmed' ? 'selected' : '' }}>Đã xác nhận</option>
                     <option value="shipping" {{ $order->order_status == 'shipping' ? 'selected' : '' }}>Đang giao hàng</option>
                     <option value="completed" {{ $order->order_status == 'completed' ? 'selected' : '' }}>Hoàn thành</option>
-                    <option value="cancelled" {{ $order->order_status == 'cancelled' ? 'selected' : '' }}>Đã hủy (Tự động hoàn kho)</option>
+                    <option value="cancelled" {{ in_array($order->order_status, ['cancelled', 'canceled'], true) ? 'selected' : '' }}>Đã hủy (Tự động hoàn kho)</option>
                 </select>
             </div>
 
