@@ -120,6 +120,19 @@
                         </span>
                         <span class="shrink-0 rounded-full bg-primary px-4 py-2 text-xs font-bold text-primary-foreground">Phối phòng</span>
                     </a>
+
+                    <div class="rounded-2xl sm:rounded-3xl border border-ui-border bg-surface p-5 shadow-sm">
+                        <h2 class="font-display text-lg font-semibold text-heading">Chi tiết sản phẩm</h2>
+                        @if ($product->description)
+                            <div class="mt-3 text-sm leading-relaxed text-body">
+                                {!! nl2br(e($product->description)) !!}
+                            </div>
+                        @elseif ($product->short_description)
+                            <p class="mt-3 text-sm leading-relaxed text-body">{{ $product->short_description }}</p>
+                        @else
+                            <p class="mt-3 text-sm leading-relaxed text-body">{{ $product->name }} thuộc bộ sưu tập {{ $product->category?->name ?? 'Mộc An' }}, làm từ gỗ tự nhiên, hoàn thiện để dùng lâu trong nhà.</p>
+                        @endif
+                    </div>
                 </div>
             </div>
 
@@ -345,75 +358,8 @@
             </div>
         </div>
 
-        @php
-            $specColors = $product->variants->pluck('color')->filter()->unique()->values();
-            $specSizes = $product->variants->pluck('size')->filter()->unique()->values();
-        @endphp
-        <div class="mt-8 grid items-start gap-5 lg:grid-cols-5">
-            <div class="rounded-3xl border border-ui-border bg-surface p-6 shadow-xs lg:col-span-2">
-                <h2 class="font-display text-xl font-semibold text-heading">Thông số</h2>
-                <dl class="mt-4 divide-y divide-ui-border text-sm">
-                    @if ($product->dimensions)
-                        <div class="flex items-start justify-between gap-4 py-2.5">
-                            <dt class="text-muted">Kích thước</dt>
-                            <dd class="text-right font-semibold text-heading">{{ $product->dimensions }}</dd>
-                        </div>
-                    @endif
-                    @if ($specSizes->isNotEmpty())
-                        <div class="flex items-start justify-between gap-4 py-2.5">
-                            <dt class="text-muted">Size đang bán</dt>
-                            <dd class="text-right font-semibold text-heading">{{ $specSizes->join(', ') }}</dd>
-                        </div>
-                    @endif
-                    @if ($product->material)
-                        <div class="flex items-start justify-between gap-4 py-2.5">
-                            <dt class="text-muted">Chất liệu</dt>
-                            <dd class="text-right font-semibold text-heading">{{ $product->material }}</dd>
-                        </div>
-                    @endif
-                    @if ($specColors->isNotEmpty())
-                        <div class="flex items-start justify-between gap-4 py-2.5">
-                            <dt class="text-muted">Màu gỗ</dt>
-                            <dd class="text-right font-semibold text-heading">{{ $specColors->join(', ') }}</dd>
-                        </div>
-                    @endif
-                    @if ($product->weight)
-                        <div class="flex items-start justify-between gap-4 py-2.5">
-                            <dt class="text-muted">Khối lượng</dt>
-                            <dd class="text-right font-semibold text-heading">{{ rtrim(rtrim(number_format((float) $product->weight, 2, ',', '.'), '0'), ',') }} kg</dd>
-                        </div>
-                    @endif
-                    <div class="flex items-start justify-between gap-4 py-2.5">
-                        <dt class="text-muted">Bảo hành</dt>
-                        <dd class="text-right font-semibold text-heading">24 tháng</dd>
-                    </div>
-                    <div class="flex items-start justify-between gap-4 py-2.5">
-                        <dt class="text-muted">Đổi trả</dt>
-                        <dd class="text-right font-semibold text-heading">7 ngày</dd>
-                    </div>
-                    <div class="flex items-start justify-between gap-4 py-2.5">
-                        <dt class="text-muted">Giao hàng</dt>
-                        <dd class="text-right font-semibold text-heading">Lắp đặt tận nơi</dd>
-                    </div>
-                </dl>
-            </div>
-            <div class="rounded-3xl border border-ui-border bg-surface p-6 shadow-xs lg:col-span-3">
-                <h2 class="font-display text-xl font-semibold text-heading">Chi tiết sản phẩm</h2>
-                @if ($product->short_description)
-                    <p class="mt-4 text-sm font-medium leading-relaxed text-heading">{{ $product->short_description }}</p>
-                @endif
-                @if ($product->description)
-                    <div class="mt-3 text-sm leading-relaxed text-body sm:text-base">
-                        {!! nl2br(e($product->description)) !!}
-                    </div>
-                @else
-                    <p class="mt-4 text-sm leading-relaxed text-body">{{ $product->name }} thuộc bộ sưu tập {{ $product->category?->name ?? 'Mộc An' }}, làm từ gỗ tự nhiên, hoàn thiện để dùng lâu trong nhà.</p>
-                @endif
-            </div>
-        </div>
-
         <!-- Reviews Section -->
-        <section id="reviews" class="mt-8 scroll-mt-24 rounded-3xl border border-ui-border bg-surface p-6 shadow-xs">
+        <section id="reviews" class="mt-6 scroll-mt-24 rounded-3xl border border-ui-border bg-surface p-6 shadow-xs">
             <h2 class="font-display text-2xl font-semibold text-heading mb-6">Đánh giá từ khách hàng</h2>
 
             @error('review')
@@ -525,7 +471,7 @@
 
         <!-- Related Products Section -->
         @if ($relatedProducts->isNotEmpty())
-            <div class="mt-8">
+            <div class="mt-6">
                 <div class="flex items-end justify-between mb-8">
                     <div>
                         <p class="eyebrow">Cùng bộ sưu tập</p>
