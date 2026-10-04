@@ -33,12 +33,17 @@
         @if ($products->isNotEmpty())
             <div class="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
                 @foreach ($products as $product)
-                    <a href="{{ route('products.show', $product->slug) }}" class="rounded-2xl border border-ui-border bg-surface p-3">
-                        <img src="{{ $product->primary_image_url }}" alt="{{ $product->name }}" class="aspect-4/3 w-full rounded-xl object-cover">
-                        <p class="mt-3 text-[11px] uppercase tracking-wider text-muted">{{ $product->category?->name }}</p>
-                        <h2 class="font-display text-lg font-semibold text-heading">{{ $product->name }}</h2>
-                        <p class="mt-1 text-sm font-bold">{{ number_format((float) $product->final_price, 0, ',', '.') }}₫</p>
-                    </a>
+                    <article class="rounded-2xl border border-ui-border bg-surface p-3">
+                        <a href="{{ route('products.show', $product->slug) }}" class="block">
+                            <img src="{{ $product->primary_image_url }}" alt="{{ $product->name }}" class="aspect-4/3 w-full rounded-xl object-cover">
+                            <p class="mt-3 text-[11px] uppercase tracking-wider text-muted">{{ $product->category?->name }}</p>
+                            <h2 class="font-display text-lg font-semibold text-heading">{{ $product->name }}</h2>
+                            <p class="mt-1 text-sm font-bold">{{ number_format((float) $product->final_price, 0, ',', '.') }}₫</p>
+                        </a>
+                        <div class="mt-3">
+                            @include('partials.compare-toggle', ['product' => $product, 'variant' => 'chip'])
+                        </div>
+                    </article>
                 @endforeach
             </div>
         @elseif ($analysis)

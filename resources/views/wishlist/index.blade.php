@@ -98,6 +98,7 @@
                                     </button>
                                 </form>
 
+                                @include('partials.compare-toggle', ['product' => $product])
                                 <a href="{{ route('products.show', $product->slug) }}" class="quick-add">
                                     Xem chi tiết
                                 </a>

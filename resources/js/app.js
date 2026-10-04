@@ -400,6 +400,127 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    document.addEventListener('click', async (event) => {
+        const button = event.target.closest('.compare-toggle');
+        if (!button) return;
+
+        event.preventDefault();
+        const url = button.dataset.compareUrl;
+        if (!url || button.dataset.busy === '1') return;
+
+        button.dataset.busy = '1';
+        const token = document.querySelector('meta[name="csrf-token"]')?.content;
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': token || '',
+                },
+            });
+            const data = await response.json();
+
+            if (data.limited) {
+                window.Toast?.error(data.message || 'Chỉ so sánh được tối đa 3 sản phẩm.');
+                return;
+            }
+
+            if (!response.ok || !data.success) {
+                window.Toast?.error(data.message || 'Không cập nhật được bảng so sánh.');
+                return;
+            }
+
+            if (document.querySelector('[data-compare-page]')) {
+                window.location.reload();
+                return;
+            }
+
+            const productId = String(data.product_id);
+            const inCompare = !!data.in_compare;
+            document.querySelectorAll(`.compare-toggle[data-product-id="${productId}"]`).forEach((el) => {
+                el.classList.toggle('is-active', inCompare);
+                el.setAttribute('aria-pressed', inCompare ? 'true' : 'false');
+                const label = el.querySelector('.compare-btn-text');
+                if (label) {
+                    const detail = el.classList.contains('compare-detail-btn');
+                    label.textContent = inCompare
+                        ? (detail ? 'Đang trong bảng so sánh' : 'Đang so sánh')
+                        : (detail ? 'Thêm vào so sánh' : 'So sánh');
+                }
+                if (el.classList.contains('compare-button') || el.classList.contains('compare-detail-btn')) {
+                    const name = data.item?.name || '';
+                    el.setAttribute('aria-label', inCompare ? `Bỏ ${name} khỏi so sánh` : `Thêm ${name} vào so sánh`);
+                    if (el.classList.contains('compare-button')) {
+                        el.title = inCompare ? 'Bỏ khỏi so sánh' : 'Thêm vào so sánh';
+                    }
+                }
+            });
+
+            updateCompareBar(data);
+            window.Toast?.success(data.message);
+        } catch (e) {
+            window.Toast?.error('Không cập nhật được bảng so sánh.');
+        } finally {
+            button.dataset.busy = '0';
+        }
+    });
+
+    function updateCompareBar(data) {
+        const count = Number(data.count || 0);
+        document.querySelectorAll('.compare-badge-count').forEach((badge) => {
+            badge.textContent = String(count);
+            badge.classList.toggle('hidden', count === 0);
+        });
+
+        const bar = document.getElementById('compare-bar');
+        const list = document.getElementById('compare-bar-items');
+        const countEl = document.getElementById('compare-bar-count');
+        const go = document.getElementById('compare-bar-go');
+        if (countEl) countEl.textContent = String(count);
+        if (bar) bar.toggleAttribute('hidden', count === 0);
+        if (go) {
+            go.classList.toggle('pointer-events-none', count < 2);
+            go.classList.toggle('opacity-40', count < 2);
+            if (count < 2) go.setAttribute('aria-disabled', 'true');
+            else go.removeAttribute('aria-disabled');
+        }
+        if (!list || !data.item) return;
+
+        const productId = String(data.product_id);
+        const existing = list.querySelector(`.compare-bar-item[data-product-id="${productId}"]`);
+        if (!data.in_compare) {
+            existing?.remove();
+            return;
+        }
+        if (existing) return;
+
+        const item = document.createElement('div');
+        item.className = 'compare-bar-item relative flex w-40 shrink-0 items-center gap-2 rounded-xl border border-ui-border bg-page p-1.5 pr-6';
+        item.dataset.productId = productId;
+
+        const img = document.createElement('img');
+        img.src = data.item.image || '';
+        img.alt = '';
+        img.className = 'size-12 shrink-0 rounded-lg object-cover';
+
+        const name = document.createElement('p');
+        name.className = 'truncate text-[11px] font-semibold leading-snug text-heading';
+        name.textContent = data.item.name || '';
+
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'compare-toggle absolute right-1 top-1 grid size-5 place-items-center rounded-full bg-heading text-[11px] font-bold leading-none text-page';
+        remove.dataset.compareUrl = data.item.toggle_url || '';
+        remove.dataset.productId = productId;
+        remove.setAttribute('aria-label', `Bỏ ${data.item.name || ''} khỏi so sánh`);
+        remove.textContent = '×';
+
+        item.append(img, name, remove);
+        list.appendChild(item);
+    }
+
     document.querySelectorAll('.wishlist-remove-btn').forEach((btn) => {
         btn.addEventListener('click', async (event) => {
             event.preventDefault();

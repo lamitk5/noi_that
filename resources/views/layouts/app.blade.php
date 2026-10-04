@@ -64,6 +64,17 @@
                     <span class="wishlist-badge-count absolute right-0.5 top-0.5 grid min-w-4 h-4 place-items-center rounded-full bg-rose-500 px-1 text-[9px] font-bold leading-none text-white">{{ $wishlistCount ?? 0 }}</span>
                 </a>
                 <a
+                    href="{{ route('compare.index') }}"
+                    class="icon-button relative {{ request()->routeIs('compare.*') ? 'bg-surface-alt text-primary font-bold' : '' }}"
+                    aria-label="So sánh sản phẩm"
+                    title="So sánh sản phẩm"
+                >
+                    <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 19V5H4v14h5Zm11 0V5h-5v14h5ZM9 12h6"/>
+                    </svg>
+                    <span class="compare-badge-count absolute right-0.5 top-0.5 grid min-w-4 h-4 place-items-center rounded-full bg-primary px-1 text-[9px] font-bold leading-none text-primary-foreground {{ ($compareCount ?? 0) > 0 ? '' : 'hidden' }}">{{ $compareCount ?? 0 }}</span>
+                </a>
+                <a
                     href="{{ route('orders.index') }}"
                     class="icon-button {{ request()->routeIs('orders.*') ? 'bg-surface-alt text-primary font-bold' : '' }}"
                     aria-label="Lịch sử đơn hàng"
@@ -136,6 +147,10 @@
                                         <svg viewBox="0 0 24 24" class="size-4 text-rose-500" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"/></svg>
                                         <span>Danh sách yêu thích</span>
                                     </a>
+                                    <a href="{{ route('compare.index') }}" class="flex items-center justify-between rounded-lg px-2.5 py-2 hover:bg-surface-alt hover:text-heading transition-colors">
+                                        <span>So sánh sản phẩm</span>
+                                        <span class="compare-badge-count rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold text-primary {{ ($compareCount ?? 0) > 0 ? '' : 'hidden' }}">{{ $compareCount ?? 0 }}</span>
+                                    </a>
                                 @endguest
 
                                 @auth
@@ -162,6 +177,10 @@
                                             <span>Danh sách yêu thích</span>
                                         </div>
                                         <span class="wishlist-badge-count rounded-full bg-rose-500/15 text-rose-600 px-2 py-0.5 text-[10px] font-bold">{{ $wishlistCount ?? 0 }}</span>
+                                    </a>
+                                    <a href="{{ route('compare.index') }}" class="flex items-center justify-between rounded-lg px-2.5 py-2 hover:bg-surface-alt hover:text-heading transition-colors">
+                                        <span>So sánh sản phẩm</span>
+                                        <span class="compare-badge-count rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold text-primary {{ ($compareCount ?? 0) > 0 ? '' : 'hidden' }}">{{ $compareCount ?? 0 }}</span>
                                     </a>
 
                                     @if (Route::has('orders.index'))
@@ -289,6 +308,10 @@
             <div class="mx-auto flex max-w-7xl flex-col">
                 <a href="{{ route('home') }}" class="mobile-nav-link">Trang chủ</a>
                 <a href="{{ route('products.index') }}" class="mobile-nav-link">Sản phẩm</a>
+                <a href="{{ route('compare.index') }}" class="mobile-nav-link flex items-center justify-between">
+                    <span>So sánh sản phẩm</span>
+                    <span class="compare-badge-count rounded-full bg-primary/15 px-2 py-0.5 text-xs font-semibold text-primary {{ ($compareCount ?? 0) > 0 ? '' : 'hidden' }}">{{ $compareCount ?? 0 }}</span>
+                </a>
                 <a href="{{ route('rooms.mix') }}" class="mobile-nav-link">Phối combo</a>
                 <a href="{{ route('cart.index') }}" class="mobile-nav-link flex items-center justify-between">
                     <span>Giỏ hàng</span>
@@ -320,6 +343,7 @@
                         <li><a href="{{ route('home') }}#ve-chung-toi" class="hover:text-primary transition-colors">Về thương hiệu Mộc An</a></li>
                         <li><a href="{{ route('products.index') }}" class="hover:text-primary transition-colors">Bộ sưu tập nội thất tự nhiên</a></li>
                         <li><a href="{{ route('wishlist.index') }}" class="hover:text-primary transition-colors">Danh sách yêu thích</a></li>
+                        <li><a href="{{ route('compare.index') }}" class="hover:text-primary transition-colors">So sánh sản phẩm</a></li>
                         <li><a href="{{ route('home') }}#bo-suu-tap" class="hover:text-primary transition-colors">Hệ thống showroom & nhà xưởng</a></li>
                         <li><a href="{{ route('home') }}#ve-chung-toi" class="hover:text-primary transition-colors">Tiêu chuẩn vật liệu bền vững</a></li>
                     </ul>
@@ -386,7 +410,9 @@
     </footer>
 
     {{-- Floating chat: trợ lý AI + nhân viên --}}
-    <div class="fixed bottom-5 right-5 z-50" x-data="chatWidget" data-auth="{{ auth()->check() && !auth()->user()->isAdmin() && !auth()->user()->isStaff() ? '1' : '0' }}">
+    @include('partials.compare-bar')
+
+    <div class="chat-dock fixed bottom-5 right-5 z-50" x-data="chatWidget" data-auth="{{ auth()->check() && !auth()->user()->isAdmin() && !auth()->user()->isStaff() ? '1' : '0' }}">
         <div
             x-show="open"
             x-cloak

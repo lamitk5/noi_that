@@ -102,9 +102,10 @@ server_pids+=("$!")
 
 # The port is open now. Seeding stays out of the health check so a slow Aiven
 # insert cannot make Render mark the deploy as exited.
-echo "Web server is listening; seeding admin user and reviews."
+echo "Web server is listening; seeding admin user, reviews, and comparable products."
 su-exec www-data php artisan db:seed --class=AdminUserSeeder --force --no-interaction || echo "Admin seed failed; continuing." >&2
 su-exec www-data php artisan db:seed --class=StorefrontReviewSeeder --force --no-interaction || echo "Review seed failed; continuing." >&2
+su-exec www-data php artisan db:seed --class=SimilarProductSeeder --force --no-interaction || echo "Similar product seed failed; continuing." >&2
 su-exec www-data php artisan products:fix-sizes --no-interaction || echo "Variant size fix failed; continuing." >&2
 su-exec www-data php artisan products:add-sizes --no-interaction || echo "Variant size expansion failed; continuing." >&2
 su-exec www-data php artisan products:clear-models --no-interaction || echo "3D model cleanup failed; continuing." >&2

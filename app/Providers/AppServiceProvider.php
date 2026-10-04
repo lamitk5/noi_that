@@ -5,6 +5,7 @@ namespace App\Providers;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
+use App\Services\CompareService;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 
@@ -41,17 +42,32 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('ai-chat', fn (Request $request) => Limit::perMinute(20)->by('ai-chat:'.($request->user()?->id ?? $request->ip())));
 
         \Illuminate\Support\Facades\View::composer('*', function ($view) {
-            $cart = session('furniture_cart', []);
-            $view->with('cartCount', array_sum(array_column($cart, 'quantity')));
+            static $shared = null;
 
-            $wishlistProductIds = [];
-            if (\Illuminate\Support\Facades\Auth::check()) {
-                $wishlistProductIds = \App\Models\Wishlist::where('user_id', \Illuminate\Support\Facades\Auth::id())
-                    ->pluck('product_id')
-                    ->all();
+            if ($shared === null) {
+                $cart = session('furniture_cart', []);
+                $wishlistProductIds = [];
+                if (\Illuminate\Support\Facades\Auth::check()) {
+                    $wishlistProductIds = \App\Models\Wishlist::where('user_id', \Illuminate\Support\Facades\Auth::id())
+                        ->pluck('product_id')
+                        ->all();
+                }
+
+                $compareItems = request()->is('admin', 'admin/*')
+                    ? collect()
+                    : app(CompareService::class)->products();
+
+                $shared = [
+                    'cartCount' => array_sum(array_column($cart, 'quantity')),
+                    'wishlistProductIds' => $wishlistProductIds,
+                    'wishlistCount' => count($wishlistProductIds),
+                    'compareItems' => $compareItems,
+                    'compareProductIds' => $compareItems->pluck('id')->map(fn ($id) => (int) $id)->all(),
+                    'compareCount' => $compareItems->count(),
+                ];
             }
-            $view->with('wishlistCount', count($wishlistProductIds));
-            $view->with('wishlistProductIds', $wishlistProductIds);
+
+            $view->with($shared);
         });
     }
 }

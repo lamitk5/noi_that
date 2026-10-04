@@ -13,6 +13,7 @@ use App\Http\Controllers\Auth\SocialAuthController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\CompareController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\PageController;
@@ -29,6 +30,9 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/products', [ProductController::class, 'index'])->name('products.index');
+Route::get('/so-sanh', [CompareController::class, 'index'])->name('compare.index');
+Route::post('/so-sanh/xoa-het', [CompareController::class, 'clear'])->name('compare.clear');
+Route::post('/so-sanh/{product}', [CompareController::class, 'toggle'])->name('compare.toggle');
 Route::get('/tim-bang-anh', [VisualSearchController::class, 'index'])->name('products.visual');
 Route::post('/tim-bang-anh', [VisualSearchController::class, 'search'])->middleware('throttle:ai-chat')->name('products.visual.search');
 Route::get('/phoi-combo', [RoomMixController::class, 'show'])->name('rooms.mix');

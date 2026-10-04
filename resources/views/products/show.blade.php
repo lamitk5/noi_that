@@ -332,6 +332,7 @@
                                 <svg viewBox="0 0 24 24" class="wishlist-icon size-4 transition-colors {{ $isWishlisted ? 'fill-current text-rose-600' : '' }}" fill="{{ $isWishlisted ? 'currentColor' : 'none' }}" stroke="currentColor" stroke-width="1.7"><path d="M20.8 5.7a5.5 5.5 0 0 0-7.8 0L12 6.8l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 22l8.8-8.5a5.5 5.5 0 0 0 0-7.8Z"/></svg>
                                 <span class="wishlist-btn-text">{{ $isWishlisted ? 'Đã lưu trong yêu thích' : 'Thêm vào danh sách yêu thích' }}</span>
                             </button>
+                            @include('partials.compare-toggle', ['product' => $product, 'variant' => 'detail'])
                         </div>
                     </form>
                 </div>
@@ -499,6 +500,7 @@
                                 <button class="wishlist-button {{ in_array($related->id, $wishlistProductIds ?? []) ? 'is-active' : '' }}" type="button" data-wishlist-url="{{ route('wishlist.toggle', $related) }}" aria-label="Thêm {{ $related->name }} vào yêu thích">
                                     <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20.8 5.7a5.5 5.5 0 0 0-7.8 0L12 6.8l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 22l8.8-8.5a5.5 5.5 0 0 0 0-7.8Z"/></svg>
                                 </button>
+                                @include('partials.compare-toggle', ['product' => $related])
                                 <a href="{{ route('products.show', $related->slug) }}" class="quick-add">
                                     Xem chi tiết
                                 </a>
@@ -514,8 +516,9 @@
                                         <span>({{ $related->rating_count }})</span>
                                     </div>
                                 @endif
-                                <div class="mt-3 flex items-center gap-2">
+                                <div class="mt-3 flex items-center justify-between gap-2">
                                     <span class="text-[15px] font-bold tracking-tight text-body">{{ number_format((float) $related->base_price, 0, ',', '.') }}₫</span>
+                                    @include('partials.compare-toggle', ['product' => $related, 'variant' => 'chip'])
                                 </div>
                             </div>
                         </article>
