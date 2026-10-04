@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Services\CartService;
+use App\Services\CouponRedemptionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -30,7 +31,9 @@ class CartController extends Controller
         $total = $this->cartService->getTotal();
         $count = $this->cartService->count();
 
-        $data = compact('cart', 'items', 'selectedKeys', 'selectedCount', 'subtotal', 'hasCalculatedShipping', 'shippingFee', 'coupon', 'discountAmount', 'availableCoupons', 'total', 'count');
+        $couponUsed = $request->user() ? app(CouponRedemptionService::class)->redemptionFor($request->user())?->load('order') : null;
+
+        $data = compact('cart', 'items', 'selectedKeys', 'selectedCount', 'subtotal', 'hasCalculatedShipping', 'shippingFee', 'coupon', 'couponUsed', 'discountAmount', 'availableCoupons', 'total', 'count');
 
         if ($request->wantsJson()) {
             return response()->json(['success' => true, 'data' => $data]);
@@ -147,8 +150,19 @@ class CartController extends Controller
             return redirect()->back()->with('error', $msg);
         }
 
+        [$allowed, $retryIn] = app(CouponRedemptionService::class)
+            ->hitApplyLimit($request->user()?->id ? 'user:'.$request->user()->id : 'ip:'.$request->ip());
+
+        if (! $allowed) {
+            $msg = "Bạn nhập mã quá nhiều lần. Vui lòng thử lại sau {$retryIn} giây.";
+            if ($request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $msg], 429);
+            }
+            return redirect()->back()->with('error', $msg);
+        }
+
         try {
-            $coupon = $this->cartService->applyCoupon($code);
+            $coupon = $this->cartService->applyCoupon($code, $request->user());
             $discount = $this->cartService->getDiscountAmount();
             $msg = 'Áp dụng mã giảm giá "'.$coupon['code'].'" thành công!';
 

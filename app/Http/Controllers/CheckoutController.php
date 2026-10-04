@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Http\Requests\CheckoutRequest;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\Coupon;
 use App\Services\CartService;
+use App\Services\CouponRedemptionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,7 +18,10 @@ use Illuminate\View\View;
 
 class CheckoutController extends Controller
 {
-    public function __construct(protected CartService $cartService) {}
+    public function __construct(
+        protected CartService $cartService,
+        protected CouponRedemptionService $coupons,
+    ) {}
 
     public function index(Request $request): View|RedirectResponse|JsonResponse
     {
@@ -80,7 +85,9 @@ class CheckoutController extends Controller
         $checkoutToken = (string) Str::random(40);
         session(['checkout_token' => $checkoutToken]);
 
-        $data = compact('cart', 'items', 'subtotal', 'hasCalculatedShipping', 'shippingFee', 'coupon', 'discountAmount', 'availableCoupons', 'total', 'totalPrice', 'user', 'savedAddresses', 'checkoutToken', 'isBuyNow');
+        $couponUsed = $user ? $this->coupons->redemptionFor($user)?->load('order') : null;
+
+        $data = compact('cart', 'items', 'subtotal', 'hasCalculatedShipping', 'shippingFee', 'coupon', 'couponUsed', 'discountAmount', 'availableCoupons', 'total', 'totalPrice', 'user', 'savedAddresses', 'checkoutToken', 'isBuyNow');
 
         if ($request->wantsJson()) {
             return response()->json(['success' => true, 'data' => $data]);
@@ -130,7 +137,7 @@ class CheckoutController extends Controller
         $paymentMethod = $request->input('payment_method');
 
         try {
-            $order = DB::transaction(function () use ($request, $cart, $paymentMethod, $isBuyNow) {
+            $order = $this->coupons->withCheckoutLock(Auth::user(), fn () => DB::transaction(function () use ($request, $cart, $paymentMethod, $isBuyNow) {
                 $orderItemsData = [];
                 $calculatedSubtotal = 0.0;
 
@@ -164,8 +171,7 @@ class CheckoutController extends Controller
                 }
 
                 $shippingFee = (float) session('shipping_fee', (float) config('services.ghn.default_fee', 30000.0));
-                $coupon = $this->cartService->getCoupon();
-                $discountAmount = $this->cartService->getDiscountAmount();
+                [$couponCode, $discountAmount] = $this->resolveCoupon($calculatedSubtotal, $shippingFee);
                 $totalAmount = max(0.0, $calculatedSubtotal + $shippingFee - $discountAmount);
 
                 $order = Order::create([
@@ -177,7 +183,7 @@ class CheckoutController extends Controller
                     'shipping_address' => $request->input('shipping_address'),
                     'shipping_fee' => $shippingFee,
                     'discount_amount' => $discountAmount,
-                    'coupon_code' => $coupon ? $coupon['code'] : null,
+                    'coupon_code' => $couponCode,
                     'total_price' => $totalAmount,
                     'payment_method' => $paymentMethod,
                     'payment_status' => Order::PAYMENT_PENDING,
@@ -193,6 +199,15 @@ class CheckoutController extends Controller
 
                 foreach ($orderItemsData as $itemData) {
                     $order->items()->create($itemData);
+                }
+
+                if ($couponCode && $discountAmount > 0) {
+                    $this->coupons->redeem(
+                        $request->user(),
+                        $order,
+                        Coupon::findByCode($couponCode),
+                        $discountAmount,
+                    );
                 }
 
                 if ($isBuyNow) {
@@ -212,7 +227,7 @@ class CheckoutController extends Controller
                 }
 
                 return $order;
-            });
+            }));
 
             if ($request->wantsJson()) {
                 return response()->json([
@@ -247,6 +262,28 @@ class CheckoutController extends Controller
 
             return redirect()->back()->withInput()->with('error', $e->getMessage());
         }
+    }
+
+    /**
+     * The discount is recomputed here from the coupon row, never taken from the session amount.
+     * A coupon that no longer qualifies is dropped silently instead of failing the order.
+     *
+     * @return array{0: ?string, 1: float}
+     */
+    protected function resolveCoupon(float $subtotal, float $shippingFee): array
+    {
+        $applied = $this->cartService->getCoupon();
+        $user = Auth::user();
+        if (empty($applied['code']) || ! $user || $this->coupons->redemptionFor($user)) {
+            return [null, 0.0];
+        }
+
+        $coupon = Coupon::query()->where('code', $applied['code'])->lockForUpdate()->first();
+        if (! $coupon || ! $coupon->isValidFor($subtotal)) {
+            return [null, 0.0];
+        }
+
+        return [$coupon->code, $coupon->calculateDiscount($subtotal, $shippingFee)];
     }
 
     public function success(Request $request, string $orderNumber): View|JsonResponse

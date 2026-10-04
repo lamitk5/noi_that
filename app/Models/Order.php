@@ -81,6 +81,23 @@ class Order extends Model
                 $order->total_price = 0;
             }
         });
+
+        static::updated(function (Order $order) {
+            if (! $order->wasChanged('order_status')) {
+                return;
+            }
+
+            $cancelled = [self::STATUS_CANCELLED, 'canceled'];
+            $wasCancelled = in_array($order->getOriginal('order_status'), $cancelled, true);
+            $isCancelled = in_array($order->order_status, $cancelled, true);
+            $coupons = app(\App\Services\CouponRedemptionService::class);
+
+            if ($isCancelled && ! $wasCancelled) {
+                $coupons->release($order);
+            } elseif ($wasCancelled && ! $isCancelled) {
+                $coupons->reclaim($order);
+            }
+        });
     }
 
     public static function generateOrderNumber(): string

@@ -13,15 +13,17 @@ class ReviewController extends Controller
 {
     public function index(Request $request): View|JsonResponse
     {
-        $query = Review::with(['product', 'user'])
+        $query = Review::with(['product', 'user', 'order'])
             ->latest();
 
         if ($request->filled('status')) {
             $status = $request->input('status');
             if ($status === 'approved') {
-                $query->where('is_approved', true);
+                $query->where('is_approved', true)->verifiedPurchase();
             } elseif ($status === 'pending') {
                 $query->where('is_approved', false);
+            } elseif ($status === 'unverified') {
+                $query->whereNot(fn ($q) => $q->verifiedPurchase());
             }
         }
 
@@ -40,8 +42,9 @@ class ReviewController extends Controller
         $reviews = $query->paginate(15)->withQueryString();
         $stats = [
             'total' => Review::count(),
-            'approved' => Review::where('is_approved', true)->count(),
+            'approved' => Review::where('is_approved', true)->verifiedPurchase()->count(),
             'pending' => Review::where('is_approved', false)->count(),
+            'unverified' => Review::whereNot(fn ($q) => $q->verifiedPurchase())->count(),
         ];
 
         if ($request->wantsJson()) {
@@ -53,6 +56,14 @@ class ReviewController extends Controller
 
     public function approve(Review $review): RedirectResponse|JsonResponse
     {
+        if (! $review->isVerifiedPurchase()) {
+            $message = 'Không duyệt được: đánh giá không gắn với đơn đã giao của chính tài khoản này.';
+
+            return request()->wantsJson()
+                ? response()->json(['success' => false, 'message' => $message], 422)
+                : back()->with('error', $message);
+        }
+
         $review->is_approved = true;
         $review->save();
         $message = 'Đã duyệt đánh giá thành công.';

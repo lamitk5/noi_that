@@ -235,7 +235,13 @@
                             <h3 class="font-display text-sm font-bold text-heading">Mã giảm giá / Voucher</h3>
                         </div>
 
-                        @if ($coupon)
+                        @if ($couponUsed)
+                            <p class="text-xs text-amber-700 dark:text-amber-400 bg-amber-500/10 rounded-xl px-3 py-2.5">
+                                Mỗi tài khoản chỉ được dùng 1 mã giảm giá. Tài khoản của bạn đã dùng mã
+                                <span class="font-mono font-bold">{{ $couponUsed->code }}</span>
+                                cho đơn {{ $couponUsed->order?->order_code ?? 'trước đó' }}.
+                            </p>
+                        @elseif ($coupon)
                             <div class="p-3 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-between">
                                 <div class="min-w-0">
                                     <div class="flex items-center gap-1.5">
@@ -277,21 +283,25 @@
                             </form>
 
                             <!-- Suggested Coupons -->
-                            <div class="pt-3 border-t border-dashed border-ui-border">
-                                <p class="text-[11px] font-semibold text-muted mb-2">Mã ưu đãi gợi ý cho bạn:</p>
-                                <div class="flex flex-wrap gap-1.5">
-                                    @foreach (['MOCAN10' => 'Giảm 10%', 'FREESHIP' => 'FreeShip', 'VIP500' => 'Giảm 500K'] as $cCode => $cLabel)
-                                        <button
-                                            type="button"
-                                            onclick="document.getElementById('cart_coupon_input').value='{{ $cCode }}'"
-                                            class="inline-flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/5 hover:bg-primary/10 px-2 py-1 text-[11px] font-bold text-primary transition cursor-pointer"
-                                        >
-                                            <span class="font-mono">{{ $cCode }}</span>
-                                            <span class="text-[10px] opacity-80">({{ $cLabel }})</span>
-                                        </button>
-                                    @endforeach
+                            @if (!empty($availableCoupons))
+                                <div class="pt-3 border-t border-dashed border-ui-border">
+                                    <p class="text-[11px] font-semibold text-muted mb-2">Mã ưu đãi gợi ý cho bạn:</p>
+                                    <div class="flex flex-wrap gap-1.5">
+                                        @foreach ($availableCoupons as $cCode => $cData)
+                                            <button
+                                                type="button"
+                                                onclick="document.getElementById('cart_coupon_input').value='{{ $cCode }}'"
+                                                title="{{ $cData['description'] }}"
+                                                class="inline-flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/5 hover:bg-primary/10 px-2 py-1 text-[11px] font-bold text-primary transition cursor-pointer"
+                                            >
+                                                <span class="font-mono">{{ $cCode }}</span>
+                                                <span class="text-[10px] opacity-80">({{ $cData['description'] }})</span>
+                                            </button>
+                                        @endforeach
+                                    </div>
+                                    <p class="mt-2 text-[10px] text-muted">Mỗi tài khoản chỉ được dùng 1 mã giảm giá.</p>
                                 </div>
-                            </div>
+                            @endif
                         @endif
                     </div>
 

@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Models\Coupon;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Session;
 
@@ -286,52 +288,17 @@ class CartService
 
     protected string $couponSessionKey = 'furniture_coupon';
 
-    public const AVAILABLE_COUPONS = [
-        'MOCAN10' => [
-            'code' => 'MOCAN10',
-            'type' => 'percent',
-            'value' => 10,
-            'max_discount' => 500000,
-            'min_order' => 0,
-            'description' => 'Giảm 10% (tối đa 500.000₫)',
-        ],
-        'MOCAN20' => [
-            'code' => 'MOCAN20',
-            'type' => 'percent',
-            'value' => 20,
-            'max_discount' => 1000000,
-            'min_order' => 3000000,
-            'description' => 'Giảm 20% (tối đa 1.000.000₫ cho đơn từ 3tr)',
-        ],
-        'FREESHIP' => [
-            'code' => 'FREESHIP',
-            'type' => 'shipping',
-            'value' => 50000,
-            'max_discount' => 50000,
-            'min_order' => 0,
-            'description' => 'Miễn phí vận chuyển (tối đa 50.000₫)',
-        ],
-        'VIP500' => [
-            'code' => 'VIP500',
-            'type' => 'fixed',
-            'value' => 500000,
-            'max_discount' => 500000,
-            'min_order' => 5000000,
-            'description' => 'Giảm trực tiếp 500.000₫ cho đơn từ 5tr',
-        ],
-        'CHAOBAN50' => [
-            'code' => 'CHAOBAN50',
-            'type' => 'fixed',
-            'value' => 50000,
-            'max_discount' => 50000,
-            'min_order' => 500000,
-            'description' => 'Giảm 50.000₫ cho đơn từ 500.000₫',
-        ],
-    ];
-
     public function getAvailableCoupons(): array
     {
-        return self::AVAILABLE_COUPONS;
+        return Coupon::query()
+            ->where('is_active', true)
+            ->where(fn ($q) => $q->whereNull('starts_at')->orWhere('starts_at', '<=', now()))
+            ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>=', now()))
+            ->where(fn ($q) => $q->whereNull('usage_limit')->orWhereColumn('used_count', '<', 'usage_limit'))
+            ->orderBy('id')
+            ->get()
+            ->mapWithKeys(fn (Coupon $coupon) => [$coupon->code => $coupon->toCartArray()])
+            ->all();
     }
 
     public function getCoupon(): ?array
@@ -339,28 +306,36 @@ class CartService
         return Session::get($this->couponSessionKey);
     }
 
-    public function applyCoupon(string $code): array
+    public function applyCoupon(string $code, ?User $user): array
     {
+        if (! $user) {
+            throw new \InvalidArgumentException('Vui lòng đăng nhập để sử dụng mã giảm giá (mỗi tài khoản được dùng 1 mã).');
+        }
+
+        $redemptions = app(CouponRedemptionService::class);
+        if ($used = $redemptions->redemptionFor($user)) {
+            throw new \InvalidArgumentException($redemptions->usedMessage($used));
+        }
+
         $code = strtoupper(trim($code));
-        if (! isset(self::AVAILABLE_COUPONS[$code])) {
+        $coupon = Coupon::findByCode($code);
+        if (! $coupon) {
             throw new \InvalidArgumentException('Mã giảm giá "'.$code.'" không tồn tại hoặc đã hết hạn.');
         }
 
-        $coupon = self::AVAILABLE_COUPONS[$code];
         $subtotal = $this->getSelectedSubtotal();
-
         if ($subtotal <= 0) {
             throw new \InvalidArgumentException('Vui lòng chọn ít nhất 1 sản phẩm trước khi áp dụng mã giảm giá.');
         }
 
-        if ($subtotal < $coupon['min_order']) {
-            $formattedMin = number_format($coupon['min_order'], 0, ',', '.');
-            throw new \InvalidArgumentException("Mã {$code} chỉ áp dụng cho đơn hàng từ {$formattedMin}₫. Tạm tính các món đã chọn: ".number_format($subtotal, 0, ',', '.')."₫.");
+        if (! $coupon->isValidFor($subtotal, $error)) {
+            throw new \InvalidArgumentException($error.' Tạm tính các món đã chọn: '.number_format($subtotal, 0, ',', '.').'₫.');
         }
 
-        Session::put($this->couponSessionKey, $coupon);
+        $data = $coupon->toCartArray();
+        Session::put($this->couponSessionKey, $data);
 
-        return $coupon;
+        return $data;
     }
 
     public function removeCoupon(): void

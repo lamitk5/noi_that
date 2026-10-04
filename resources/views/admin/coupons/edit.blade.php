@@ -52,6 +52,7 @@
                     >
                         <option value="percent" {{ old('type', $coupon->type) === 'percent' ? 'selected' : '' }}>Phần trăm (%)</option>
                         <option value="fixed" {{ old('type', $coupon->type) === 'fixed' ? 'selected' : '' }}>Số tiền cố định (₫)</option>
+                        <option value="shipping" {{ old('type', $coupon->type) === 'shipping' ? 'selected' : '' }}>Miễn phí vận chuyển (₫)</option>
                     </select>
                 </div>
 

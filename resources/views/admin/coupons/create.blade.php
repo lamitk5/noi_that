@@ -53,6 +53,7 @@
                     >
                         <option value="percent" {{ old('type') === 'percent' ? 'selected' : '' }}>Phần trăm (%)</option>
                         <option value="fixed" {{ old('type') === 'fixed' ? 'selected' : '' }}>Số tiền cố định (₫)</option>
+                        <option value="shipping" {{ old('type') === 'shipping' ? 'selected' : '' }}>Miễn phí vận chuyển (₫)</option>
                     </select>
                 </div>
 

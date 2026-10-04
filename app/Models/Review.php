@@ -41,4 +41,23 @@ class Review extends Model
     {
         return $this->belongsTo(Order::class);
     }
+
+    /**
+     * A review counts only when its order was delivered to the same account that wrote it.
+     */
+    public function scopeVerifiedPurchase($query)
+    {
+        return $query->whereHas('order', function ($orders) {
+            $orders->whereColumn('orders.user_id', 'reviews.user_id')
+                ->where('orders.order_status', Order::STATUS_COMPLETED);
+        });
+    }
+
+    public function isVerifiedPurchase(): bool
+    {
+        return $this->order_id !== null
+            && $this->order !== null
+            && (int) $this->order->user_id === (int) $this->user_id
+            && $this->order->order_status === Order::STATUS_COMPLETED;
+    }
 }

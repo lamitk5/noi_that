@@ -37,6 +37,16 @@ class ReviewController extends Controller
             return redirect()->to(route('products.show', $product->slug).'#reviews')->withErrors(['review' => $message]);
         }
 
+        $existing = Review::where('user_id', $user->id)->where('product_id', $product->id)->first();
+        if ($existing && $existing->order_id !== $completedOrder->id) {
+            $message = 'Bạn đã đánh giá sản phẩm này từ đơn hàng trước đó.';
+            if ($request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $message], 403);
+            }
+
+            return redirect()->to(route('products.show', $product->slug).'#reviews')->withErrors(['review' => $message]);
+        }
+
         $review = Review::updateOrCreate(
             [
                 'user_id' => $user->id,

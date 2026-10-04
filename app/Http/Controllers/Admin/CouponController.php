@@ -29,7 +29,7 @@ class CouponController extends Controller
             $validated = $request->validate([
                 'code' => ['required', 'string', 'max:50', 'unique:coupons,code'],
                 'name' => ['nullable', 'string', 'max:255'],
-                'type' => ['required', 'in:percent,fixed'],
+                'type' => ['required', 'in:percent,fixed,shipping'],
                 'value' => ['required', 'numeric', 'min:0.01'],
                 'min_order_amount' => ['nullable', 'numeric', 'min:0'],
                 'max_discount_amount' => ['nullable', 'numeric', 'min:0'],
@@ -71,7 +71,7 @@ class CouponController extends Controller
             $validated = $request->validate([
                 'code' => ['required', 'string', 'max:50', Rule::unique('coupons')->ignore($coupon->id)],
                 'name' => ['nullable', 'string', 'max:255'],
-                'type' => ['required', 'in:percent,fixed'],
+                'type' => ['required', 'in:percent,fixed,shipping'],
                 'value' => ['required', 'numeric', 'min:0.01'],
                 'min_order_amount' => ['nullable', 'numeric', 'min:0'],
                 'max_discount_amount' => ['nullable', 'numeric', 'min:0'],

@@ -395,7 +395,11 @@
                             <span class="text-xs font-bold text-heading">Mã ưu đãi / Voucher</span>
                         </div>
 
-                        @if ($coupon)
+                        @if ($couponUsed)
+                            <p class="text-xs text-amber-700 dark:text-amber-400">
+                                Tài khoản của bạn đã dùng mã <span class="font-mono font-bold">{{ $couponUsed->code }}</span>, mỗi tài khoản chỉ được dùng 1 mã.
+                            </p>
+                        @elseif ($coupon)
                             <div class="flex items-center justify-between p-2.5 rounded-xl bg-primary/10 border border-primary/20 text-xs">
                                 <div>
                                     <span class="font-mono font-bold text-primary bg-surface px-1.5 py-0.5 rounded border border-ui-border">{{ $coupon['code'] }}</span>

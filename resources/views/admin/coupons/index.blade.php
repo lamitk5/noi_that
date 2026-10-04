@@ -54,6 +54,8 @@
                                     @if($coupon->max_discount_amount)
                                         <div class="text-[10px] text-muted font-normal">(tối đa {{ number_format((float) $coupon->max_discount_amount, 0, ',', '.') }}₫)</div>
                                     @endif
+                                @elseif($coupon->type === 'shipping')
+                                    FreeShip {{ number_format((float) $coupon->value, 0, ',', '.') }}₫
                                 @else
                                     Giảm {{ number_format((float) $coupon->value, 0, ',', '.') }}₫
                                 @endif
