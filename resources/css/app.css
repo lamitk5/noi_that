@@ -183,6 +183,7 @@ body,
     .slider-button { @apply grid size-12 place-items-center rounded-full border border-ui-border bg-surface text-lg text-heading transition-all duration-300 hover:border-primary hover:bg-primary hover:text-primary-foreground hover:shadow-lg; }
     .product-card { @apply rounded-[1.5rem] border border-ui-border bg-surface p-3 pb-6 shadow-sm shadow-black/5 transition-all duration-500 hover:-translate-y-1.5 hover:shadow-xl; }
     .product-media { @apply relative aspect-[4/5] overflow-hidden rounded-[1.1rem] bg-surface-alt; }
+    .product-gallery { @apply relative aspect-[4/3] min-h-[320px] w-full overflow-hidden rounded-3xl border border-ui-border bg-surface shadow-sm lg:min-h-[480px]; }
     .wishlist-button { @apply absolute right-3 top-3 grid size-10 place-items-center rounded-full bg-surface/90 text-heading opacity-0 shadow-sm transition hover:bg-primary hover:text-primary-foreground group-hover:opacity-100; }
     .wishlist-button.is-active { @apply bg-primary text-primary-foreground opacity-100; }
     .wishlist-button.is-active svg { fill: currentColor; }
