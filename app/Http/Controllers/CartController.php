@@ -25,15 +25,15 @@ class CartController extends Controller
         $subtotal = $this->cartService->getSelectedSubtotal();
         $hasCalculatedShipping = $this->cartService->hasCalculatedShipping();
         $shippingFee = $this->cartService->getShippingFee();
-        $coupon = $this->cartService->getCoupon();
-        $discountAmount = $this->cartService->getDiscountAmount();
+        $quote = $this->cartService->quote();
+        $coupons = $quote['coupons'];
+        $discountAmount = $quote['price_discount'];
+        $payableShipping = $quote['payable_shipping'];
         $availableCoupons = $this->cartService->getAvailableCoupons();
-        $total = $this->cartService->getTotal();
+        $total = $quote['total'];
         $count = $this->cartService->count();
 
-        $couponUsed = $request->user() ? app(CouponRedemptionService::class)->redemptionFor($request->user())?->load('order') : null;
-
-        $data = compact('cart', 'items', 'selectedKeys', 'selectedCount', 'subtotal', 'hasCalculatedShipping', 'shippingFee', 'coupon', 'couponUsed', 'discountAmount', 'availableCoupons', 'total', 'count');
+        $data = compact('cart', 'items', 'selectedKeys', 'selectedCount', 'subtotal', 'hasCalculatedShipping', 'shippingFee', 'quote', 'coupons', 'discountAmount', 'payableShipping', 'availableCoupons', 'total', 'count');
 
         if ($request->wantsJson()) {
             return response()->json(['success' => true, 'data' => $data]);
@@ -190,7 +190,8 @@ class CartController extends Controller
 
     public function removeCoupon(Request $request): RedirectResponse|JsonResponse
     {
-        $this->cartService->removeCoupon();
+        $code = $request->input('coupon_code') ?? $request->input('code');
+        $this->cartService->removeCoupon(is_string($code) && trim($code) !== '' ? $code : null);
 
         if ($request->wantsJson()) {
             return response()->json([

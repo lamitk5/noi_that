@@ -235,73 +235,74 @@
                             <h3 class="font-display text-sm font-bold text-heading">Mã giảm giá / Voucher</h3>
                         </div>
 
-                        @if ($couponUsed)
-                            <p class="text-xs text-amber-700 dark:text-amber-400 bg-amber-500/10 rounded-xl px-3 py-2.5">
-                                Mỗi tài khoản chỉ được dùng 1 mã giảm giá. Tài khoản của bạn đã dùng mã
-                                <span class="font-mono font-bold">{{ $couponUsed->code }}</span>
-                                cho đơn {{ $couponUsed->order?->order_code ?? 'trước đó' }}.
-                            </p>
-                        @elseif ($coupon)
-                            <div class="p-3 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-between">
-                                <div class="min-w-0">
-                                    <div class="flex items-center gap-1.5">
-                                        <span class="font-mono text-xs font-bold text-primary bg-surface px-2 py-0.5 rounded border border-ui-border">
-                                            {{ $coupon['code'] }}
-                                        </span>
-                                        <span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                                            -{{ number_format($discountAmount, 0, ',', '.') }}₫
-                                        </span>
-                                    </div>
-                                    <p class="text-[11px] text-muted truncate mt-1">{{ $coupon['description'] ?? 'Đã áp dụng mã' }}</p>
-                                </div>
-                                <form method="POST" action="{{ route('cart.coupon.remove') }}">
-                                    @csrf
-                                    <button type="submit" class="text-xs text-rose-600 dark:text-rose-400 hover:text-rose-800 font-semibold px-2 py-1 rounded hover:bg-rose-500/10 transition cursor-pointer">
-                                        Gỡ bỏ
-                                    </button>
-                                </form>
-                            </div>
-                        @else
-                            <form method="POST" action="{{ route('cart.coupon.apply') }}" class="space-y-2.5">
-                                @csrf
-                                <div class="flex items-center gap-2">
-                                    <input
-                                        type="text"
-                                        name="coupon_code"
-                                        id="cart_coupon_input"
-                                        placeholder="Nhập mã giảm giá..."
-                                        class="flex-1 rounded-xl border border-ui-border bg-surface-alt px-3 py-2 text-xs font-semibold uppercase tracking-wider text-heading placeholder:normal-case placeholder:font-normal placeholder:text-muted focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                                        required
-                                    >
-                                    <button
-                                        type="submit"
-                                        class="rounded-xl bg-primary hover:opacity-90 text-primary-foreground font-bold text-xs px-4 py-2 transition shadow-xs cursor-pointer"
-                                    >
-                                        Áp dụng
-                                    </button>
-                                </div>
-                            </form>
-
-                            <!-- Suggested Coupons -->
-                            @if (!empty($availableCoupons))
-                                <div class="pt-3 border-t border-dashed border-ui-border">
-                                    <p class="text-[11px] font-semibold text-muted mb-2">Mã ưu đãi gợi ý cho bạn:</p>
-                                    <div class="flex flex-wrap gap-1.5">
-                                        @foreach ($availableCoupons as $cCode => $cData)
-                                            <button
-                                                type="button"
-                                                onclick="document.getElementById('cart_coupon_input').value='{{ $cCode }}'"
-                                                title="{{ $cData['description'] }}"
-                                                class="inline-flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/5 hover:bg-primary/10 px-2 py-1 text-[11px] font-bold text-primary transition cursor-pointer"
-                                            >
-                                                <span class="font-mono">{{ $cCode }}</span>
-                                                <span class="text-[10px] opacity-80">({{ $cData['description'] }})</span>
+                        @if (!empty($coupons))
+                            <div class="space-y-2 mb-3">
+                                @foreach ($coupons as $appliedCoupon)
+                                    <div class="p-3 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-between">
+                                        <div class="min-w-0">
+                                            <div class="flex items-center gap-1.5">
+                                                <span class="font-mono text-xs font-bold text-primary bg-surface px-2 py-0.5 rounded border border-ui-border">
+                                                    {{ $appliedCoupon['code'] }}
+                                                </span>
+                                                @if (($appliedCoupon['amount'] ?? 0) > 0)
+                                                    <span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                                                        -{{ number_format($appliedCoupon['amount'], 0, ',', '.') }}₫
+                                                    </span>
+                                                @elseif (($appliedCoupon['type'] ?? '') === 'shipping')
+                                                    <span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400">Miễn phí ship</span>
+                                                @endif
+                                            </div>
+                                            <p class="text-[11px] text-muted truncate mt-1">{{ $appliedCoupon['description'] ?? 'Đã áp dụng mã' }}</p>
+                                        </div>
+                                        <form method="POST" action="{{ route('cart.coupon.remove') }}">
+                                            @csrf
+                                            <input type="hidden" name="coupon_code" value="{{ $appliedCoupon['code'] }}">
+                                            <button type="submit" class="text-xs text-rose-600 dark:text-rose-400 hover:text-rose-800 font-semibold px-2 py-1 rounded hover:bg-rose-500/10 transition cursor-pointer">
+                                                Gỡ bỏ
                                             </button>
-                                        @endforeach
+                                        </form>
                                     </div>
-                                    <p class="mt-2 text-[10px] text-muted">Mỗi tài khoản chỉ được dùng 1 mã giảm giá.</p>
+                                @endforeach
+                            </div>
+                        @endif
+
+                        <form method="POST" action="{{ route('cart.coupon.apply') }}" class="space-y-2.5">
+                            @csrf
+                            <div class="flex items-center gap-2">
+                                <input
+                                    type="text"
+                                    name="coupon_code"
+                                    id="cart_coupon_input"
+                                    placeholder="Nhập thêm mã giảm giá..."
+                                    class="flex-1 rounded-xl border border-ui-border bg-surface-alt px-3 py-2 text-xs font-semibold uppercase tracking-wider text-heading placeholder:normal-case placeholder:font-normal placeholder:text-muted focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                                    required
+                                >
+                                <button
+                                    type="submit"
+                                    class="rounded-xl bg-primary hover:opacity-90 text-primary-foreground font-bold text-xs px-4 py-2 transition shadow-xs cursor-pointer"
+                                >
+                                    Áp dụng
+                                </button>
+                            </div>
+                        </form>
+
+                        @if (!empty($availableCoupons))
+                            <div class="pt-3 border-t border-dashed border-ui-border">
+                                <p class="text-[11px] font-semibold text-muted mb-2">Có thể dùng nhiều mã cùng lúc:</p>
+                                <div class="flex flex-wrap gap-1.5">
+                                    @foreach ($availableCoupons as $cCode => $cData)
+                                        <button
+                                            type="button"
+                                            onclick="document.getElementById('cart_coupon_input').value='{{ $cCode }}'"
+                                            title="{{ $cData['description'] }}"
+                                            class="inline-flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/5 hover:bg-primary/10 px-2 py-1 text-[11px] font-bold text-primary transition cursor-pointer"
+                                        >
+                                            <span class="font-mono">{{ $cCode }}</span>
+                                            <span class="text-[10px] opacity-80">({{ $cData['description'] }})</span>
+                                        </button>
+                                    @endforeach
                                 </div>
-                            @endif
+                            </div>
                         @endif
                     </div>
 
@@ -318,8 +319,8 @@
                             <div id="summary-discount-row" class="flex items-center justify-between py-3 text-emerald-700 font-semibold {{ $discountAmount > 0 ? '' : 'hidden' }}">
                                 <span class="flex items-center gap-1">
                                     <span>Giảm giá</span>
-                                    @if ($coupon)
-                                        <span class="font-mono text-xs bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded" id="summary-coupon-badge">({{ $coupon['code'] }})</span>
+                                    @if (!empty($coupons))
+                                        <span class="font-mono text-xs bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded" id="summary-coupon-badge">({{ collect($coupons)->pluck('code')->implode(', ') }})</span>
                                     @endif
                                 </span>
                                 <span id="summary-discount-amount">-{{ number_format($discountAmount, 0, ',', '.') }}₫</span>
@@ -328,7 +329,15 @@
                             <div class="flex items-center justify-between py-3">
                                 <span class="text-muted">Phí vận chuyển</span>
                                 <span class="text-xs font-semibold text-accent" id="summary-shipping-fee">
-                                    {{ $shippingFee > 0 ? number_format($shippingFee, 0, ',', '.') . '₫' : ($subtotal >= 5000000 ? 'Miễn phí' : 'Tính ở thanh toán') }}
+                                    @if ($quote['has_shipping_coupon'] && (! $hasCalculatedShipping || $payableShipping <= 0))
+                                        Miễn phí
+                                    @elseif ($hasCalculatedShipping)
+                                        {{ number_format($payableShipping, 0, ',', '.') }}₫
+                                    @elseif ($subtotal >= 5000000)
+                                        Miễn phí
+                                    @else
+                                        Tính ở thanh toán
+                                    @endif
                                 </span>
                             </div>
 
@@ -404,7 +413,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const config = {
         selectUrl: "{{ route('cart.select') }}",
         csrfToken: "{{ csrf_token() }}",
-        coupon: @json($coupon),
+        coupons: @json($coupons),
         shippingFee: {{ (float) $shippingFee }},
         hasCalculatedShipping: {{ ($hasCalculatedShipping ?? false) ? 'true' : 'false' }},
     };
@@ -415,24 +424,42 @@ document.addEventListener('DOMContentLoaded', function () {
         return new Intl.NumberFormat('vi-VN').format(Math.max(0, Math.round(amount))) + '₫';
     }
 
-    function calculateDiscount(subtotal) {
-        if (!config.coupon) return 0;
-        const c = config.coupon;
-        if (subtotal < (c.min_order || 0)) return 0;
+    function calculateQuote(subtotal) {
+        const coupons = Array.isArray(config.coupons) ? config.coupons : [];
+        const ship = config.hasCalculatedShipping ? (config.shippingFee || 0) : 0;
+        let price = 0;
+        let shipDiscount = 0;
+        let hasShippingCoupon = false;
 
-        let discount = 0;
-        if (c.type === 'percent') {
-            discount = subtotal * (parseFloat(c.value) / 100);
-            if (c.max_discount && discount > parseFloat(c.max_discount)) {
-                discount = parseFloat(c.max_discount);
+        coupons.forEach(c => {
+            if (subtotal < (c.min_order || 0)) {
+                if (c.type === 'shipping') hasShippingCoupon = true;
+                return;
             }
-        } else if (c.type === 'fixed') {
-            discount = Math.min(subtotal, parseFloat(c.value));
-        } else if (c.type === 'shipping') {
-            const ship = config.shippingFee || 0;
-            discount = Math.min(ship, parseFloat(c.max_discount || 50000));
-        }
-        return discount;
+            if (c.type === 'shipping') {
+                hasShippingCoupon = true;
+                const cap = parseFloat(c.max_discount || c.value || 0);
+                if (config.hasCalculatedShipping) {
+                    shipDiscount += Math.min(Math.max(0, ship - shipDiscount), cap);
+                }
+                return;
+            }
+            let amount = 0;
+            if (c.type === 'percent') {
+                amount = subtotal * (parseFloat(c.value) / 100);
+                if (c.max_discount && amount > parseFloat(c.max_discount)) {
+                    amount = parseFloat(c.max_discount);
+                }
+            } else {
+                amount = parseFloat(c.value || 0);
+            }
+            amount = Math.min(amount, Math.max(0, subtotal - price));
+            price += amount;
+        });
+
+        const payable = config.hasCalculatedShipping ? Math.max(0, ship - shipDiscount) : 0;
+        const total = subtotal === 0 ? 0 : Math.max(0, subtotal - price + payable);
+        return { price, payable, hasShippingCoupon, total };
     }
 
     function updateCartUI() {
@@ -473,9 +500,9 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         // Compute Discount & Shipping & Total
-        const discount = calculateDiscount(subtotal);
-        const shipping = config.hasCalculatedShipping ? config.shippingFee : 0;
-        const total = subtotal === 0 ? 0 : Math.max(0, subtotal - discount + shipping);
+        const priced = calculateQuote(subtotal);
+        const discount = priced.price;
+        const total = priced.total;
 
         // Update counts
         if (selectedSummaryCount) selectedSummaryCount.textContent = selectedCount;
@@ -494,8 +521,10 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         if (summaryShippingFee) {
-            if (config.shippingFee > 0) {
-                summaryShippingFee.textContent = formatVND(config.shippingFee);
+            if (priced.hasShippingCoupon && (!config.hasCalculatedShipping || priced.payable <= 0)) {
+                summaryShippingFee.textContent = 'Miễn phí';
+            } else if (config.hasCalculatedShipping) {
+                summaryShippingFee.textContent = formatVND(priced.payable);
             } else if (subtotal >= 5000000) {
                 summaryShippingFee.textContent = 'Miễn phí';
             } else {

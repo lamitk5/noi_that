@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * One row per account: the unique user_id index is what enforces "1 coupon per account".
+ * One row per coupon used on an order. An account may have many rows.
  */
 class CouponRedemption extends Model
 {

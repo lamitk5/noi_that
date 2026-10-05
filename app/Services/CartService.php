@@ -301,26 +301,48 @@ class CartService
             ->all();
     }
 
-    public function getCoupon(): ?array
+    /**
+     * Applied coupons. A legacy session that stored one coupon is still read.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function getCoupons(): array
     {
-        return Session::get($this->couponSessionKey);
+        $stored = Session::get($this->couponSessionKey);
+        if (! is_array($stored) || $stored === []) {
+            return [];
+        }
+
+        if (isset($stored['code'])) {
+            return [$stored];
+        }
+
+        return array_values(array_filter(
+            $stored,
+            fn ($coupon) => is_array($coupon) && ! empty($coupon['code'])
+        ));
     }
 
     public function applyCoupon(string $code, ?User $user): array
     {
         if (! $user) {
-            throw new \InvalidArgumentException('Vui lòng đăng nhập để sử dụng mã giảm giá (mỗi tài khoản được dùng 1 mã).');
-        }
-
-        $redemptions = app(CouponRedemptionService::class);
-        if ($used = $redemptions->redemptionFor($user)) {
-            throw new \InvalidArgumentException($redemptions->usedMessage($used));
+            throw new \InvalidArgumentException('Vui lòng đăng nhập để sử dụng mã giảm giá.');
         }
 
         $code = strtoupper(trim($code));
         $coupon = Coupon::findByCode($code);
         if (! $coupon) {
             throw new \InvalidArgumentException('Mã giảm giá "'.$code.'" không tồn tại hoặc đã hết hạn.');
+        }
+
+        $current = $this->getCoupons();
+        if (collect($current)->contains(fn ($row) => strtoupper((string) $row['code']) === $coupon->code)) {
+            throw new \InvalidArgumentException('Mã "'.$coupon->code.'" đã được áp dụng. Bạn vẫn có thể thêm mã khác.');
+        }
+
+        if ($coupon->type === Coupon::TYPE_SHIPPING
+            && collect($current)->contains(fn ($row) => ($row['type'] ?? '') === Coupon::TYPE_SHIPPING)) {
+            throw new \InvalidArgumentException('Đơn đã có một mã miễn phí vận chuyển. Hãy gỡ mã đó nếu muốn đổi.');
         }
 
         $subtotal = $this->getSelectedSubtotal();
@@ -333,42 +355,115 @@ class CartService
         }
 
         $data = $coupon->toCartArray();
-        Session::put($this->couponSessionKey, $data);
+        $current[] = $data;
+        Session::put($this->couponSessionKey, $current);
 
         return $data;
     }
 
-    public function removeCoupon(): void
+    public function removeCoupon(?string $code = null): void
     {
-        Session::forget($this->couponSessionKey);
+        if ($code === null || trim($code) === '') {
+            Session::forget($this->couponSessionKey);
+
+            return;
+        }
+
+        $code = strtoupper(trim($code));
+        $remaining = array_values(array_filter(
+            $this->getCoupons(),
+            fn ($coupon) => strtoupper((string) $coupon['code']) !== $code
+        ));
+
+        if ($remaining === []) {
+            Session::forget($this->couponSessionKey);
+
+            return;
+        }
+
+        Session::put($this->couponSessionKey, $remaining);
+    }
+
+    /**
+     * Price discounts come off the subtotal. Shipping coupons come off the carrier fee,
+     * so a freeship code is not left sitting on top of a full shipping charge.
+     *
+     * @return array{
+     *     subtotal: float,
+     *     price_discount: float,
+     *     shipping_discount: float,
+     *     shipping_fee: float,
+     *     payable_shipping: float,
+     *     shipping_known: bool,
+     *     has_shipping_coupon: bool,
+     *     total: float,
+     *     coupons: list<array<string, mixed>>
+     * }
+     */
+    public function quote(?float $subtotal = null, ?float $shippingFee = null): array
+    {
+        $subtotal = $subtotal ?? $this->getSelectedSubtotal();
+        $shippingKnown = $shippingFee !== null || $this->hasCalculatedShipping();
+        $shippingFee = $shippingFee ?? ($shippingKnown ? $this->getShippingFee() : 0.0);
+
+        $priceDiscount = 0.0;
+        $shippingDiscount = 0.0;
+        $applied = [];
+        $hasShippingCoupon = false;
+
+        foreach ($this->getCoupons() as $coupon) {
+            if ($subtotal < (float) ($coupon['min_order'] ?? 0)) {
+                $applied[] = $coupon + ['amount' => 0.0];
+                $hasShippingCoupon = $hasShippingCoupon || ($coupon['type'] ?? '') === Coupon::TYPE_SHIPPING;
+                continue;
+            }
+
+            if (($coupon['type'] ?? '') === Coupon::TYPE_SHIPPING) {
+                $hasShippingCoupon = true;
+                $cap = (float) ($coupon['max_discount'] ?? $coupon['value'] ?? 0);
+                $amount = $shippingKnown ? min(max(0.0, $shippingFee - $shippingDiscount), $cap) : 0.0;
+                $shippingDiscount += $amount;
+                $applied[] = $coupon + ['amount' => $amount];
+                continue;
+            }
+
+            if (($coupon['type'] ?? '') === 'percent') {
+                $amount = $subtotal * ((float) $coupon['value'] / 100);
+                if (! empty($coupon['max_discount']) && $amount > (float) $coupon['max_discount']) {
+                    $amount = (float) $coupon['max_discount'];
+                }
+            } else {
+                $amount = (float) ($coupon['value'] ?? 0);
+            }
+
+            $amount = min($amount, max(0.0, $subtotal - $priceDiscount));
+            $priceDiscount += $amount;
+            $applied[] = $coupon + ['amount' => $amount];
+        }
+
+        $payableShipping = $shippingKnown ? max(0.0, $shippingFee - $shippingDiscount) : 0.0;
+        $total = $subtotal <= 0
+            ? 0.0
+            : max(0.0, $subtotal - $priceDiscount + ($shippingKnown ? $payableShipping : 0.0));
+
+        return [
+            'subtotal' => $subtotal,
+            'price_discount' => $priceDiscount,
+            'shipping_discount' => $shippingDiscount,
+            'shipping_fee' => $shippingFee,
+            'payable_shipping' => $payableShipping,
+            'shipping_known' => $shippingKnown,
+            'has_shipping_coupon' => $hasShippingCoupon,
+            'total' => $total,
+            'coupons' => $applied,
+        ];
     }
 
     public function getDiscountAmount(?float $subtotal = null): float
     {
-        $coupon = $this->getCoupon();
-        if (! $coupon) {
-            return 0.0;
-        }
+        $quote = $this->quote($subtotal);
 
-        $subtotal = $subtotal ?? $this->getSelectedSubtotal();
-        if ($subtotal < ($coupon['min_order'] ?? 0)) {
-            return 0.0;
-        }
-
-        $discount = 0.0;
-        if ($coupon['type'] === 'percent') {
-            $discount = $subtotal * ((float) $coupon['value'] / 100);
-            if (! empty($coupon['max_discount']) && $discount > (float) $coupon['max_discount']) {
-                $discount = (float) $coupon['max_discount'];
-            }
-        } elseif ($coupon['type'] === 'fixed') {
-            $discount = min($subtotal, (float) $coupon['value']);
-        } elseif ($coupon['type'] === 'shipping') {
-            $shippingFee = $this->getShippingFee();
-            $discount = min($shippingFee, (float) ($coupon['max_discount'] ?? 50000.0));
-        }
-
-        return (float) $discount;
+        return (float) ($quote['price_discount'] + $quote['shipping_discount']);
     }
 
     public function removeSelected(): void
@@ -420,14 +515,7 @@ class CartService
 
     public function getTotal(): float
     {
-        $subtotal = $this->getSelectedSubtotal();
-        if ($subtotal === 0.0) {
-            return 0.0;
-        }
-
-        $shipping = $this->hasCalculatedShipping() ? $this->getShippingFee() : 0.0;
-        $total = $subtotal + $shipping - $this->getDiscountAmount($subtotal);
-        return max(0.0, (float) $total);
+        return (float) $this->quote()['total'];
     }
 
     public function count(): int

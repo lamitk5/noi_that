@@ -122,7 +122,9 @@ class Coupon extends Model
         $text = match ($this->type) {
             self::TYPE_PERCENT => 'Giảm ' . rtrim(rtrim((string) $this->value, '0'), '.') . '%'
                 . ($this->max_discount_amount ? ' (tối đa ' . $money($this->max_discount_amount) . ')' : ''),
-            self::TYPE_SHIPPING => 'Miễn phí vận chuyển (tối đa ' . $money($this->value) . ')',
+            self::TYPE_SHIPPING => ((float) $this->value >= 1000000 && $this->max_discount_amount === null)
+                ? 'Miễn phí vận chuyển'
+                : 'Miễn phí vận chuyển (tối đa ' . $money($this->max_discount_amount ?? $this->value) . ')',
             default => 'Giảm trực tiếp ' . $money($this->value),
         };
 

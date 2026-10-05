@@ -330,12 +330,13 @@
                                     <span class="font-semibold text-heading text-sm">MoMo - Thẻ ATM & Tài khoản (Sandbox)</span>
                                     <span class="rounded bg-pink-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-pink-600 dark:text-pink-400">Sandbox</span>
                                 </div>
-                                <p class="text-xs text-muted">Thanh toán trực tiếp bằng thẻ ATM nội địa (bỏ qua quét mã QR MoMo).</p>
+                                <p class="text-xs text-muted">Thanh toán thử bằng thẻ ATM trên cổng MoMo sandbox.</p>
                                 <div class="mt-2 rounded-lg border border-pink-200/50 bg-pink-500/5 p-2.5 text-[11px] text-muted space-y-0.5">
-                                    <p class="font-semibold text-pink-600 dark:text-pink-400">Thông tin thẻ thử nghiệm MoMo Sandbox:</p>
-                                    <p>• Số thẻ: <code class="font-mono font-bold text-heading">9704198526191432198</code></p>
-                                    <p>• Tên chủ thẻ: <code class="font-mono font-bold text-heading">NGUYEN VAN A</code> | Hạn: <code class="font-mono font-bold text-heading">07/15</code></p>
-                                    <p>• Mã OTP: <code class="font-mono font-bold text-heading">000000</code></p>
+                                    <p class="font-semibold text-pink-600 dark:text-pink-400">Thẻ ATM thử nghiệm (giao dịch thành công):</p>
+                                    <p>• Số thẻ: <code class="font-mono font-bold text-heading">9704 0000 0000 0018</code></p>
+                                    <p>• Tên chủ thẻ: <code class="font-mono font-bold text-heading">NGUYEN VAN A</code></p>
+                                    <p>• Ngày phát hành: <code class="font-mono font-bold text-heading">03/07</code> · OTP: <code class="font-mono font-bold text-heading">OTP</code></p>
+                                    <p>Hình thẻ hồng trên trang MoMo chỉ là ảnh mẫu. Nhập đúng số thẻ ở trên, không nhập số in trên hình.</p>
                                 </div>
                             </div>
                         </label>
@@ -395,58 +396,62 @@
                             <span class="text-xs font-bold text-heading">Mã ưu đãi / Voucher</span>
                         </div>
 
-                        @if ($couponUsed)
-                            <p class="text-xs text-amber-700 dark:text-amber-400">
-                                Tài khoản của bạn đã dùng mã <span class="font-mono font-bold">{{ $couponUsed->code }}</span>, mỗi tài khoản chỉ được dùng 1 mã.
-                            </p>
-                        @elseif ($coupon)
-                            <div class="flex items-center justify-between p-2.5 rounded-xl bg-primary/10 border border-primary/20 text-xs">
-                                <div>
-                                    <span class="font-mono font-bold text-primary bg-surface px-1.5 py-0.5 rounded border border-ui-border">{{ $coupon['code'] }}</span>
-                                    <span class="text-emerald-700 dark:text-emerald-400 font-semibold ml-1">-{{ number_format($discountAmount, 0, ',', '.') }}₫</span>
-                                </div>
-                                <button
-                                    type="button"
-                                    onclick="removeCouponAjax()"
-                                    class="text-rose-600 hover:text-rose-800 font-semibold text-xs cursor-pointer"
-                                >
-                                    Gỡ bỏ
-                                </button>
-                            </div>
-                        @else
-                            <div class="flex items-center gap-2">
-                                <input
-                                    type="text"
-                                    id="checkout_coupon_input"
-                                    placeholder="Nhập mã giảm giá..."
-                                    class="flex-1 rounded-xl border border-ui-border bg-surface px-3 py-2 text-xs font-semibold uppercase tracking-wider text-heading placeholder:normal-case placeholder:font-normal placeholder:text-muted focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                                >
-                                <button
-                                    type="button"
-                                    id="btn_apply_coupon"
-                                    onclick="applyCouponAjax()"
-                                    class="rounded-xl bg-primary hover:opacity-90 text-primary-foreground font-bold text-xs px-3.5 py-2 transition shadow-xs cursor-pointer shrink-0"
-                                >
-                                    Áp dụng
-                                </button>
-                            </div>
-                            <div id="coupon_msg" class="text-xs hidden"></div>
-
-                            <div class="pt-2 border-t border-dashed border-ui-border/60">
-                                <div class="flex flex-wrap gap-1.5 items-center">
-                                    <span class="text-[10px] text-muted font-medium">Gợi ý:</span>
-                                    @foreach (['MOCAN10' => '10%', 'FREESHIP' => 'FreeShip', 'VIP500' => '500K'] as $cCode => $cLabel)
+                        @if (!empty($coupons))
+                            <div class="space-y-2">
+                                @foreach ($coupons as $appliedCoupon)
+                                    <div class="flex items-center justify-between p-2.5 rounded-xl bg-primary/10 border border-primary/20 text-xs">
+                                        <div>
+                                            <span class="font-mono font-bold text-primary bg-surface px-1.5 py-0.5 rounded border border-ui-border">{{ $appliedCoupon['code'] }}</span>
+                                            @if (($appliedCoupon['amount'] ?? 0) > 0)
+                                                <span class="text-emerald-700 dark:text-emerald-400 font-semibold ml-1">-{{ number_format($appliedCoupon['amount'], 0, ',', '.') }}₫</span>
+                                            @elseif (($appliedCoupon['type'] ?? '') === 'shipping')
+                                                <span class="text-emerald-700 dark:text-emerald-400 font-semibold ml-1">Miễn phí ship</span>
+                                            @endif
+                                        </div>
                                         <button
                                             type="button"
-                                            onclick="document.getElementById('checkout_coupon_input').value='{{ $cCode }}'; applyCouponAjax();"
-                                            class="rounded-lg border border-primary/30 bg-primary/5 hover:bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary transition cursor-pointer"
+                                            onclick="removeCouponAjax('{{ $appliedCoupon['code'] }}')"
+                                            class="text-rose-600 hover:text-rose-800 font-semibold text-xs cursor-pointer"
                                         >
-                                            {{ $cCode }} ({{ $cLabel }})
+                                            Gỡ bỏ
                                         </button>
-                                    @endforeach
-                                </div>
+                                    </div>
+                                @endforeach
                             </div>
                         @endif
+
+                        <div class="flex items-center gap-2">
+                            <input
+                                type="text"
+                                id="checkout_coupon_input"
+                                placeholder="Nhập thêm mã giảm giá..."
+                                class="flex-1 rounded-xl border border-ui-border bg-surface px-3 py-2 text-xs font-semibold uppercase tracking-wider text-heading placeholder:normal-case placeholder:font-normal placeholder:text-muted focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                            >
+                            <button
+                                type="button"
+                                id="btn_apply_coupon"
+                                onclick="applyCouponAjax()"
+                                class="rounded-xl bg-primary hover:opacity-90 text-primary-foreground font-bold text-xs px-3.5 py-2 transition shadow-xs cursor-pointer shrink-0"
+                            >
+                                Áp dụng
+                            </button>
+                        </div>
+                        <div id="coupon_msg" class="text-xs hidden"></div>
+
+                        <div class="pt-2 border-t border-dashed border-ui-border/60">
+                            <div class="flex flex-wrap gap-1.5 items-center">
+                                <span class="text-[10px] text-muted font-medium">Có thể dùng nhiều mã:</span>
+                                @foreach (['MOCAN10' => '10%', 'FREESHIP' => 'FreeShip', 'VIP500' => '500K'] as $cCode => $cLabel)
+                                    <button
+                                        type="button"
+                                        onclick="document.getElementById('checkout_coupon_input').value='{{ $cCode }}'; applyCouponAjax();"
+                                        class="rounded-lg border border-primary/30 bg-primary/5 hover:bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary transition cursor-pointer"
+                                    >
+                                        {{ $cCode }} ({{ $cLabel }})
+                                    </button>
+                                @endforeach
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Price Calculations -->
@@ -460,8 +465,8 @@
                             <div class="flex justify-between text-emerald-700 dark:text-emerald-400 font-semibold">
                                 <span class="flex items-center gap-1">
                                     <span>Giảm giá</span>
-                                    @if ($coupon)
-                                        <span class="font-mono text-xs bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 px-1.5 py-0.5 rounded">({{ $coupon['code'] }})</span>
+                                    @if (!empty($coupons))
+                                        <span class="font-mono text-xs bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 px-1.5 py-0.5 rounded">({{ collect($coupons)->pluck('code')->implode(', ') }})</span>
                                     @endif
                                 </span>
                                 <span>-{{ number_format($discountAmount, 0, ',', '.') }}₫</span>
@@ -471,14 +476,14 @@
                         <div class="flex justify-between text-muted">
                             <span>Phí vận chuyển</span>
                             <span class="font-semibold" data-id="shipping-fee-display">
-                                @if ($hasCalculatedShipping && $shippingFee > 0)
+                                @if ($quote['has_shipping_coupon'] && (! $hasCalculatedShipping || $payableShipping <= 0))
+                                    <span class="text-emerald-600 dark:text-emerald-400 font-bold">Miễn phí</span>
+                                @elseif ($hasCalculatedShipping && $payableShipping > 0)
                                     <span class="text-emerald-600 dark:text-emerald-400 font-bold">
-                                        {{ number_format($shippingFee, 0, ',', '.') }}₫
+                                        {{ number_format($payableShipping, 0, ',', '.') }}₫
                                     </span>
-                                @elseif ($hasCalculatedShipping && $shippingFee == 0)
-                                    <span class="text-emerald-600 dark:text-emerald-400 font-bold">
-                                        Miễn phí
-                                    </span>
+                                @elseif ($hasCalculatedShipping)
+                                    <span class="text-emerald-600 dark:text-emerald-400 font-bold">Miễn phí</span>
                                 @else
                                     <span class="text-xs text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20">
                                         Tính theo địa chỉ nhận hàng
@@ -576,14 +581,15 @@ function applyCouponAjax() {
     });
 }
 
-function removeCouponAjax() {
+function removeCouponAjax(code) {
     fetch('{{ route('cart.coupon.remove') }}', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
             'X-CSRF-TOKEN': '{{ csrf_token() }}'
-        }
+        },
+        body: JSON.stringify({ coupon_code: code || '' })
     })
     .then(() => {
         window.location.reload();

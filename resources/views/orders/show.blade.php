@@ -273,7 +273,7 @@
             </div>
             <div class="flex justify-between text-muted">
                 <span>Phí vận chuyển (GHN):</span>
-                <span class="font-semibold text-heading">{{ number_format($order->shipping_fee, 0, ',', '.') }}đ</span>
+                <span class="font-semibold text-heading">{{ $order->shipping_fee > 0 ? number_format($order->shipping_fee, 0, ',', '.').'đ' : 'Miễn phí' }}</span>
             </div>
             @if($order->discount_amount > 0)
                 <div class="flex justify-between text-emerald-600 dark:text-emerald-400">

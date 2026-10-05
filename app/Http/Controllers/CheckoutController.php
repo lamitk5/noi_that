@@ -56,10 +56,12 @@ class CheckoutController extends Controller
         $subtotal = $this->cartService->getSelectedSubtotal();
         $hasCalculatedShipping = $this->cartService->hasCalculatedShipping();
         $shippingFee = $this->cartService->getShippingFee();
-        $coupon = $this->cartService->getCoupon();
-        $discountAmount = $this->cartService->getDiscountAmount();
+        $quote = $this->cartService->quote();
+        $coupons = $quote['coupons'];
+        $discountAmount = $quote['price_discount'];
+        $payableShipping = $quote['payable_shipping'];
         $availableCoupons = $this->cartService->getAvailableCoupons();
-        $total = $this->cartService->getTotal();
+        $total = $quote['total'];
         $totalPrice = $total;
         $user = Auth::user();
         $savedAddresses = [];
@@ -85,9 +87,7 @@ class CheckoutController extends Controller
         $checkoutToken = (string) Str::random(40);
         session(['checkout_token' => $checkoutToken]);
 
-        $couponUsed = $user ? $this->coupons->redemptionFor($user)?->load('order') : null;
-
-        $data = compact('cart', 'items', 'subtotal', 'hasCalculatedShipping', 'shippingFee', 'coupon', 'couponUsed', 'discountAmount', 'availableCoupons', 'total', 'totalPrice', 'user', 'savedAddresses', 'checkoutToken', 'isBuyNow');
+        $data = compact('cart', 'items', 'subtotal', 'hasCalculatedShipping', 'shippingFee', 'quote', 'coupons', 'discountAmount', 'payableShipping', 'availableCoupons', 'total', 'totalPrice', 'user', 'savedAddresses', 'checkoutToken', 'isBuyNow');
 
         if ($request->wantsJson()) {
             return response()->json(['success' => true, 'data' => $data]);
@@ -170,9 +170,9 @@ class CheckoutController extends Controller
                     ];
                 }
 
-                $shippingFee = (float) session('shipping_fee', (float) config('services.ghn.default_fee', 30000.0));
-                [$couponCode, $discountAmount] = $this->resolveCoupon($calculatedSubtotal, $shippingFee);
-                $totalAmount = max(0.0, $calculatedSubtotal + $shippingFee - $discountAmount);
+                $grossShipping = (float) session('shipping_fee', (float) config('services.ghn.default_fee', 30000.0));
+                $resolved = $this->resolveCoupons($calculatedSubtotal, $grossShipping);
+                $totalAmount = max(0.0, $calculatedSubtotal - $resolved['price_discount'] + $resolved['payable_shipping']);
 
                 $order = Order::create([
                     'order_code' => Order::generateOrderNumber(),
@@ -181,9 +181,9 @@ class CheckoutController extends Controller
                     'customer_email' => $request->input('customer_email'),
                     'customer_phone' => $request->input('customer_phone'),
                     'shipping_address' => $request->input('shipping_address'),
-                    'shipping_fee' => $shippingFee,
-                    'discount_amount' => $discountAmount,
-                    'coupon_code' => $couponCode,
+                    'shipping_fee' => $resolved['payable_shipping'],
+                    'discount_amount' => $resolved['price_discount'],
+                    'coupon_code' => $resolved['codes'] !== [] ? implode(',', $resolved['codes']) : null,
                     'total_price' => $totalAmount,
                     'payment_method' => $paymentMethod,
                     'payment_status' => Order::PAYMENT_PENDING,
@@ -201,13 +201,18 @@ class CheckoutController extends Controller
                     $order->items()->create($itemData);
                 }
 
-                if ($couponCode && $discountAmount > 0) {
-                    $this->coupons->redeem(
-                        $request->user(),
-                        $order,
-                        Coupon::findByCode($couponCode),
-                        $discountAmount,
-                    );
+                if ($request->user()) {
+                    foreach ($resolved['lines'] as $line) {
+                        if ($line['amount'] <= 0 || ! $line['coupon']) {
+                            continue;
+                        }
+                        $this->coupons->redeem(
+                            $request->user(),
+                            $order,
+                            $line['coupon'],
+                            $line['amount'],
+                        );
+                    }
                 }
 
                 if ($isBuyNow) {
@@ -265,25 +270,57 @@ class CheckoutController extends Controller
     }
 
     /**
-     * The discount is recomputed here from the coupon row, never taken from the session amount.
-     * A coupon that no longer qualifies is dropped silently instead of failing the order.
+     * Discounts are recomputed from the coupon rows, never taken from the session amounts.
+     * A coupon that no longer qualifies is dropped instead of failing the order.
+     * Shipping coupons reduce the fee the customer pays.
      *
-     * @return array{0: ?string, 1: float}
+     * @return array{
+     *     codes: list<string>,
+     *     price_discount: float,
+     *     payable_shipping: float,
+     *     lines: list<array{coupon: ?Coupon, amount: float}>
+     * }
      */
-    protected function resolveCoupon(float $subtotal, float $shippingFee): array
+    protected function resolveCoupons(float $subtotal, float $shippingFee): array
     {
-        $applied = $this->cartService->getCoupon();
-        $user = Auth::user();
-        if (empty($applied['code']) || ! $user || $this->coupons->redemptionFor($user)) {
-            return [null, 0.0];
+        $priceDiscount = 0.0;
+        $shippingDiscount = 0.0;
+        $codes = [];
+        $lines = [];
+
+        foreach ($this->cartService->getCoupons() as $applied) {
+            $code = strtoupper((string) ($applied['code'] ?? ''));
+            if ($code === '') {
+                continue;
+            }
+
+            $coupon = Coupon::query()->where('code', $code)->lockForUpdate()->first();
+            if (! $coupon || ! $coupon->isValidFor($subtotal)) {
+                continue;
+            }
+
+            if ($coupon->type === Coupon::TYPE_SHIPPING) {
+                $amount = min($coupon->calculateDiscount($subtotal, $shippingFee), max(0.0, $shippingFee - $shippingDiscount));
+                $shippingDiscount += $amount;
+            } else {
+                $amount = min($coupon->calculateDiscount($subtotal, $shippingFee), max(0.0, $subtotal - $priceDiscount));
+                $priceDiscount += $amount;
+            }
+
+            if ($amount <= 0) {
+                continue;
+            }
+
+            $codes[] = $coupon->code;
+            $lines[] = ['coupon' => $coupon, 'amount' => $amount];
         }
 
-        $coupon = Coupon::query()->where('code', $applied['code'])->lockForUpdate()->first();
-        if (! $coupon || ! $coupon->isValidFor($subtotal)) {
-            return [null, 0.0];
-        }
-
-        return [$coupon->code, $coupon->calculateDiscount($subtotal, $shippingFee)];
+        return [
+            'codes' => $codes,
+            'price_discount' => $priceDiscount,
+            'payable_shipping' => max(0.0, $shippingFee - $shippingDiscount),
+            'lines' => $lines,
+        ];
     }
 
     public function success(Request $request, string $orderNumber): View|JsonResponse

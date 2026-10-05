@@ -119,18 +119,23 @@ class ShippingController extends Controller
             'ward_code' => $toWardCode,
         ]);
 
-        $subtotal = $this->cartService->getSubtotal();
-        $discountAmount = $this->cartService->getDiscountAmount();
-        $totalPrice = max(0.0, $subtotal + $fee - $discountAmount);
+        $subtotal = $this->cartService->getSelectedSubtotal() ?: $this->cartService->getSubtotal();
+        $quote = $this->cartService->quote($subtotal, $fee);
+        $payable = $quote['payable_shipping'];
+        $formattedFee = $payable <= 0
+            ? 'Miễn phí'
+            : number_format($payable, 0, ',', '.') . '₫';
 
         return response()->json([
             'success' => true,
-            'shipping_fee' => $fee,
-            'formatted_fee' => number_format($fee, 0, ',', '.') . '₫',
+            'shipping_fee' => $payable,
+            'gross_shipping_fee' => $fee,
+            'formatted_fee' => $formattedFee,
             'subtotal' => $subtotal,
-            'discount_amount' => $discountAmount,
-            'total_price' => $totalPrice,
-            'formatted_total' => number_format($totalPrice, 0, ',', '.') . '₫',
+            'discount_amount' => $quote['price_discount'],
+            'shipping_discount' => $quote['shipping_discount'],
+            'total_price' => $quote['total'],
+            'formatted_total' => number_format($quote['total'], 0, ',', '.') . '₫',
         ]);
     }
 

@@ -12,27 +12,13 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
 
 /**
- * Each account may redeem exactly one coupon, ever.
- *
- * The unique index on coupon_redemptions.user_id is the hard guarantee. The cache lock serialises
- * concurrent checkouts of one account and the rate limiter slows down code guessing; both use the
- * configured cache store, so they move to Redis automatically when CACHE_STORE=redis.
+ * Records each coupon used on an order. An account may combine several codes on one order
+ * and use codes again on later orders. The cache lock serialises concurrent checkouts of one
+ * account and the rate limiter slows down code guessing.
  */
 class CouponRedemptionService
 {
-    public const APPLY_ATTEMPTS_PER_MINUTE = 5;
-
-    public const USED_MESSAGE = 'Mỗi tài khoản chỉ được sử dụng 1 mã giảm giá. Tài khoản của bạn đã dùng mã :code.';
-
-    public function redemptionFor(User $user): ?CouponRedemption
-    {
-        return CouponRedemption::where('user_id', $user->id)->first();
-    }
-
-    public function usedMessage(CouponRedemption $redemption): string
-    {
-        return str_replace(':code', $redemption->code, self::USED_MESSAGE);
-    }
+    public const APPLY_ATTEMPTS_PER_MINUTE = 20;
 
     /**
      * @return array{0: bool, 1: int} allowed, seconds until retry
@@ -78,10 +64,6 @@ class CouponRedemptionService
      */
     public function redeem(User $user, Order $order, Coupon $coupon, float $discount): CouponRedemption
     {
-        if ($existing = CouponRedemption::where('user_id', $user->id)->lockForUpdate()->first()) {
-            throw new \RuntimeException($this->usedMessage($existing));
-        }
-
         $claimed = Coupon::whereKey($coupon->id)
             ->where('is_active', true)
             ->where(fn ($q) => $q->whereNull('usage_limit')->orWhereColumn('used_count', '<', 'usage_limit'))
@@ -100,7 +82,7 @@ class CouponRedemptionService
                 'discount_amount' => $discount,
             ]);
         } catch (UniqueConstraintViolationException) {
-            throw new \RuntimeException(str_replace(':code', $coupon->code, self::USED_MESSAGE));
+            throw new \RuntimeException("Mã {$coupon->code} đã được dùng cho đơn này.");
         }
     }
 
@@ -110,15 +92,13 @@ class CouponRedemptionService
     public function release(Order $order): void
     {
         DB::transaction(function () use ($order) {
-            $redemption = CouponRedemption::where('order_id', $order->id)->lockForUpdate()->first();
-            if (! $redemption) {
-                return;
+            $redemptions = CouponRedemption::where('order_id', $order->id)->lockForUpdate()->get();
+            foreach ($redemptions as $redemption) {
+                if ($redemption->coupon_id) {
+                    Coupon::whereKey($redemption->coupon_id)->where('used_count', '>', 0)->decrement('used_count');
+                }
+                $redemption->delete();
             }
-
-            if ($redemption->coupon_id) {
-                Coupon::whereKey($redemption->coupon_id)->where('used_count', '>', 0)->decrement('used_count');
-            }
-            $redemption->delete();
         });
     }
 
@@ -131,19 +111,22 @@ class CouponRedemptionService
             return;
         }
 
-        $coupon = Coupon::findByCode($order->coupon_code);
-        $inserted = CouponRedemption::query()->insertOrIgnore([
-            'coupon_id' => $coupon?->id,
-            'user_id' => $order->user_id,
-            'order_id' => $order->id,
-            'code' => strtoupper($order->coupon_code),
-            'discount_amount' => $order->discount_amount ?? 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        $codes = array_values(array_filter(preg_split('/\s*,\s*/', strtoupper((string) $order->coupon_code)) ?: []));
+        foreach ($codes as $index => $code) {
+            $coupon = Coupon::findByCode($code);
+            $inserted = CouponRedemption::query()->insertOrIgnore([
+                'coupon_id' => $coupon?->id,
+                'user_id' => $order->user_id,
+                'order_id' => $order->id,
+                'code' => $code,
+                'discount_amount' => $index === 0 ? ($order->discount_amount ?? 0) : 0,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
 
-        if ($inserted && $coupon) {
-            $coupon->increment('used_count');
+            if ($inserted && $coupon) {
+                $coupon->increment('used_count');
+            }
         }
     }
 }
