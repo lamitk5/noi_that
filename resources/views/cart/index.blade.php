@@ -235,8 +235,8 @@
                             <h3 class="font-display text-sm font-bold text-heading">Mã giảm giá / Voucher</h3>
                         </div>
 
-                        @if (!empty($coupons))
-                            <div class="space-y-2 mb-3">
+                        <div id="cart-coupon-msg" class="mb-3 hidden text-xs"></div>
+                        <div id="applied-coupon-list" class="space-y-2 mb-3 {{ empty($coupons) ? 'hidden' : '' }}">
                                 @foreach ($coupons as $appliedCoupon)
                                     <div class="p-3 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-between">
                                         <div class="min-w-0">
@@ -249,7 +249,7 @@
                                                         -{{ number_format($appliedCoupon['amount'], 0, ',', '.') }}₫
                                                     </span>
                                                 @elseif (($appliedCoupon['type'] ?? '') === 'shipping')
-                                                    <span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400">Miễn phí ship</span>
+                                                    <span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400">Giảm phí ship</span>
                                                 @endif
                                             </div>
                                             <p class="text-[11px] text-muted truncate mt-1">{{ $appliedCoupon['description'] ?? 'Đã áp dụng mã' }}</p>
@@ -263,10 +263,9 @@
                                         </form>
                                     </div>
                                 @endforeach
-                            </div>
-                        @endif
+                        </div>
 
-                        <form method="POST" action="{{ route('cart.coupon.apply') }}" class="space-y-2.5">
+                        <form id="cart-coupon-form" method="POST" action="{{ route('cart.coupon.apply') }}" class="space-y-2.5">
                             @csrf
                             <div class="flex items-center gap-2">
                                 <input
@@ -319,9 +318,7 @@
                             <div id="summary-discount-row" class="flex items-center justify-between py-3 text-emerald-700 font-semibold {{ $discountAmount > 0 ? '' : 'hidden' }}">
                                 <span class="flex items-center gap-1">
                                     <span>Giảm giá</span>
-                                    @if (!empty($coupons))
-                                        <span class="font-mono text-xs bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded" id="summary-coupon-badge">({{ collect($coupons)->pluck('code')->implode(', ') }})</span>
-                                    @endif
+                                    <span class="font-mono text-xs bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded {{ empty($coupons) ? 'hidden' : '' }}" id="summary-coupon-badge">{{ empty($coupons) ? '' : '('.collect($coupons)->pluck('code')->implode(', ').')' }}</span>
                                 </span>
                                 <span id="summary-discount-amount">-{{ number_format($discountAmount, 0, ',', '.') }}₫</span>
                             </div>
@@ -329,14 +326,10 @@
                             <div class="flex items-center justify-between py-3">
                                 <span class="text-muted">Phí vận chuyển</span>
                                 <span class="text-xs font-semibold text-accent" id="summary-shipping-fee">
-                                    @if ($quote['has_shipping_coupon'] && (! $hasCalculatedShipping || $payableShipping <= 0))
-                                        Miễn phí
-                                    @elseif ($hasCalculatedShipping)
+                                    @if ($hasCalculatedShipping)
                                         {{ number_format($payableShipping, 0, ',', '.') }}₫
-                                    @elseif ($subtotal >= 5000000)
-                                        Miễn phí
                                     @else
-                                        Tính ở thanh toán
+                                        Tính phí vận chuyển
                                     @endif
                                 </span>
                             </div>
@@ -521,15 +514,9 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         if (summaryShippingFee) {
-            if (priced.hasShippingCoupon && (!config.hasCalculatedShipping || priced.payable <= 0)) {
-                summaryShippingFee.textContent = 'Miễn phí';
-            } else if (config.hasCalculatedShipping) {
-                summaryShippingFee.textContent = formatVND(priced.payable);
-            } else if (subtotal >= 5000000) {
-                summaryShippingFee.textContent = 'Miễn phí';
-            } else {
-                summaryShippingFee.textContent = 'Tính ở thanh toán';
-            }
+            summaryShippingFee.textContent = config.hasCalculatedShipping
+                ? formatVND(priced.payable)
+                : 'Tính phí vận chuyển';
         }
 
         if (summaryTotal) summaryTotal.textContent = formatVND(total);
@@ -601,6 +588,122 @@ document.addEventListener('DOMContentLoaded', function () {
     // Attach listener to each item checkbox
     itemCheckboxes.forEach(cb => {
         cb.addEventListener('change', updateCartUI);
+    });
+
+    const couponList = document.getElementById('applied-coupon-list');
+    const couponMsg = document.getElementById('cart-coupon-msg');
+    const couponForm = document.getElementById('cart-coupon-form');
+    const couponBadge = document.getElementById('summary-coupon-badge');
+
+    function escapeHtml(value) {
+        return String(value).replace(/[&<>"']/g, (ch) => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+        }[ch]));
+    }
+
+    function showCouponMsg(text, ok) {
+        if (!couponMsg) return;
+        couponMsg.className = 'mb-3 text-xs ' + (ok ? 'text-emerald-600' : 'text-rose-500');
+        couponMsg.textContent = text;
+    }
+
+    function renderAppliedCoupons(coupons) {
+        config.coupons = coupons || [];
+        if (couponBadge) {
+            if (config.coupons.length) {
+                couponBadge.textContent = '(' + config.coupons.map(c => c.code).join(', ') + ')';
+                couponBadge.classList.remove('hidden');
+            } else {
+                couponBadge.textContent = '';
+                couponBadge.classList.add('hidden');
+            }
+        }
+        if (!couponList) return;
+        if (!config.coupons.length) {
+            couponList.classList.add('hidden');
+            couponList.innerHTML = '';
+            return;
+        }
+        couponList.classList.remove('hidden');
+        couponList.innerHTML = config.coupons.map(c => {
+            const amount = Number(c.amount || 0);
+            const extra = amount > 0
+                ? `<span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400">-${formatVND(amount)}</span>`
+                : (c.type === 'shipping' ? '<span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400">Giảm phí ship</span>' : '');
+            return `<div class="p-3 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-between">
+                <div class="min-w-0">
+                    <div class="flex items-center gap-1.5">
+                        <span class="font-mono text-xs font-bold text-primary bg-surface px-2 py-0.5 rounded border border-ui-border">${escapeHtml(c.code)}</span>
+                        ${extra}
+                    </div>
+                    <p class="text-[11px] text-muted truncate mt-1">${escapeHtml(c.description || 'Đã áp dụng mã')}</p>
+                </div>
+                <form method="POST" action="{{ route('cart.coupon.remove') }}">
+                    <input type="hidden" name="coupon_code" value="${escapeHtml(c.code)}">
+                    <button type="submit" class="text-xs text-rose-600 dark:text-rose-400 hover:text-rose-800 font-semibold px-2 py-1 rounded hover:bg-rose-500/10 transition cursor-pointer">Gỡ bỏ</button>
+                </form>
+            </div>`;
+        }).join('');
+        updateCartUI();
+    }
+
+    function applyCouponPayload(body) {
+        if (typeof body.has_calculated_shipping === 'boolean') {
+            config.hasCalculatedShipping = body.has_calculated_shipping;
+        }
+        if (body.has_calculated_shipping) {
+            config.shippingFee = Number(body.payable_shipping || 0);
+        }
+        renderAppliedCoupons(body.coupons || []);
+        if (summarySubtotal && body.formatted_subtotal) summarySubtotal.textContent = body.formatted_subtotal;
+        if (summaryTotal && body.formatted_total) summaryTotal.textContent = body.formatted_total;
+    }
+
+    async function postCoupon(url, payload) {
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': config.csrfToken,
+            },
+            body: JSON.stringify(payload),
+        });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok || !body.success) {
+            throw new Error(body.message || 'Không áp dụng được mã giảm giá.');
+        }
+        return body;
+    }
+
+    couponForm?.addEventListener('submit', function (e) {
+        e.preventDefault();
+        const input = document.getElementById('cart_coupon_input');
+        const code = input ? input.value.trim() : '';
+        if (!code) return;
+        const button = couponForm.querySelector('button[type="submit"]');
+        if (button) button.disabled = true;
+        postCoupon(couponForm.action, { coupon_code: code })
+            .then(body => {
+                if (input) input.value = '';
+                applyCouponPayload(body);
+                showCouponMsg(body.message || 'Đã áp dụng mã giảm giá.', true);
+            })
+            .catch(err => showCouponMsg(err.message, false))
+            .finally(() => { if (button) button.disabled = false; });
+    });
+
+    couponList?.addEventListener('submit', function (e) {
+        const form = e.target;
+        if (!(form instanceof HTMLFormElement)) return;
+        e.preventDefault();
+        const code = new FormData(form).get('coupon_code');
+        postCoupon(form.action, { coupon_code: code })
+            .then(body => {
+                applyCouponPayload(body);
+                showCouponMsg(body.message || 'Đã gỡ mã giảm giá.', true);
+            })
+            .catch(err => showCouponMsg(err.message, false));
     });
 
     // Form submit check

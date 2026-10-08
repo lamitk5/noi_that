@@ -396,29 +396,27 @@
                             <span class="text-xs font-bold text-heading">Mã ưu đãi / Voucher</span>
                         </div>
 
-                        @if (!empty($coupons))
-                            <div class="space-y-2">
-                                @foreach ($coupons as $appliedCoupon)
-                                    <div class="flex items-center justify-between p-2.5 rounded-xl bg-primary/10 border border-primary/20 text-xs">
-                                        <div>
-                                            <span class="font-mono font-bold text-primary bg-surface px-1.5 py-0.5 rounded border border-ui-border">{{ $appliedCoupon['code'] }}</span>
-                                            @if (($appliedCoupon['amount'] ?? 0) > 0)
-                                                <span class="text-emerald-700 dark:text-emerald-400 font-semibold ml-1">-{{ number_format($appliedCoupon['amount'], 0, ',', '.') }}₫</span>
-                                            @elseif (($appliedCoupon['type'] ?? '') === 'shipping')
-                                                <span class="text-emerald-700 dark:text-emerald-400 font-semibold ml-1">Miễn phí ship</span>
-                                            @endif
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onclick="removeCouponAjax('{{ $appliedCoupon['code'] }}')"
-                                            class="text-rose-600 hover:text-rose-800 font-semibold text-xs cursor-pointer"
-                                        >
-                                            Gỡ bỏ
-                                        </button>
+                        <div id="applied-coupons" class="space-y-2 {{ empty($coupons) ? 'hidden' : '' }}">
+                            @foreach ($coupons as $appliedCoupon)
+                                <div class="flex items-center justify-between p-2.5 rounded-xl bg-primary/10 border border-primary/20 text-xs">
+                                    <div>
+                                        <span class="font-mono font-bold text-primary bg-surface px-1.5 py-0.5 rounded border border-ui-border">{{ $appliedCoupon['code'] }}</span>
+                                        @if (($appliedCoupon['amount'] ?? 0) > 0)
+                                            <span class="text-emerald-700 dark:text-emerald-400 font-semibold ml-1">-{{ number_format($appliedCoupon['amount'], 0, ',', '.') }}₫</span>
+                                        @elseif (($appliedCoupon['type'] ?? '') === 'shipping')
+                                            <span class="text-emerald-700 dark:text-emerald-400 font-semibold ml-1">Giảm phí ship</span>
+                                        @endif
                                     </div>
-                                @endforeach
-                            </div>
-                        @endif
+                                    <button
+                                        type="button"
+                                        data-remove-coupon="{{ $appliedCoupon['code'] }}"
+                                        class="text-rose-600 hover:text-rose-800 font-semibold text-xs cursor-pointer"
+                                    >
+                                        Gỡ bỏ
+                                    </button>
+                                </div>
+                            @endforeach
+                        </div>
 
                         <div class="flex items-center gap-2">
                             <input
@@ -461,32 +459,24 @@
                             <span class="font-semibold text-heading">{{ number_format($subtotal, 0, ',', '.') }}₫</span>
                         </div>
 
-                        @if ($discountAmount > 0)
-                            <div class="flex justify-between text-emerald-700 dark:text-emerald-400 font-semibold">
-                                <span class="flex items-center gap-1">
-                                    <span>Giảm giá</span>
-                                    @if (!empty($coupons))
-                                        <span class="font-mono text-xs bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 px-1.5 py-0.5 rounded">({{ collect($coupons)->pluck('code')->implode(', ') }})</span>
-                                    @endif
-                                </span>
-                                <span>-{{ number_format($discountAmount, 0, ',', '.') }}₫</span>
-                            </div>
-                        @endif
+                        <div id="checkout-discount-row" class="flex justify-between text-emerald-700 dark:text-emerald-400 font-semibold {{ $discountAmount > 0 ? '' : 'hidden' }}">
+                            <span class="flex items-center gap-1">
+                                <span>Giảm giá</span>
+                                <span id="checkout-coupon-badge" class="font-mono text-xs bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 px-1.5 py-0.5 rounded {{ empty($coupons) ? 'hidden' : '' }}">{{ empty($coupons) ? '' : '('.collect($coupons)->pluck('code')->implode(', ').')' }}</span>
+                            </span>
+                            <span id="checkout-discount-amount">-{{ number_format($discountAmount, 0, ',', '.') }}₫</span>
+                        </div>
 
                         <div class="flex justify-between text-muted">
                             <span>Phí vận chuyển</span>
                             <span class="font-semibold" data-id="shipping-fee-display">
-                                @if ($quote['has_shipping_coupon'] && (! $hasCalculatedShipping || $payableShipping <= 0))
-                                    <span class="text-emerald-600 dark:text-emerald-400 font-bold">Miễn phí</span>
-                                @elseif ($hasCalculatedShipping && $payableShipping > 0)
+                                @if ($hasCalculatedShipping)
                                     <span class="text-emerald-600 dark:text-emerald-400 font-bold">
                                         {{ number_format($payableShipping, 0, ',', '.') }}₫
                                     </span>
-                                @elseif ($hasCalculatedShipping)
-                                    <span class="text-emerald-600 dark:text-emerald-400 font-bold">Miễn phí</span>
                                 @else
                                     <span class="text-xs text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20">
-                                        Tính theo địa chỉ nhận hàng
+                                        Tính phí vận chuyển
                                     </span>
                                 @endif
                             </span>
@@ -530,17 +520,91 @@
 </div>
 
 <script>
+function formatCheckoutVnd(amount) {
+    return new Intl.NumberFormat('vi-VN').format(Math.max(0, Math.round(Number(amount) || 0))) + '₫';
+}
+
+function escapeCouponText(value) {
+    return String(value).replace(/[&<>"']/g, (ch) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    }[ch]));
+}
+
+function showCouponMessage(text, ok) {
+    const msg = document.getElementById('coupon_msg');
+    if (!msg) return;
+    msg.className = 'text-xs block mt-1 ' + (ok ? 'text-emerald-600' : 'text-rose-600');
+    msg.textContent = text;
+}
+
+function paintCheckoutQuote(body) {
+    const coupons = Array.isArray(body.coupons) ? body.coupons : [];
+    const list = document.getElementById('applied-coupons');
+    if (list) {
+        if (!coupons.length) {
+            list.classList.add('hidden');
+            list.innerHTML = '';
+        } else {
+            list.classList.remove('hidden');
+            list.innerHTML = coupons.map((coupon) => {
+                const amount = Number(coupon.amount || 0);
+                const extra = amount > 0
+                    ? `<span class="text-emerald-700 dark:text-emerald-400 font-semibold ml-1">-${formatCheckoutVnd(amount)}</span>`
+                    : (coupon.type === 'shipping' ? '<span class="text-emerald-700 dark:text-emerald-400 font-semibold ml-1">Giảm phí ship</span>' : '');
+                return `<div class="flex items-center justify-between p-2.5 rounded-xl bg-primary/10 border border-primary/20 text-xs">
+                    <div>
+                        <span class="font-mono font-bold text-primary bg-surface px-1.5 py-0.5 rounded border border-ui-border">${escapeCouponText(coupon.code)}</span>
+                        ${extra}
+                    </div>
+                    <button type="button" data-remove-coupon="${escapeCouponText(coupon.code)}" class="text-rose-600 hover:text-rose-800 font-semibold text-xs cursor-pointer">Gỡ bỏ</button>
+                </div>`;
+            }).join('');
+        }
+    }
+
+    const discountRow = document.getElementById('checkout-discount-row');
+    const discountAmount = document.getElementById('checkout-discount-amount');
+    const badge = document.getElementById('checkout-coupon-badge');
+    const discount = Number(body.discount_amount || 0);
+    if (discountRow) discountRow.classList.toggle('hidden', discount <= 0);
+    if (discountAmount) discountAmount.textContent = '-' + formatCheckoutVnd(discount);
+    if (badge) {
+        if (coupons.length) {
+            badge.textContent = '(' + coupons.map(c => c.code).join(', ') + ')';
+            badge.classList.remove('hidden');
+        } else {
+            badge.textContent = '';
+            badge.classList.add('hidden');
+        }
+    }
+
+    const feeEl = document.querySelector('[data-id="shipping-fee-display"]');
+    if (feeEl) {
+        if (body.has_calculated_shipping) {
+            feeEl.innerHTML = '<span class="text-emerald-600 dark:text-emerald-400 font-bold">' + formatCheckoutVnd(body.payable_shipping) + '</span>';
+        } else {
+            feeEl.innerHTML = '<span class="text-xs text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20">Tính phí vận chuyển</span>';
+        }
+    }
+
+    const totalEl = document.querySelector('[data-id="total-price-display"]');
+    if (totalEl && body.formatted_total) totalEl.textContent = body.formatted_total;
+
+    const noteEl = document.getElementById('total-note');
+    if (noteEl) {
+        noteEl.textContent = body.has_calculated_shipping
+            ? '(Đã bao gồm phí ship và VAT)'
+            : '(Tạm tính, chưa bao gồm phí ship)';
+    }
+}
+
 function applyCouponAjax() {
     const input = document.getElementById('checkout_coupon_input');
-    const msg = document.getElementById('coupon_msg');
     const btn = document.getElementById('btn_apply_coupon');
     const code = input ? input.value.trim() : '';
 
     if (!code) {
-        if (msg) {
-            msg.className = 'text-xs text-rose-600 block mt-1';
-            msg.textContent = 'Vui lòng nhập mã giảm giá.';
-        }
+        showCouponMessage('Vui lòng nhập mã giảm giá.', false);
         return;
     }
 
@@ -561,19 +625,15 @@ function applyCouponAjax() {
     .then(res => res.json().then(data => ({ status: res.status, body: data })))
     .then(res => {
         if (res.status === 200 && res.body.success) {
-            window.location.reload();
+            if (input) input.value = '';
+            paintCheckoutQuote(res.body);
+            showCouponMessage(res.body.message || 'Đã áp dụng mã giảm giá.', true);
         } else {
-            if (msg) {
-                msg.className = 'text-xs text-rose-600 block mt-1';
-                msg.textContent = res.body.message || 'Mã giảm giá không hợp lệ.';
-            }
-            if (btn) {
-                btn.disabled = false;
-                btn.textContent = 'Áp dụng';
-            }
+            showCouponMessage(res.body.message || 'Mã giảm giá không hợp lệ.', false);
         }
     })
-    .catch(err => {
+    .catch(() => showCouponMessage('Không áp dụng được mã giảm giá.', false))
+    .finally(() => {
         if (btn) {
             btn.disabled = false;
             btn.textContent = 'Áp dụng';
@@ -591,10 +651,23 @@ function removeCouponAjax(code) {
         },
         body: JSON.stringify({ coupon_code: code || '' })
     })
-    .then(() => {
-        window.location.reload();
-    });
+    .then(res => res.json())
+    .then(body => {
+        if (!body.success) {
+            showCouponMessage(body.message || 'Không gỡ được mã giảm giá.', false);
+            return;
+        }
+        paintCheckoutQuote(body);
+        showCouponMessage(body.message || 'Đã gỡ mã giảm giá.', true);
+    })
+    .catch(() => showCouponMessage('Không gỡ được mã giảm giá.', false));
 }
+
+document.getElementById('applied-coupons')?.addEventListener('click', function (event) {
+    const button = event.target.closest('[data-remove-coupon]');
+    if (!button) return;
+    removeCouponAjax(button.dataset.removeCoupon || '');
+});
 
 
 // ===== GHN Shipping Fee Calculator =====
@@ -650,7 +723,7 @@ function removeCouponAjax(code) {
 
         const feeEl = document.querySelector('[data-id="shipping-fee-display"]');
         if (feeEl) {
-            feeEl.innerHTML = '<span class="text-xs text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20">Tính theo địa chỉ nhận hàng</span>';
+            feeEl.innerHTML = '<span class="text-xs text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20">Tính phí vận chuyển</span>';
         }
         const noteEl = document.getElementById('total-note');
         if (noteEl) {

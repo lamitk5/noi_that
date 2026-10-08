@@ -163,19 +163,10 @@ class CartController extends Controller
 
         try {
             $coupon = $this->cartService->applyCoupon($code, $request->user());
-            $discount = $this->cartService->getDiscountAmount();
             $msg = 'Áp dụng mã giảm giá "'.$coupon['code'].'" thành công!';
 
             if ($request->wantsJson()) {
-                return response()->json([
-                    'success' => true,
-                    'message' => $msg,
-                    'coupon' => $coupon,
-                    'discount_amount' => $discount,
-                    'subtotal' => $this->cartService->getSubtotal(),
-                    'shipping_fee' => $this->cartService->getShippingFee(),
-                    'total' => $this->cartService->getTotal(),
-                ]);
+                return response()->json($this->couponQuotePayload($msg, $coupon));
             }
 
             return redirect()->back()->with('success', $msg);
@@ -194,13 +185,7 @@ class CartController extends Controller
         $this->cartService->removeCoupon(is_string($code) && trim($code) !== '' ? $code : null);
 
         if ($request->wantsJson()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Đã gỡ bỏ mã giảm giá.',
-                'subtotal' => $this->cartService->getSubtotal(),
-                'shipping_fee' => $this->cartService->getShippingFee(),
-                'total' => $this->cartService->getTotal(),
-            ]);
+            return response()->json($this->couponQuotePayload('Đã gỡ bỏ mã giảm giá.'));
         }
 
         return redirect()->back()->with('success', 'Đã gỡ bỏ mã giảm giá.');
@@ -302,5 +287,34 @@ class CartController extends Controller
         $this->cartService->setSelectedKeys($keys);
 
         return redirect()->route('checkout.index');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function couponQuotePayload(string $message, ?array $coupon = null): array
+    {
+        $quote = $this->cartService->quote();
+        $shippingKnown = $this->cartService->hasCalculatedShipping();
+        $payable = $shippingKnown ? (float) $quote['payable_shipping'] : 0.0;
+
+        return [
+            'success' => true,
+            'message' => $message,
+            'coupon' => $coupon,
+            'coupons' => $quote['coupons'],
+            'discount_amount' => $quote['price_discount'],
+            'payable_shipping' => $payable,
+            'has_calculated_shipping' => $shippingKnown,
+            'subtotal' => $quote['subtotal'],
+            'shipping_fee' => $payable,
+            'total' => $quote['total'],
+            'formatted_subtotal' => number_format($quote['subtotal'], 0, ',', '.').'₫',
+            'formatted_discount' => number_format($quote['price_discount'], 0, ',', '.').'₫',
+            'formatted_shipping' => $shippingKnown
+                ? number_format($payable, 0, ',', '.').'₫'
+                : 'Tính phí vận chuyển',
+            'formatted_total' => number_format($quote['total'], 0, ',', '.').'₫',
+        ];
     }
 }

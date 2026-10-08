@@ -122,9 +122,7 @@ class ShippingController extends Controller
         $subtotal = $this->cartService->getSelectedSubtotal() ?: $this->cartService->getSubtotal();
         $quote = $this->cartService->quote($subtotal, $fee);
         $payable = $quote['payable_shipping'];
-        $formattedFee = $payable <= 0
-            ? 'Miễn phí'
-            : number_format($payable, 0, ',', '.') . '₫';
+        $formattedFee = number_format($payable, 0, ',', '.') . '₫';
 
         return response()->json([
             'success' => true,

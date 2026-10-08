@@ -66,7 +66,7 @@
     @if($orders->count() > 0)
         <div class="space-y-4">
             @foreach($orders as $order)
-                <div class="bg-surface rounded-2xl border border-ui-border shadow-sm p-6 transition hover:shadow-md">
+                <div id="order-{{ $order->order_code }}" class="bg-surface rounded-2xl border border-ui-border shadow-sm p-6 transition hover:shadow-md">
                     <!-- Order Header -->
                     <div class="flex flex-wrap items-center justify-between pb-4 border-b border-ui-border gap-3">
                         <div class="flex items-center gap-3">
@@ -128,6 +128,30 @@
                             </div>
                         @endforeach
                     </div>
+
+                    @if($order->order_status === 'completed' && (int) $order->user_id === (int) auth()->id())
+                        @php
+                            $reviewProducts = $order->items
+                                ->map(fn ($item) => $item->variant?->product)
+                                ->filter()
+                                ->unique('id')
+                                ->values();
+                        @endphp
+                        @if($reviewProducts->isNotEmpty())
+                            <div class="pb-4 space-y-3">
+                                <p class="text-xs font-bold text-heading">Đánh giá sản phẩm đã nhận</p>
+                                @foreach($reviewProducts as $product)
+                                    @include('orders.partials.item-review', [
+                                        'order' => $order,
+                                        'product' => $product,
+                                        'review' => $reviewsByProduct->get($product->id),
+                                        'currentStatus' => $currentStatus,
+                                        'returnTo' => 'orders',
+                                    ])
+                                @endforeach
+                            </div>
+                        @endif
+                    @endif
 
                     <!-- Order Footer -->
                     <div class="pt-4 border-t border-ui-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">

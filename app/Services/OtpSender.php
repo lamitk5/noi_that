@@ -44,11 +44,7 @@ class OtpSender
             ? "[Mộc An] Mã đặt lại mật khẩu: {$code}"
             : "[Mộc An] Mã xác thực tài khoản của bạn: {$code}";
 
-        $from = (string) config('mail.from.address');
-        $smtpUser = (string) config('mail.mailers.smtp.username');
-        if (($from === '' || str_ends_with($from, '@example.com')) && $smtpUser !== '') {
-            $from = $smtpUser;
-        }
+        $from = $this->fromAddress();
 
         $html = view('emails.otp', ['code' => $code, 'purpose' => $purpose])->render();
 
@@ -88,6 +84,56 @@ class OtpSender
 
             return false;
         }
+    }
+
+    public function sendNotification(string $email, string $subject, string $html): bool
+    {
+        $from = $this->fromAddress();
+        $https = $this->sendViaHttps($email, $subject, $html, $from);
+        if ($https !== null) {
+            return $https;
+        }
+
+        $mailer = (string) config('mail.default');
+        if (in_array($mailer, ['log', 'array'], true)) {
+            if (filled(config('mail.mailers.smtp.username')) && filled(config('mail.mailers.smtp.password'))) {
+                $mailer = 'smtp';
+            } else {
+                $this->lastError = 'Chưa cấu hình gửi email.';
+                Log::warning('Notification email skipped because MAIL_MAILER='.config('mail.default'));
+
+                return false;
+            }
+        }
+
+        try {
+            config(['mail.mailers.smtp.timeout' => 8]);
+            Mail::mailer($mailer)->html($html, function ($message) use ($email, $subject, $from) {
+                $message->to($email)->subject($subject);
+                if ($from !== '') {
+                    $message->from($from, (string) config('mail.from.name'));
+                }
+            });
+            $this->lastError = null;
+
+            return true;
+        } catch (Throwable $e) {
+            $this->lastError = $this->smtpFailureMessage($e->getMessage());
+            Log::warning('Notification email failed: '.$e->getMessage());
+
+            return false;
+        }
+    }
+
+    private function fromAddress(): string
+    {
+        $from = (string) config('mail.from.address');
+        $smtpUser = (string) config('mail.mailers.smtp.username');
+        if (($from === '' || str_ends_with($from, '@example.com')) && $smtpUser !== '') {
+            return $smtpUser;
+        }
+
+        return $from;
     }
 
     /**

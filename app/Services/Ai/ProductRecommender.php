@@ -17,11 +17,22 @@ class ProductRecommender
     private const MAX_SUGGESTIONS = 4;
 
     private const STOPWORDS = [
-        'toi', 'minh', 'ban', 'can', 'muon', 'tim', 'mua', 'cho', 'cua', 'voi', 'nhung', 'mot', 'cai', 'chiec',
+        'toi', 'minh', 'can', 'muon', 'tim', 'mua', 'cho', 'cua', 'voi', 'nhung', 'mot', 'cai', 'chiec',
         'nao', 'gi', 'khong', 'co', 'duoc', 'la', 'va', 'hay', 'hoac', 'the', 'nay', 'kia', 'loai', 'san', 'pham',
         'goi', 'y', 'tu', 'van', 'giup', 'xin', 'chao', 'nha', 'phong', 'duoi', 'tren', 'tam', 'khoang', 'gia',
         'trieu', 'nghin', 'ngan', 'dong', 'vnd', 'dep', 'nhat', 'nen', 'thi', 'sao', 'anh', 'chi', 'em', 'oi', 'a',
         'den', 'toi', 'da', 'qua', 'hon', 'it', 'go', 'noi', 'that', 'do',
+    ];
+
+    /**
+     * Shoppers often use a different name than the catalog.
+     * "bàn học" and "bàn làm việc" are the same intent and must not mix with dining tables.
+     *
+     * @var array<string, array<int, string>>
+     */
+    private const PHRASE_ALIASES = [
+        'ban hoc' => ['ban lam viec'],
+        'ban lam viec' => ['ban hoc'],
     ];
 
     public function __construct(protected GeminiService $gemini)
@@ -63,7 +74,7 @@ class ProductRecommender
     }
 
     /**
-     * @return array{min: ?int, max: ?int, category_ids: array<int, int>, keywords: array<int, string>}
+     * @return array{min: ?int, max: ?int, category_ids: array<int, int>, keywords: array<int, string>, phrases: array<int, string>}
      */
     public function extractFilters(string $text): array
     {
@@ -74,23 +85,82 @@ class ProductRecommender
         $categoryIds = Category::query()
             ->where('is_active', true)
             ->get(['id', 'name', 'slug'])
-            ->filter(function (Category $c) use ($ascii) {
-                $name = Str::lower(Str::ascii($c->name));
-                $short = trim(preg_replace('/^phong\s+/', '', $name) ?? $name);
-
-                return str_contains($ascii, $name) || ($short !== '' && str_contains($ascii, $short));
-            })
+            ->filter(fn (Category $c) => $this->categoryMentioned($ascii, $c))
             ->pluck('id')
             ->all();
 
-        $keywords = collect(preg_split('/[^a-z0-9]+/', $ascii) ?: [])
-            ->filter(fn ($w) => strlen($w) >= 2 && ! preg_match('/\d/', $w) && ! in_array($w, self::STOPWORDS, true))
-            ->unique()
-            ->take(12)
-            ->values()
-            ->all();
+        [$keywords, $phrases] = $this->extractKeywords($ascii);
 
-        return ['min' => $min, 'max' => $max, 'category_ids' => $categoryIds, 'keywords' => $keywords];
+        return [
+            'min' => $min,
+            'max' => $max,
+            'category_ids' => $categoryIds,
+            'keywords' => $keywords,
+            'phrases' => $phrases,
+        ];
+    }
+
+    /**
+     * Match a whole word or phrase. The fragment "an" must not hit inside "ban".
+     */
+    protected function categoryMentioned(string $ascii, Category $category): bool
+    {
+        $name = Str::lower(Str::ascii($category->name));
+        if ($this->containsPhrase($ascii, $name)) {
+            return true;
+        }
+
+        $short = trim((string) preg_replace('/^phong\s+/', '', $name));
+        if ($short === '' || $short === $name || strlen($short) < 3 || in_array($short, self::STOPWORDS, true)) {
+            return false;
+        }
+
+        return $this->containsPhrase($ascii, $short);
+    }
+
+    /**
+     * @return array{0: array<int, string>, 1: array<int, string>}
+     */
+    protected function extractKeywords(string $ascii): array
+    {
+        $keywords = [];
+        $phrases = [];
+        $buffer = [];
+
+        $flush = function () use (&$buffer, &$phrases): void {
+            if (count($buffer) >= 2) {
+                $phrases[] = implode(' ', $buffer);
+            }
+            $buffer = [];
+        };
+
+        foreach (preg_split('/[^a-z0-9]+/', $ascii) ?: [] as $token) {
+            $token = (string) $token;
+            $keep = strlen($token) >= 2 && ! preg_match('/\d/', $token) && ! in_array($token, self::STOPWORDS, true);
+            if (! $keep) {
+                $flush();
+
+                continue;
+            }
+            $keywords[] = $token;
+            $buffer[] = $token;
+        }
+        $flush();
+
+        return [
+            collect($keywords)->unique()->take(12)->values()->all(),
+            collect($phrases)->unique()->take(4)->values()->all(),
+        ];
+    }
+
+    protected function containsPhrase(string $haystack, string $phrase): bool
+    {
+        $phrase = trim($phrase);
+        if ($phrase === '') {
+            return false;
+        }
+
+        return (bool) preg_match('/(?<![a-z0-9])'.preg_quote($phrase, '/').'(?![a-z0-9])/', $haystack);
     }
 
     /**
@@ -130,7 +200,7 @@ class ProductRecommender
     }
 
     /**
-     * @param  array{min: ?int, max: ?int, category_ids: array<int, int>, keywords: array<int, string>}  $filters
+     * @param  array{min: ?int, max: ?int, category_ids: array<int, int>, keywords: array<int, string>, phrases?: array<int, string>}  $filters
      * @return Collection<int, Product>
      */
     public function candidates(array $filters): Collection
@@ -147,6 +217,9 @@ class ProductRecommender
             ->when($filters['min'], fn (Builder $q, $min) => $q->whereRaw("{$priceExpr} >= ?", [$min]))
             ->when($filters['max'], fn (Builder $q, $max) => $q->whereRaw("{$priceExpr} <= ?", [$max]));
 
+        // A named product ("bàn học") has to be found even when it is not in the featured slice.
+        $namedSearch = ($filters['phrases'] ?? []) !== [];
+
         // Relax filters step by step: category + budget, then category only, then the whole catalog.
         $pool = collect();
         foreach ([[$byCategory, $byPrice], [$byCategory], []] as $scopes) {
@@ -154,28 +227,74 @@ class ProductRecommender
             foreach ($scopes as $scope) {
                 $scope($query);
             }
-            $pool = $query->orderByDesc('is_featured')->latest('id')->limit(self::CANDIDATE_POOL)->get();
+            $fetch = $query->orderByDesc('is_featured')->latest('id');
+            if (! $namedSearch) {
+                $fetch->limit(self::CANDIDATE_POOL);
+            }
+            $pool = $fetch->get();
             if ($pool->isNotEmpty()) {
                 break;
             }
         }
 
         $keywords = $filters['keywords'];
+        $wantedPhrases = $this->expandPhrases($filters['phrases'] ?? []);
 
-        return $pool
+        $ranked = $pool
             ->map(function (Product $p) use ($keywords) {
                 $name = Str::lower(Str::ascii($p->name));
                 $details = Str::lower(Str::ascii(implode(' ', [
                     $p->category?->name, $p->material, $p->color, $p->short_description,
                 ])));
-                $score = collect($keywords)->sum(fn ($k) => (str_contains($name, $k) ? 3 : 0) + (str_contains($details, $k) ? 1 : 0));
+                $score = 0;
+                foreach ($keywords as $keyword) {
+                    if ($this->containsPhrase($name, $keyword)) {
+                        $score += 3;
+                    } elseif ($this->containsPhrase($details, $keyword)) {
+                        $score += 1;
+                    }
+                }
                 $p->setAttribute('match_score', $score + ($p->is_featured ? 0.5 : 0) + ((float) $p->rating_avg) / 10);
 
                 return $p;
             })
             ->sortByDesc('match_score')
-            ->take(self::CANDIDATE_LIMIT)
             ->values();
+
+        if ($wantedPhrases !== []) {
+            $phraseMatches = $ranked->filter(function (Product $p) use ($wantedPhrases) {
+                $name = Str::lower(Str::ascii($p->name));
+                foreach ($wantedPhrases as $phrase) {
+                    if ($this->containsPhrase($name, $phrase)) {
+                        return true;
+                    }
+                }
+
+                return false;
+            })->values();
+
+            if ($phraseMatches->isNotEmpty()) {
+                return $phraseMatches->take(self::CANDIDATE_LIMIT)->values();
+            }
+        }
+
+        return $ranked->take(self::CANDIDATE_LIMIT)->values();
+    }
+
+    /**
+     * @param  array<int, string>  $phrases
+     * @return array<int, string>
+     */
+    protected function expandPhrases(array $phrases): array
+    {
+        $expanded = $phrases;
+        foreach ($phrases as $phrase) {
+            foreach (self::PHRASE_ALIASES[$phrase] ?? [] as $alias) {
+                $expanded[] = $alias;
+            }
+        }
+
+        return array_values(array_unique($expanded));
     }
 
     /**

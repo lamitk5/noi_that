@@ -237,7 +237,9 @@
         </div>
 
         <div class="divide-y divide-ui-border">
+            @php $shownReviewProducts = []; @endphp
             @foreach($order->items as $item)
+                <div>
                 <div class="p-6 flex items-center justify-between gap-4">
                     <div class="flex items-center gap-4 min-w-0">
                         @php
@@ -255,12 +257,23 @@
 
                     <div class="text-right flex-shrink-0">
                         <span class="text-base font-bold text-heading">{{ number_format($item->price * $item->quantity, 0, ',', '.') }}đ</span>
-                        @if($order->order_status === \App\Models\Order::STATUS_COMPLETED && $item->variant?->product?->slug)
-                            <a href="{{ route('products.show', $item->variant->product->slug) }}#reviews" class="mt-1.5 flex items-center justify-end gap-1 text-xs font-semibold text-primary hover:underline">
-                                ★ Đánh giá
-                            </a>
-                        @endif
                     </div>
+                </div>
+                @if($order->order_status === \App\Models\Order::STATUS_COMPLETED && (int) $order->user_id === (int) auth()->id() && $item->variant?->product)
+                    @php $reviewProduct = $item->variant->product; @endphp
+                    @if(! in_array($reviewProduct->id, $shownReviewProducts, true))
+                        @php $shownReviewProducts[] = $reviewProduct->id; @endphp
+                        <div class="px-6 pb-6">
+                            @include('orders.partials.item-review', [
+                                'order' => $order,
+                                'product' => $reviewProduct,
+                                'review' => ($reviewsByProduct ?? collect())->get($reviewProduct->id),
+                                'showName' => false,
+                                'returnTo' => 'order',
+                            ])
+                        </div>
+                    @endif
+                @endif
                 </div>
             @endforeach
         </div>

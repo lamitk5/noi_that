@@ -4,13 +4,13 @@ namespace App\Http\Controllers\Customer;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
-use App\Models\OrderItem;
-use App\Models\Product;
-use App\Models\ProductVariant;
+use App\Models\Review;
+use App\Models\User;
 use App\Services\CartService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
@@ -62,6 +62,7 @@ class OrderController extends Controller
             'orders' => $orders,
             'counts' => $counts,
             'currentStatus' => $currentStatus,
+            'reviewsByProduct' => $this->reviewsForOrders($orders->getCollection(), $user),
         ]);
     }
 
@@ -95,7 +96,9 @@ class OrderController extends Controller
             ]);
         }
 
-        return view('orders.show', compact('order'));
+        $reviewsByProduct = $this->reviewsForOrders(collect([$order]), $user);
+
+        return view('orders.show', compact('order', 'reviewsByProduct'));
     }
 
     /**
@@ -142,22 +145,64 @@ class OrderController extends Controller
                         ->orWhere('customer_email', $user->email);
                 }
             })
-            ->with('items.variant')
+            ->with('items.variant.product')
             ->firstOrFail();
 
+        $cartService->setBuyNowMode(false);
+
         $addedCount = 0;
+        $skipped = [];
+
         foreach ($order->items as $item) {
             $variant = $item->variant;
-            if ($variant) {
-                $cartService->add($variant, (int) $item->quantity);
+            $product = $variant?->product;
+
+            if (! $variant || ! $product) {
+                $skipped[] = $item->product_name;
+                continue;
+            }
+
+            try {
+                $cartService->add($product, max(1, (int) $item->quantity), $variant);
                 $addedCount++;
+            } catch (\InvalidArgumentException $e) {
+                $skipped[] = $item->product_name;
             }
         }
 
         if ($addedCount > 0) {
-            return redirect()->route('cart.index')->with('success', "Đã thêm {$addedCount} sản phẩm từ đơn {$order->order_code} vào giỏ hàng!");
+            $message = "Đã thêm {$addedCount} sản phẩm từ đơn {$order->order_code} vào giỏ hàng!";
+            if ($skipped !== []) {
+                $message .= ' Không thêm được: '.implode(', ', array_unique($skipped)).'.';
+            }
+
+            return redirect()->route('cart.index')->with('success', $message);
         }
 
         return back()->with('error', 'Các sản phẩm trong đơn hàng này hiện không còn khả dụng.');
+    }
+
+    /**
+     * @param  Collection<int, Order>  $orders
+     * @return Collection<int, Review>
+     */
+    private function reviewsForOrders(Collection $orders, User $user): Collection
+    {
+        $productIds = $orders
+            ->filter(fn (Order $order) => $order->order_status === Order::STATUS_COMPLETED)
+            ->flatMap(fn (Order $order) => $order->items->map(fn ($item) => $item->variant?->product_id))
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($productIds->isEmpty()) {
+            return collect();
+        }
+
+        return Review::query()
+            ->where('user_id', $user->id)
+            ->whereIn('product_id', $productIds)
+            ->get()
+            ->keyBy('product_id');
     }
 }

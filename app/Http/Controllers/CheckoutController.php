@@ -8,11 +8,13 @@ use App\Models\Product;
 use App\Models\Coupon;
 use App\Services\CartService;
 use App\Services\CouponRedemptionService;
+use App\Services\OtpSender;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -234,6 +236,8 @@ class CheckoutController extends Controller
                 return $order;
             }));
 
+            $this->sendOrderConfirmation($order);
+
             if ($request->wantsJson()) {
                 return response()->json([
                     'success' => true,
@@ -334,5 +338,29 @@ class CheckoutController extends Controller
         }
 
         return view('checkout.success', compact('order'));
+    }
+
+    private function sendOrderConfirmation(Order $order): void
+    {
+        $email = trim((string) $order->customer_email);
+        if ($email === '' || ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return;
+        }
+
+        try {
+            $order->loadMissing('items');
+            $html = view('emails.order_confirmation', ['order' => $order])->render();
+            $sent = app(OtpSender::class)->sendNotification(
+                $email,
+                "Xác nhận đơn hàng #{$order->order_code} - Mộc An",
+                $html
+            );
+
+            if (! $sent) {
+                Log::warning('Order confirmation email was not sent for '.$order->order_code);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Order confirmation email failed for '.$order->order_code.': '.$e->getMessage());
+        }
     }
 }
