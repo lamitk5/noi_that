@@ -45,7 +45,7 @@
                     <option value="open" {{ request('status') == 'open' ? 'selected' : '' }}>Đang chờ</option>
                     <option value="closed" {{ request('status') == 'closed' ? 'selected' : '' }}>Đã đóng</option>
                 </select>
-                <button type="submit" class="bg-heading text-white text-xs px-3 py-2 rounded-lg hover:opacity-90">
+                <button type="submit" class="bg-primary text-primary-foreground text-xs px-3 py-2 rounded-lg hover:opacity-90">
                     Lọc
                 </button>
             </form>

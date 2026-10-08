@@ -13,7 +13,7 @@
                 <option value="staff" {{ request('role') == 'staff' ? 'selected' : '' }}>Nhân viên</option>
                 <option value="manager" {{ request('role') == 'manager' ? 'selected' : '' }}>Quản lý</option>
             </select>
-            <button type="submit" class="bg-heading text-white text-xs px-3 py-2 rounded-lg hover:opacity-90">Lọc</button>
+            <button type="submit" class="bg-primary text-primary-foreground text-xs px-3 py-2 rounded-lg hover:opacity-90">Lọc</button>
         </form>
 
         <a href="{{ route('admin.staff.create') }}" class="bg-primary hover:opacity-90 text-primary-foreground font-semibold text-xs px-4 py-2 rounded-lg transition whitespace-nowrap">

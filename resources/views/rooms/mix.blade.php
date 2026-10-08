@@ -758,7 +758,7 @@
                 <input type="search" x-model="search" placeholder="Tìm sofa, giường, bàn..." class="mt-3 w-full rounded-xl border border-ui-border bg-page px-3.5 py-2 text-xs text-heading placeholder:text-muted focus:border-primary focus:outline-none">
                 <div class="mt-3 flex flex-wrap gap-1.5">
                     <template x-for="c in categories" :key="c">
-                        <button type="button" class="rounded-full px-2.5 py-1 text-[11px] font-semibold transition" :class="category === c ? 'bg-heading text-white' : 'bg-surface-alt text-body hover:bg-stone-200'" @click="category = c" x-text="c"></button>
+                        <button type="button" class="rounded-full px-2.5 py-1 text-[11px] font-semibold transition" :class="category === c ? 'bg-primary text-primary-foreground' : 'bg-surface-alt text-body hover:bg-surface'" @click="category = c" x-text="c"></button>
                     </template>
                 </div>
 

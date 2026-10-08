@@ -218,8 +218,8 @@
                             {{ mb_strtoupper(mb_substr(auth()->user()?->name ?? 'A', 0, 1)) }}
                         </div>
                         <div class="hidden sm:flex flex-col text-left">
-                            <span class="text-xs font-bold text-heading leading-tight">{{ auth()->user()?->name ?? 'Quản trị viên' }}</span>
-                            <span class="text-[10px] font-semibold text-accent uppercase">
+                            <span class="admin-account-name text-xs font-bold text-heading leading-tight">{{ auth()->user()?->name ?? 'Quản trị viên' }}</span>
+                            <span class="admin-account-role text-[10px] font-semibold uppercase">
                                 {{ match (auth()->user()?->role) {
                                     'admin' => 'Quản trị viên',
                                     'manager' => 'Quản lý',

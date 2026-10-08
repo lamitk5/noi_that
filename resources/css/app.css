@@ -134,6 +134,45 @@ html[data-theme='black'] .admin-app .bg-white :is(input, select, textarea)::plac
     color: #78716c;
 }
 
+html[data-theme='black'] .admin-app .admin-account-name {
+    color: #fafaf9;
+}
+
+html[data-theme='black'] .admin-app .admin-account-role {
+    color: #e7e5e4;
+}
+
+.admin-app .admin-account-role {
+    color: var(--theme-muted);
+}
+
+/* Chữ phụ trên thẻ trắng (SKU, ngày, ghi chú) không dùng xám quá nhạt. */
+.admin-app .bg-white .text-gray-400 {
+    color: #57534e;
+}
+
+.admin-app .bg-white .text-gray-500 {
+    color: #44403c;
+}
+
+/* Nhãn trạng thái nằm trên nền tối: mực đậm của bảng màu sáng sẽ chìm. */
+html[data-theme='black'] .admin-app .text-amber-600 { color: #fbbf24; }
+html[data-theme='black'] .admin-app .text-amber-700 { color: #fcd34d; }
+html[data-theme='black'] .admin-app .text-emerald-600 { color: #34d399; }
+html[data-theme='black'] .admin-app .text-emerald-700 { color: #6ee7b7; }
+html[data-theme='black'] .admin-app .text-rose-600 { color: #fb7185; }
+html[data-theme='black'] .admin-app .text-rose-700 { color: #fda4af; }
+html[data-theme='black'] .admin-app .text-sky-600 { color: #7dd3fc; }
+html[data-theme='black'] .admin-app .text-stone-600 { color: #d6d3d1; }
+
+html[data-theme='black'] .admin-app :is(.bg-white, .bg-gray-50, .bg-gray-100, .bg-amber-50, .bg-emerald-50, .bg-rose-50, .bg-emerald-100, .bg-rose-100) .text-amber-600 { color: #d97706; }
+html[data-theme='black'] .admin-app :is(.bg-white, .bg-gray-50, .bg-gray-100, .bg-amber-50, .bg-emerald-50, .bg-rose-50) .text-amber-700 { color: #b45309; }
+html[data-theme='black'] .admin-app :is(.bg-white, .bg-gray-50, .bg-gray-100, .bg-amber-50, .bg-emerald-50, .bg-rose-50, .bg-emerald-100) .text-emerald-600 { color: #059669; }
+html[data-theme='black'] .admin-app :is(.bg-white, .bg-gray-50, .bg-gray-100, .bg-amber-50, .bg-emerald-50, .bg-rose-50, .bg-emerald-100) .text-emerald-700 { color: #047857; }
+html[data-theme='black'] .admin-app :is(.bg-white, .bg-gray-50, .bg-gray-100, .bg-amber-50, .bg-emerald-50, .bg-rose-50, .bg-rose-100) .text-rose-600 { color: #e11d48; }
+html[data-theme='black'] .admin-app :is(.bg-white, .bg-gray-50, .bg-gray-100, .bg-amber-50, .bg-emerald-50, .bg-rose-50, .bg-rose-100) .text-rose-700 { color: #be123c; }
+html[data-theme='black'] .admin-app :is(.bg-white, .bg-gray-50, .bg-gray-100) .text-stone-600 { color: #57534e; }
+
 @theme inline {
     --font-sans: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
     --font-display: 'Playfair Display', Georgia, serif;
