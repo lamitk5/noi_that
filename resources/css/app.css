@@ -20,11 +20,11 @@ html[data-theme='moss'] {
 
     --theme-heading: #263a2f;
     --theme-body: #292c2a;
-    --theme-muted: #6f746f;
+    --theme-muted: #5c635c;
 
     --theme-border: #ddd8cf;
 
-    --theme-accent: #b47b42;
+    --theme-accent: #7a5228;
     --theme-accent-foreground: #ffffff;
 }
 
@@ -41,17 +41,17 @@ html[data-theme='wood'] {
 
     --theme-heading: #5a3828;
     --theme-body: #3b2f29;
-    --theme-muted: #7d6a5f;
+    --theme-muted: #6e5c52;
 
     --theme-border: #dccabd;
 
-    --theme-accent: #b47745;
+    --theme-accent: #7a4a28;
     --theme-accent-foreground: #ffffff;
 }
 
 html[data-theme='cream'] {
-    --theme-primary: #d8c7a8;
-    --theme-primary-foreground: #2f2921;
+    --theme-primary: #5c4636;
+    --theme-primary-foreground: #fffdf8;
 
     --theme-page: #fffaf0;
     --theme-surface: #fffdf8;
@@ -60,14 +60,14 @@ html[data-theme='cream'] {
     --theme-header: #fff9ec;
     --theme-footer: #5a5043;
 
-    --theme-heading: #4b4134;
+    --theme-heading: #3f362c;
     --theme-body: #3b352e;
-    --theme-muted: #7f756a;
+    --theme-muted: #6a6056;
 
-    --theme-border: #e8dac1;
+    --theme-border: #e0d0b4;
 
-    --theme-accent: #b98b55;
-    --theme-accent-foreground: #ffffff;
+    --theme-accent: #7a4e28;
+    --theme-accent-foreground: #fffdf8;
 }
 
 html[data-theme='blue'] {
@@ -83,11 +83,11 @@ html[data-theme='blue'] {
 
     --theme-heading: #294c61;
     --theme-body: #27353d;
-    --theme-muted: #657782;
+    --theme-muted: #526270;
 
     --theme-border: #d0dde4;
 
-    --theme-accent: #6f91a6;
+    --theme-accent: #2c556c;
     --theme-accent-foreground: #ffffff;
 }
 
@@ -106,10 +106,32 @@ html[data-theme='black'] {
     --theme-body: #e7e5e4;
     --theme-muted: #a8a29e;
 
-    --theme-border: #343434;
+    --theme-border: #4a4a4a;
 
-    --theme-accent: #d8b184;
+    --theme-accent: #e4c39a;
     --theme-accent-foreground: #171717;
+}
+
+/* Thẻ quản trị còn nền trắng: mực của theme tối không được đè lên nền sáng. */
+html[data-theme='black'] .admin-app .bg-white {
+    color: #1c1917;
+}
+
+html[data-theme='black'] .admin-app .bg-white :is(.text-heading, .text-body, .text-primary, .text-accent, label) {
+    color: #1c1917;
+}
+
+html[data-theme='black'] .admin-app .bg-white .text-muted {
+    color: #57534e;
+}
+
+html[data-theme='black'] .admin-app .bg-white :is(input, select, textarea) {
+    color: #1c1917;
+    background-color: #ffffff;
+}
+
+html[data-theme='black'] .admin-app .bg-white :is(input, select, textarea)::placeholder {
+    color: #78716c;
 }
 
 @theme inline {

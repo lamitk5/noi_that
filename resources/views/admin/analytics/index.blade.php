@@ -267,6 +267,10 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        const themeInk = getComputedStyle(document.documentElement).getPropertyValue('--theme-body').trim() || '#292524';
+        const themeGrid = getComputedStyle(document.documentElement).getPropertyValue('--theme-border').trim() || '#ddd8cf';
+        const themeSurface = getComputedStyle(document.documentElement).getPropertyValue('--theme-surface').trim() || '#ffffff';
+
         // 1. Biểu đồ Cột - Doanh thu theo thời gian
         const revCanvas = document.getElementById('revenueBarChart');
         if (revCanvas) {
@@ -308,8 +312,9 @@
                     scales: {
                         y: {
                             beginAtZero: true,
-                            grid: { color: 'rgba(0, 0, 0, 0.05)' },
+                            grid: { color: themeGrid },
                             ticks: {
+                                color: themeInk,
                                 font: { size: 11 },
                                 callback: function (val) {
                                     if (val >= 1000000) return (val / 1000000) + ' tr';
@@ -320,7 +325,7 @@
                         },
                         x: {
                             grid: { display: false },
-                            ticks: { font: { size: 11 } }
+                            ticks: { color: themeInk, font: { size: 11 } }
                         }
                     }
                 }
@@ -354,7 +359,7 @@
                         data: dData,
                         backgroundColor: dColors,
                         borderWidth: 2,
-                        borderColor: '#ffffff',
+                        borderColor: themeSurface,
                     }]
                 },
                 options: {
@@ -367,6 +372,7 @@
                             labels: {
                                 boxWidth: 12,
                                 padding: 14,
+                                color: themeInk,
                                 font: { size: 11, weight: '600' }
                             }
                         },

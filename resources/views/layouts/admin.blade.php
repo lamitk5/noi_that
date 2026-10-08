@@ -63,7 +63,7 @@
         canvas { max-width: 100% !important; }
     </style>
 </head>
-<body class="h-full bg-page font-sans text-body antialiased flex flex-col">
+<body class="admin-app h-full bg-page font-sans text-body antialiased flex flex-col">
     <div class="flex-1 flex min-h-screen">
         <!-- Admin Sidebar -->
         <aside class="w-64 shrink-0 border-r border-ui-border bg-surface flex flex-col justify-between">
