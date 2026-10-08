@@ -112,26 +112,33 @@ html[data-theme='black'] {
     --theme-accent-foreground: #171717;
 }
 
-/* Thẻ quản trị còn nền trắng: mực của theme tối không được đè lên nền sáng. */
+/* Theme đen: thẻ quản trị đang gắn nền trắng phải chuyển sang nền tối, chữ sáng. */
 html[data-theme='black'] .admin-app .bg-white {
-    color: #1c1917;
+    background-color: var(--theme-surface);
+    color: var(--theme-body);
+    border-color: var(--theme-border);
 }
 
-html[data-theme='black'] .admin-app .bg-white :is(.text-heading, .text-body, .text-primary, .text-accent, label) {
-    color: #1c1917;
+html[data-theme='black'] .admin-app .bg-white :is(.bg-gray-50, .bg-gray-100, .hover\:bg-gray-50:hover) {
+    background-color: var(--theme-surface-alt);
 }
 
-html[data-theme='black'] .admin-app .bg-white .text-muted {
-    color: #57534e;
+html[data-theme='black'] .admin-app .bg-white :is(.text-gray-900, .text-gray-800, .text-gray-700, .text-heading, .text-body, .text-amber-900, .text-amber-800, label, h1, h2, h3, h4) {
+    color: var(--theme-heading);
+}
+
+html[data-theme='black'] .admin-app .bg-white :is(.text-gray-600, .text-gray-500, .text-gray-400, .text-muted) {
+    color: var(--theme-muted);
 }
 
 html[data-theme='black'] .admin-app .bg-white :is(input, select, textarea) {
-    color: #1c1917;
-    background-color: #ffffff;
+    background-color: var(--theme-page);
+    color: var(--theme-heading);
+    border-color: var(--theme-border);
 }
 
 html[data-theme='black'] .admin-app .bg-white :is(input, select, textarea)::placeholder {
-    color: #78716c;
+    color: #a8a29e;
 }
 
 html[data-theme='black'] .admin-app .admin-account-name {
@@ -146,15 +153,6 @@ html[data-theme='black'] .admin-app .admin-account-role {
     color: var(--theme-muted);
 }
 
-/* Chữ phụ trên thẻ trắng (SKU, ngày, ghi chú) không dùng xám quá nhạt. */
-.admin-app .bg-white .text-gray-400 {
-    color: #57534e;
-}
-
-.admin-app .bg-white .text-gray-500 {
-    color: #44403c;
-}
-
 /* Nhãn trạng thái nằm trên nền tối: mực đậm của bảng màu sáng sẽ chìm. */
 html[data-theme='black'] .admin-app .text-amber-600 { color: #fbbf24; }
 html[data-theme='black'] .admin-app .text-amber-700 { color: #fcd34d; }
@@ -165,13 +163,16 @@ html[data-theme='black'] .admin-app .text-rose-700 { color: #fda4af; }
 html[data-theme='black'] .admin-app .text-sky-600 { color: #7dd3fc; }
 html[data-theme='black'] .admin-app .text-stone-600 { color: #d6d3d1; }
 
-html[data-theme='black'] .admin-app :is(.bg-white, .bg-gray-50, .bg-gray-100, .bg-amber-50, .bg-emerald-50, .bg-rose-50, .bg-emerald-100, .bg-rose-100) .text-amber-600 { color: #d97706; }
-html[data-theme='black'] .admin-app :is(.bg-white, .bg-gray-50, .bg-gray-100, .bg-amber-50, .bg-emerald-50, .bg-rose-50) .text-amber-700 { color: #b45309; }
-html[data-theme='black'] .admin-app :is(.bg-white, .bg-gray-50, .bg-gray-100, .bg-amber-50, .bg-emerald-50, .bg-rose-50, .bg-emerald-100) .text-emerald-600 { color: #059669; }
-html[data-theme='black'] .admin-app :is(.bg-white, .bg-gray-50, .bg-gray-100, .bg-amber-50, .bg-emerald-50, .bg-rose-50, .bg-emerald-100) .text-emerald-700 { color: #047857; }
-html[data-theme='black'] .admin-app :is(.bg-white, .bg-gray-50, .bg-gray-100, .bg-amber-50, .bg-emerald-50, .bg-rose-50, .bg-rose-100) .text-rose-600 { color: #e11d48; }
-html[data-theme='black'] .admin-app :is(.bg-white, .bg-gray-50, .bg-gray-100, .bg-amber-50, .bg-emerald-50, .bg-rose-50, .bg-rose-100) .text-rose-700 { color: #be123c; }
-html[data-theme='black'] .admin-app :is(.bg-white, .bg-gray-50, .bg-gray-100) .text-stone-600 { color: #57534e; }
+html[data-theme='black'] .admin-app :is(.bg-amber-50, .bg-amber-100).text-amber-700,
+html[data-theme='black'] .admin-app :is(.bg-amber-50, .bg-amber-100) .text-amber-700 { color: #b45309; }
+html[data-theme='black'] .admin-app :is(.bg-emerald-50, .bg-emerald-100).text-emerald-800,
+html[data-theme='black'] .admin-app :is(.bg-emerald-50, .bg-emerald-100) .text-emerald-800,
+html[data-theme='black'] .admin-app :is(.bg-emerald-50, .bg-emerald-100).text-emerald-700,
+html[data-theme='black'] .admin-app :is(.bg-emerald-50, .bg-emerald-100) .text-emerald-700 { color: #047857; }
+html[data-theme='black'] .admin-app :is(.bg-rose-50, .bg-rose-100).text-rose-700,
+html[data-theme='black'] .admin-app :is(.bg-rose-50, .bg-rose-100) .text-rose-700 { color: #be123c; }
+html[data-theme='black'] .admin-app :is(.bg-gray-100).text-gray-600,
+html[data-theme='black'] .admin-app .bg-gray-100.text-gray-600 { color: #e7e5e4; }
 
 @theme inline {
     --font-sans: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
