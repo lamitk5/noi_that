@@ -496,7 +496,7 @@
                         </div>
                     </template>
                     <div x-show="aiSending" x-cloak class="flex justify-start">
-                        <div class="rounded-2xl rounded-tl-sm border border-ui-border bg-surface px-3.5 py-2 text-xs text-muted shadow-sm">Trợ lý đang tìm sản phẩm phù hợp...</div>
+                        <div class="rounded-2xl rounded-tl-sm border border-ui-border bg-surface px-3.5 py-2 text-xs text-muted shadow-sm">Trợ lý đang soạn câu trả lời...</div>
                     </div>
                 </div>
 
@@ -508,7 +508,7 @@
                             @keydown.enter.exact.prevent="sendAi()"
                             rows="1"
                             maxlength="500"
-                            placeholder="Ví dụ: tủ quần áo gỗ dưới 10 triệu..."
+                            placeholder="Ví dụ: danh mục sản phẩm, sofa dưới 10 triệu..."
                             class="max-h-24 flex-1 resize-none rounded-xl border border-ui-border bg-page px-3.5 py-2.5 text-sm text-heading placeholder:text-muted focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                         ></textarea>
                         <button

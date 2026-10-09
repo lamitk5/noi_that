@@ -35,10 +35,10 @@ Alpine.data('chatWidget', () => ({
     aiLoaded: false,
     aiError: '',
     aiSuggestions: [
+        'Danh mục sản phẩm trên web là gì?',
         'Sofa phòng khách dưới 15 triệu',
         'Giường gỗ cho phòng ngủ nhỏ',
         'Bàn làm việc gỗ sồi',
-        'Bộ bàn ăn 6 ghế',
     ],
     auth: false,
     chatId: null,
