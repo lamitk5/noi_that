@@ -32,7 +32,7 @@ return [
         'tmn_code'    => env('VNPAY_TMN_CODE'),
         'hash_secret' => env('VNPAY_HASH_SECRET'),
         // INTCARD = thẻ quốc tế (Visa/Master/JCB), VNBANK = ATM nội địa, VNPAYQR = QR, rỗng = để khách tự chọn
-        'bank_code'   => env('VNPAY_BANK_CODE', 'INTCARD'),
+        'bank_code'   => env('VNPAY_BANK_CODE', 'VNBANK'),
         'mock'        => env('VNPAY_MOCK', false),
     ],
 
@@ -42,7 +42,7 @@ return [
         'access_key'   => env('MOMO_ACCESS_KEY'),
         'secret_key'   => env('MOMO_SECRET_KEY'),
         // payWithCC = thẻ quốc tế (Visa/Master/JCB), payWithATM = ATM nội địa, captureWallet = ví MoMo
-        'request_type' => env('MOMO_REQUEST_TYPE', 'payWithCC'),
+        'request_type' => env('MOMO_REQUEST_TYPE', 'payWithATM'),
         'mock'         => env('MOMO_MOCK', false),
     ],
 
