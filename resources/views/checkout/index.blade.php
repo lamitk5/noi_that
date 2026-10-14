@@ -313,6 +313,7 @@
                                     <span class="rounded bg-sky-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-sky-600 dark:text-sky-400">Trực tuyến</span>
                                 </div>
                                 <p class="text-xs text-muted">Thanh toán an toàn qua cổng VNPAY bằng thẻ quốc tế Visa, MasterCard hoặc JCB.</p>
+                                @unless (config('services.vnpay.mock'))
                                 <div class="mt-2 rounded-lg border border-sky-200/50 bg-sky-500/5 p-2.5 text-[11px] text-muted space-y-0.5">
                                     <p class="font-semibold text-sky-600 dark:text-sky-400">Thẻ quốc tế thử nghiệm (giao dịch thành công):</p>
                                     <p>• Visa: <code class="font-mono font-bold text-heading">4456 5300 0000 1005</code></p>
@@ -320,6 +321,7 @@
                                     <p>• Tên chủ thẻ: <code class="font-mono font-bold text-heading">NGUYEN VAN A</code> · Hết hạn: <code class="font-mono font-bold text-heading">12/26</code> · CVC: <code class="font-mono font-bold text-heading">123</code></p>
                                     <p>• Email: <code class="font-mono font-bold text-heading">test@gmail.com</code> · Địa chỉ: <code class="font-mono font-bold text-heading">22 Lang Ha</code> · Thành phố: <code class="font-mono font-bold text-heading">Ha Noi</code></p>
                                 </div>
+                                @endunless
                             </div>
                         </label>
 
@@ -338,6 +340,7 @@
                                     <span class="rounded bg-pink-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-pink-600 dark:text-pink-400">Sandbox</span>
                                 </div>
                                 <p class="text-xs text-muted">Thanh toán thử bằng thẻ quốc tế trên cổng MoMo sandbox.</p>
+                                @unless (config('services.momo.mock'))
                                 <div class="mt-2 rounded-lg border border-pink-200/50 bg-pink-500/5 p-2.5 text-[11px] text-muted space-y-0.5">
                                     <p class="font-semibold text-pink-600 dark:text-pink-400">Thẻ quốc tế thử nghiệm (giao dịch thành công):</p>
                                     <p>• Visa: <code class="font-mono font-bold text-heading">4111 1111 1111 1111</code> (không cần OTP)</p>
@@ -345,6 +348,7 @@
                                     <p>• Tên chủ thẻ: <code class="font-mono font-bold text-heading">NGUYEN VAN A</code> · Hết hạn: <code class="font-mono font-bold text-heading">05/26</code> · CVC: <code class="font-mono font-bold text-heading">111</code></p>
                                     <p>Hình thẻ trên trang MoMo chỉ là ảnh mẫu. Nhập đúng số thẻ ở trên, không nhập số in trên hình.</p>
                                 </div>
+                                @endunless
                             </div>
                         </label>
 
