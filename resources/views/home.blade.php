@@ -84,7 +84,7 @@
                                 ],
                                 [
                                     'q' => 'Cửa hàng hỗ trợ những phương thức thanh toán nào?',
-                                    'a' => 'Mộc An hỗ trợ: thanh toán tiền mặt khi nhận hàng (COD), cổng VNPAY (thẻ ATM, Visa, MasterCard, VNPAY-QR) và ví điện tử MoMo an toàn.'
+                                    'a' => 'Mộc An hỗ trợ: thanh toán tiền mặt khi nhận hàng (COD), thẻ quốc tế Visa, MasterCard, JCB qua cổng VNPAY hoặc MoMo an toàn.'
                                 ],
                             ];
                         @endphp

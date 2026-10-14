@@ -11,7 +11,7 @@ Hệ thống thương mại điện tử hoàn chỉnh cho thương hiệu nội
 - **Database**: SQLite / MySQL (Hỗ trợ chuyển đổi linh hoạt qua file `.env`)
 - **Kiến trúc**: MVC (Model - View - Controller), Clean Architecture
 - **Xử lý giao dịch**: Database Transactions đảm bảo tính toàn vẹn dữ liệu khi đặt hàng và trừ kho
-- **Thanh toán**: Tích hợp Cổng thanh toán **VNPAY-QR** và Ví điện tử **MoMo ATM**
+- **Thanh toán**: Tích hợp Cổng thanh toán **VNPAY** và **MoMo** bằng thẻ quốc tế (Visa / MasterCard / JCB)
 - **Vận chuyển**: Tích hợp API **Giao Hàng Nhanh (GHN)** tính phí theo địa chỉ và tra cứu vận đơn
 - **Hỗ trợ khách hàng**: Hệ thống Live Chat Realtime 1-1 giữa khách hàng và nhân viên tư vấn
 - **Thông báo**: Hệ thống Toast Notification toàn cục tự động bắt sự kiện thao tác
@@ -115,8 +115,8 @@ furniture-shop/
 - **Giỏ hàng linh hoạt**: Chọn từng sản phẩm thanh toán bằng checkbox, tự động tính tổng tiền và chiết khấu.
 - **Phương thức thanh toán**:
   - Thanh toán khi nhận hàng (COD).
-  - Cổng thanh toán VNPAY (Thẻ ATM, QR, Ngân hàng).
-  - Ví điện tử MoMo (MoMo ATM).
+  - Cổng thanh toán VNPAY (thẻ quốc tế Visa / MasterCard / JCB, `VNPAY_BANK_CODE=INTCARD`).
+  - Cổng thanh toán MoMo (thẻ quốc tế Visa / MasterCard / JCB, `MOMO_REQUEST_TYPE=payWithCC`).
 - **Hệ thống Toast Notification**: Thông báo nổi góc màn hình tức thì khi đăng nhập, đặt hàng, thêm giỏ hàng thành công.
 - **Live Chat Hỗ trợ**: Khách hàng đã đăng nhập có thể trò chuyện trực tiếp với tư vấn viên, lưu trữ lịch sử cuộc gọi.
 - **Trợ lý AI tư vấn (Gemini)**: Tab "Tư vấn AI" trong khung chat, mở cho cả khách chưa đăng nhập; AI chỉ gợi ý sản phẩm đang có trong kho và hiển thị thẻ sản phẩm. Khi chưa cấu hình `GEMINI_API_KEY`, hệ thống tự gợi ý theo từ khóa.

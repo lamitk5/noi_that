@@ -31,6 +31,8 @@ return [
         'url'         => env('VNPAY_PAYMENT_URL', 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html'),
         'tmn_code'    => env('VNPAY_TMN_CODE'),
         'hash_secret' => env('VNPAY_HASH_SECRET'),
+        // INTCARD = thẻ quốc tế (Visa/Master/JCB), VNBANK = ATM nội địa, VNPAYQR = QR, rỗng = để khách tự chọn
+        'bank_code'   => env('VNPAY_BANK_CODE', 'INTCARD'),
         'mock'        => env('VNPAY_MOCK', false),
     ],
 
@@ -39,7 +41,8 @@ return [
         'partner_code' => env('MOMO_PARTNER_CODE'),
         'access_key'   => env('MOMO_ACCESS_KEY'),
         'secret_key'   => env('MOMO_SECRET_KEY'),
-        'request_type' => env('MOMO_REQUEST_TYPE', 'payWithATM'),
+        // payWithCC = thẻ quốc tế (Visa/Master/JCB), payWithATM = ATM nội địa, captureWallet = ví MoMo
+        'request_type' => env('MOMO_REQUEST_TYPE', 'payWithCC'),
         'mock'         => env('MOMO_MOCK', false),
     ],
 

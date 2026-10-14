@@ -47,6 +47,11 @@ class VnpayService
             'vnp_ExpireDate' => $now->copy()->addMinutes(15)->format('YmdHis'),
         ];
 
+        $bankCode = (string) config('services.vnpay.bank_code', '');
+        if ($bankCode !== '') {
+            $inputData['vnp_BankCode'] = $bankCode;
+        }
+
         ksort($inputData);
 
         $query = '';
